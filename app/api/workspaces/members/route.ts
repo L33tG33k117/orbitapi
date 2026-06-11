@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -9,6 +10,7 @@ const schema = z.object({
 })
 
 export async function POST(request: Request) {
+  // Auth + permission check via regular (RLS-enforced) client
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,7 +21,6 @@ export async function POST(request: Request) {
 
   const { workspaceId, email, role } = parsed.data
 
-  // Verify caller is owner/admin of this workspace
   const { data: callerMembership } = await supabase
     .from('memberships')
     .select('role')
@@ -31,23 +32,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Look up the invitee by email via admin API — requires service role
-  const adminSupabase = await createClient()
-  const { data: invitee } = await adminSupabase
+  // Look up invitee and write membership via admin client
+  const admin = createAdminClient()
+  const { data: invitee } = await admin
     .from('profiles')
     .select('id')
     .eq('email', email)
     .single()
 
   if (!invitee) {
-    return NextResponse.json({ error: 'No user found with that email. They must sign up first.' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'No user found with that email. They must sign up first.' },
+      { status: 404 }
+    )
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('memberships')
     .upsert({ workspace_id: workspaceId, user_id: invitee.id, role }, { onConflict: 'workspace_id,user_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json({ ok: true })
 }

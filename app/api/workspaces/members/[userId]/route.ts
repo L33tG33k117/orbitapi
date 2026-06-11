@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
 const patchSchema = z.object({
@@ -19,6 +20,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
 
   const { workspaceId, role } = parsed.data
 
+  // Permission check via regular client
   const { data: caller } = await supabase
     .from('memberships')
     .select('role')
@@ -28,7 +30,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
 
   if (caller?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { error } = await supabase
+  // Write via admin client
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('memberships')
     .update({ role })
     .eq('workspace_id', workspaceId)
@@ -49,6 +53,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Permission check via regular client
   const { data: caller } = await supabase
     .from('memberships')
     .select('role')
@@ -58,7 +63,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
 
   if (caller?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { error } = await supabase
+  // Write via admin client
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('memberships')
     .delete()
     .eq('workspace_id', workspaceId)
