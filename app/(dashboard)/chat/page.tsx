@@ -1,11 +1,17 @@
+import { ChatUI } from './chat-ui'
+
 export default function ChatPage() {
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Orbit Assistant</h1>
-        <p className="text-muted-foreground mt-1">Talk to your connected APIs in plain English</p>
+    <div className="flex flex-col h-full">
+      <div className="px-8 py-5 border-b shrink-0">
+        <h1 className="text-2xl font-bold">Orbit Assistant</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">
+          Talk to your connected APIs in plain English
+        </p>
       </div>
-      <p className="text-muted-foreground">Coming in Phase 2 — AI chat with streaming tool use.</p>
+      <div className="flex-1 overflow-hidden">
+        <ChatUI />
+      </div>
     </div>
   )
 }
