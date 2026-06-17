@@ -415,6 +415,11 @@ export function ChatUI({ skills = [] }: { skills?: Skill[] }) {
   const [loadedMessages, setLoadedMessages] = useState<UIMessage[] | undefined>(undefined)
   const [chatKey, setChatKey] = useState(0) // forces ChatCore remount
 
+  // Start with the history rail collapsed on small screens so chat gets full width.
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) setSidebarCollapsed(true)
+  }, [])
+
   const activeSkill = skills.find(s => s.id === activeSkillId) ?? null
   const suggestions = activeSkill
     ? [`Run your standard workflow`, `What does ${activeSkill.name} see right now?`]

@@ -11,7 +11,7 @@ import {
 import { NotificationBell } from '@/components/notification-bell'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FeedbackButton } from '@/components/feedback-button'
-import { LogOut, User as UserIcon, Settings, ChevronDown } from 'lucide-react'
+import { LogOut, User as UserIcon, Settings, ChevronDown, Menu } from 'lucide-react'
 
 interface TopBarProps {
   user: User
@@ -40,6 +40,18 @@ export function TopBar({ user, role, workspaceId, impersonating }: TopBarProps) 
 
   return (
     <div className="flex items-center justify-end gap-1 px-4 py-2.5 border-b border-border/60 glass shrink-0">
+      {/* Mobile menu trigger + brand (sidebar is hidden under lg) */}
+      <div className="lg:hidden mr-auto flex items-center gap-2">
+        <button
+          onClick={() => window.dispatchEvent(new Event('orbit:toggle-nav'))}
+          aria-label="Open menu"
+          className="p-2 -ml-1 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <span className="font-bold text-sm tracking-tight text-gradient">OrbitAPI</span>
+      </div>
+
       {impersonating && (
         <div className="flex items-center gap-2 mr-auto">
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30">

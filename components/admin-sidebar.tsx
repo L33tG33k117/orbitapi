@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Building2, Users, ShieldCheck, ArrowLeft,
-  Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus,
+  Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus, X,
 } from 'lucide-react'
 
 const items = [
@@ -34,12 +35,17 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ email, fullName, openReports = 0 }: AdminSidebarProps) {
   const pathname = usePathname()
+  const [open, setOpen] = useState(false)
 
-  return (
-    <aside
-      className="w-52 shrink-0 flex flex-col h-full"
-      style={{ background: 'var(--sidebar)', borderRight: '1px solid var(--sidebar-border)', width: '208px' }}
-    >
+  useEffect(() => {
+    const toggle = () => setOpen(v => !v)
+    window.addEventListener('orbit:toggle-nav', toggle)
+    return () => window.removeEventListener('orbit:toggle-nav', toggle)
+  }, [])
+  useEffect(() => { setOpen(false) }, [pathname])
+
+  const inner = (
+    <>
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         <div className="h-8 w-8 rounded-lg bg-red-500/15 flex items-center justify-center shrink-0">
@@ -107,6 +113,39 @@ export function AdminSidebar({ email, fullName, openReports = 0 }: AdminSidebarP
           <span>Back to app</span>
         </Link>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className="shrink-0 hidden lg:flex flex-col h-full"
+        style={{ background: 'var(--sidebar)', borderRight: '1px solid var(--sidebar-border)', width: '208px' }}
+      >
+        {inner}
+      </aside>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+          <aside
+            className="relative flex flex-col h-full shadow-2xl animate-in slide-in-from-left duration-200"
+            style={{ background: 'var(--sidebar)', borderRight: '1px solid var(--sidebar-border)', width: '240px', maxWidth: '82vw' }}
+          >
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close menu"
+              className="absolute right-2 top-4 z-10 p-1.5 rounded-md"
+              style={{ color: 'var(--sidebar-foreground)' }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+            {inner}
+          </aside>
+        </div>
+      )}
+    </>
   )
 }

@@ -65,7 +65,7 @@ export default async function RootPage() {
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <section className="relative pt-40 pb-32 px-6">
+      <section className="relative pt-28 pb-20 sm:pt-40 sm:pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[oklch(0.46_0.19_264)]/40 bg-[oklch(0.46_0.19_264)]/10 text-[oklch(0.75_0.18_264)] text-xs font-medium mb-8">
             <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block" />

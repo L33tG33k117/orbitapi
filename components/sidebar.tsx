@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import type { UserRole, FeatureFlags, WorkspaceTier } from '@/types'
 import { cn } from '@/lib/utils'
 import { hasCapability, type Capability } from '@/lib/entitlements'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock,
+  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X,
 } from 'lucide-react'
 
 interface NavItem {
@@ -89,6 +90,16 @@ interface SidebarProps {
 
 export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingApprovals, unreadConnectorMessages }: SidebarProps) {
   const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+
+  // The TopBar hamburger fires `orbit:toggle-nav` to open the mobile drawer.
+  useEffect(() => {
+    const toggle = () => setOpen(v => !v)
+    window.addEventListener('orbit:toggle-nav', toggle)
+    return () => window.removeEventListener('orbit:toggle-nav', toggle)
+  }, [])
+  // Close the drawer whenever the route changes.
+  useEffect(() => { setOpen(false) }, [pathname])
 
   function isPathActive(href: string) {
     return pathname === href || pathname.startsWith(href + '/')
@@ -143,11 +154,8 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
     )
   }
 
-  return (
-    <aside
-      className="orbit-stars w-[236px] flex flex-col h-full shrink-0 bg-sidebar"
-      style={{ borderRight: '1px solid var(--sidebar-border)' }}
-    >
+  const navInner = (
+    <>
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)] shadow-[0_4px_16px_-4px_var(--brand-to)]">
@@ -209,6 +217,38 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
           </div>
         )}
       </nav>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className="orbit-stars w-[236px] hidden lg:flex flex-col h-full shrink-0 bg-sidebar"
+        style={{ borderRight: '1px solid var(--sidebar-border)' }}
+      >
+        {navInner}
+      </aside>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+          <aside
+            className="orbit-stars relative w-[264px] max-w-[82vw] flex flex-col h-full bg-sidebar shadow-2xl animate-in slide-in-from-left duration-200"
+            style={{ borderRight: '1px solid var(--sidebar-border)' }}
+          >
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close menu"
+              className="absolute right-2 top-4 z-10 p-1.5 rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            {navInner}
+          </aside>
+        </div>
+      )}
+    </>
   )
 }
