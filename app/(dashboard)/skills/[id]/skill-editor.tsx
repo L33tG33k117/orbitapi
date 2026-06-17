@@ -162,7 +162,7 @@ export function SkillEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Name</Label>
           <Input value={form.name} onChange={e => set('name', e.target.value)} />

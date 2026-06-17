@@ -130,16 +130,16 @@ function CatalogCard({
             ) : (
               /* Real connectors: Connect + Simulate */
               <div className="flex gap-1.5">
-                <Button size="sm" variant="default" className="flex-1 text-xs h-8" onClick={() => setOpen(true)}>
+                <Button size="sm" variant="default" className="flex-1 min-w-0 text-xs h-8 justify-center whitespace-nowrap" onClick={() => setOpen(true)}>
                   Connect
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="flex-1 text-xs h-8 gap-1 text-violet-400 border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-300"
+                  className="flex-1 min-w-0 text-xs h-8 gap-1 justify-center whitespace-nowrap text-violet-400 border-violet-500/30 hover:bg-violet-500/10 hover:text-violet-300"
                   onClick={() => setSimOpen(true)}
                 >
-                  <FlaskConical className="h-3 w-3" />
+                  <FlaskConical className="h-3 w-3 shrink-0" />
                   Simulate
                 </Button>
               </div>
@@ -214,7 +214,7 @@ export function CatalogGrid({ catalog, availableConnectors, canManage, atConnect
               Just added
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
             {newEntries.map(entry => (
               <CatalogCard
                 key={entry.slug}
@@ -261,7 +261,7 @@ export function CatalogGrid({ catalog, availableConnectors, canManage, atConnect
             {filtered.length} API connector{filtered.length !== 1 ? 's' : ''}
             {search ? ` matching "${search}"` : ` in ${activeCategory}`}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filtered.map(entry => (
               <CatalogCard
                 key={entry.slug}
@@ -288,7 +288,7 @@ export function CatalogGrid({ catalog, availableConnectors, canManage, atConnect
                 {entries.filter(e => e.available).length}/{entries.length} available
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {entries.map(entry => (
                 <CatalogCard
                   key={entry.slug}
