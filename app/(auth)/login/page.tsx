@@ -42,12 +42,12 @@ export default function LoginPage() {
     >
       {/* Left panel — branding */}
       <div className="hidden lg:flex flex-col justify-between w-96 shrink-0 p-10 border-r border-white/8">
-        <div className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5 w-fit hover:opacity-80 transition-opacity">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/20">
             <Orbit className="h-4 w-4 text-[oklch(0.7_0.2_264)]" />
           </div>
           <span className="font-bold text-white text-[15px]">OrbitAPI</span>
-        </div>
+        </Link>
         <div className="space-y-4">
           <blockquote className="text-white/70 text-sm leading-relaxed italic">
             &ldquo;OrbitAPI lets our team query NetSuite, trigger alerts in Teams, and contain threats in CrowdStrike — all from one place.&rdquo;
@@ -60,12 +60,12 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-2.5 justify-center">
+          <Link href="/" className="flex lg:hidden items-center gap-2.5 justify-center hover:opacity-80 transition-opacity">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/20">
               <Orbit className="h-4 w-4 text-[oklch(0.7_0.2_264)]" />
             </div>
             <span className="font-bold text-white text-[15px]">OrbitAPI</span>
-          </div>
+          </Link>
 
           <div>
             <h1 className="text-2xl font-bold text-white">Welcome back</h1>

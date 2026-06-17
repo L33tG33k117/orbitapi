@@ -64,12 +64,12 @@ export default function SignupPage() {
     <div className="min-h-screen flex" style={{ background: 'oklch(0.07 0.02 268)' }}>
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-96 shrink-0 p-10 border-r border-white/8">
-        <div className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5 w-fit hover:opacity-80 transition-opacity">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/20">
             <Orbit className="h-4 w-4 text-[oklch(0.7_0.2_264)]" />
           </div>
           <span className="font-bold text-white text-[15px]">OrbitAPI</span>
-        </div>
+        </Link>
         <div className="space-y-6">
           {[
             'Connect 100+ APIs in minutes',
@@ -87,12 +87,12 @@ export default function SignupPage() {
       {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-8">
-          <div className="flex lg:hidden items-center gap-2.5 justify-center">
+          <Link href="/" className="flex lg:hidden items-center gap-2.5 justify-center hover:opacity-80 transition-opacity">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/20">
               <Orbit className="h-4 w-4 text-[oklch(0.7_0.2_264)]" />
             </div>
             <span className="font-bold text-white text-[15px]">OrbitAPI</span>
-          </div>
+          </Link>
 
           <div>
             <h1 className="text-2xl font-bold text-white">Create your account</h1>
