@@ -68,7 +68,7 @@ export default async function RootPage() {
       <section className="relative pt-28 pb-20 sm:pt-40 sm:pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[oklch(0.46_0.19_264)]/40 bg-[oklch(0.46_0.19_264)]/10 text-[oklch(0.75_0.18_264)] text-xs font-medium mb-8">
-            <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block shrink-0" />
             100+ integrations now in orbit
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight">
@@ -106,7 +106,7 @@ export default async function RootPage() {
             <span className="h-3 w-3 rounded-full bg-green-500/60" />
             <span className="ml-4 text-xs text-white/30 font-mono">Orbit Assistant — Mission Control</span>
           </div>
-          <div className="p-6 space-y-5 text-sm font-mono">
+          <div className="p-4 sm:p-6 space-y-5 text-xs sm:text-sm font-mono">
             <div className="flex gap-3 items-start">
               <span className="text-[oklch(0.7_0.2_264)] shrink-0 mt-0.5">you</span>
               <span className="text-[oklch(0.7_0.2_264)] shrink-0 mt-0.5">→</span>
@@ -116,20 +116,20 @@ export default async function RootPage() {
               <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5 font-semibold">orbit</span>
               <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5">→</span>
               <div className="text-white/70 space-y-2.5 flex-1">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[oklch(0.46_0.19_264)]/15 border border-[oklch(0.46_0.19_264)]/20 text-[oklch(0.72_0.18_264)]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block" />
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md bg-[oklch(0.46_0.19_264)]/15 border border-[oklch(0.46_0.19_264)]/20 text-[oklch(0.72_0.18_264)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block shrink-0" />
                     Querying NetSuite → list_open_invoices
                   </span>
                 </div>
                 <p className="text-white/75">Found <strong className="text-white">3 invoices</strong> — $247,800 total. Acme Corp ($120k, 14d overdue), TechVentures ($89k, 7d), GlobalSystems ($38.8k, 3d).</p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse inline-block shrink-0" />
                     Sending via SendGrid → send_alert_email
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse inline-block" />
+                  <span className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse inline-block shrink-0" />
                     Posting to Teams → send_alert
                   </span>
                 </div>
