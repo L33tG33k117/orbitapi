@@ -113,8 +113,8 @@ export default async function RootPage() {
               <span className="text-white/80">Show open critical invoices in NetSuite over $50k, then email me a summary and post to Teams</span>
             </div>
             <div className="flex gap-3 items-start">
-              <span className="text-green-400 shrink-0 mt-0.5 font-semibold">orbit</span>
-              <span className="text-green-400 shrink-0 mt-0.5">→</span>
+              <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5 font-semibold">orbit</span>
+              <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5">→</span>
               <div className="text-white/70 space-y-2.5 flex-1">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[oklch(0.46_0.19_264)]/15 border border-[oklch(0.46_0.19_264)]/20 text-[oklch(0.72_0.18_264)]">
