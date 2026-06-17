@@ -133,7 +133,7 @@ export default async function RootPage() {
                     Posting to Teams → send_alert
                   </span>
                 </div>
-                <p className="text-emerald-400/80">✓ Email sent · Teams channel notified · 3 actions across 3 APIs in 2.3s</p>
+                <p className="text-[oklch(0.78_0.12_200)]">✓ Email sent · Teams channel notified · 3 actions across 3 APIs in 2.3s</p>
               </div>
             </div>
           </div>
