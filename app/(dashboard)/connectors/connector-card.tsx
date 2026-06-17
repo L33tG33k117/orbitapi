@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import type { ConnectorSummary } from '@/connectors/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,25 +19,40 @@ export function ConnectorCard({ connector, canManage }: ConnectorCardProps) {
   return (
     <>
       <Card className="flex flex-col">
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <CardTitle className="text-base">{connector.name}</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex items-start gap-3">
+            {connector.logoUrl ? (
+              <Image
+                src={connector.logoUrl}
+                alt={connector.name}
+                width={40}
+                height={40}
+                className="rounded-lg shrink-0"
+                unoptimized
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-lg bg-muted shrink-0 flex items-center justify-center text-sm font-bold text-muted-foreground">
+                {connector.name[0]}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-base leading-tight">{connector.name}</CardTitle>
+                {connector.isSimulated && (
+                  <Badge variant="secondary" className="text-xs shrink-0">Simulated</Badge>
+                )}
+              </div>
               <CardDescription className="mt-0.5">{connector.category}</CardDescription>
             </div>
-            {connector.isSimulated && (
-              <Badge variant="secondary" className="text-xs shrink-0">Simulated</Badge>
-            )}
           </div>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col gap-3">
           <p className="text-sm text-muted-foreground flex-1">{connector.description}</p>
-          {canManage && (
+          {canManage ? (
             <Button size="sm" onClick={() => setOpen(true)} className="w-full">
               Connect
             </Button>
-          )}
-          {!canManage && (
+          ) : (
             <p className="text-xs text-muted-foreground">Admins can connect this API</p>
           )}
         </CardContent>

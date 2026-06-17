@@ -34,6 +34,7 @@ export const simulatedLightsManifest: ConnectorManifest = {
   name: 'Simulated Lights',
   category: 'Smart Home',
   description: 'A virtual lighting system for demos — on/off, brightness, color, and scenes.',
+  logoUrl: '/logos/simulated-lights.svg',
   isSimulated: true,
 
   auth: {
@@ -194,6 +195,119 @@ export const simulatedLightsManifest: ConnectorManifest = {
         return upsertDevice(creds.connection_id, params.device_name as string, {
           is_on: false, brightness: 100, hex_color: '#FFFFFF', color_temp: 3000,
         })
+      },
+    },
+    {
+      slug: 'get_device',
+      name: 'Get device',
+      description: 'Get the current state of a single simulated light device by name. Returns is_on, brightness, hex_color, color_temp, and scene.',
+      risk: 'read',
+      inputSchema: {
+        type: 'object',
+        required: ['device_name'],
+        properties: {
+          device_name: { type: 'string', description: 'Device name from list_devices' },
+        },
+      },
+      execute: async (creds, params) => {
+        const device = await getDevice(creds.connection_id, params.device_name as string)
+        if (!device) return { ok: false, error: `Device "${params.device_name}" not found.` }
+        return { ok: true, data: device }
+      },
+    },
+    {
+      slug: 'turn_all_on',
+      name: 'Turn all on',
+      description: 'Turn on all simulated light devices at once. Optionally set a brightness for all. Does not change existing color/scene settings.',
+      risk: 'write',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          brightness: { type: 'integer', minimum: 1, maximum: 100, description: 'Brightness to set (1–100, optional — defaults to each device\'s current brightness)' },
+        },
+      },
+      execute: async (creds, params) => {
+        const db = await getDb()
+        const { data: devices, error } = await db
+          .from('simulated_devices')
+          .select('device_name')
+          .eq('connection_id', creds.connection_id)
+        if (error) return { ok: false, error: error.message }
+        if (!devices?.length) return { ok: false, error: 'No devices found. Add a device first.' }
+        const patch: Record<string, unknown> = { is_on: true }
+        if (params.brightness !== undefined) patch.brightness = params.brightness
+        for (const d of devices) {
+          await upsertDevice(creds.connection_id, d.device_name, patch)
+        }
+        return { ok: true, data: { turned_on: devices.map(d => d.device_name) } }
+      },
+    },
+    {
+      slug: 'turn_all_off',
+      name: 'Turn all off',
+      description: 'Turn off all simulated light devices at once.',
+      risk: 'write',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+      execute: async (creds) => {
+        const db = await getDb()
+        const { data: devices, error } = await db
+          .from('simulated_devices')
+          .select('device_name')
+          .eq('connection_id', creds.connection_id)
+        if (error) return { ok: false, error: error.message }
+        if (!devices?.length) return { ok: false, error: 'No devices found.' }
+        for (const d of devices) {
+          await upsertDevice(creds.connection_id, d.device_name, { is_on: false, brightness: 0 })
+        }
+        return { ok: true, data: { turned_off: devices.map(d => d.device_name) } }
+      },
+    },
+    {
+      slug: 'toggle',
+      name: 'Toggle device',
+      description: 'Flip the power state of a device — if on, turn it off; if off, turn it on.',
+      risk: 'write',
+      inputSchema: {
+        type: 'object',
+        required: ['device_name'],
+        properties: {
+          device_name: { type: 'string', description: 'Device name from list_devices' },
+        },
+      },
+      execute: async (creds, params) => {
+        const device = await getDevice(creds.connection_id, params.device_name as string)
+        if (!device) return { ok: false, error: `Device "${params.device_name}" not found.` }
+        const newState = !device.is_on
+        return upsertDevice(creds.connection_id, params.device_name as string, {
+          is_on: newState,
+          brightness: newState ? (device.brightness > 0 ? device.brightness : 100) : 0,
+        })
+      },
+    },
+    {
+      slug: 'remove_device',
+      name: 'Remove device',
+      description: 'Permanently delete a simulated light device and all its state. This cannot be undone.',
+      risk: 'destructive',
+      inputSchema: {
+        type: 'object',
+        required: ['device_name'],
+        properties: {
+          device_name: { type: 'string', description: 'Device name to remove' },
+        },
+      },
+      execute: async (creds, params) => {
+        const db = await getDb()
+        const { error } = await db
+          .from('simulated_devices')
+          .delete()
+          .eq('connection_id', creds.connection_id)
+          .eq('device_name', params.device_name as string)
+        if (error) return { ok: false, error: error.message }
+        return { ok: true, data: { removed: params.device_name } }
       },
     },
   ],

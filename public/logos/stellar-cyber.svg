@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0D0D1A"/>
+  <!-- Stellar Cyber constellation-style mark -->
+  <!-- Central star -->
+  <circle cx="32" cy="32" r="4" fill="#FF5722"/>
+  <!-- Satellite nodes -->
+  <circle cx="18" cy="20" r="2.5" fill="#FF7043"/>
+  <circle cx="46" cy="20" r="2.5" fill="#FF7043"/>
+  <circle cx="18" cy="44" r="2.5" fill="#FF7043"/>
+  <circle cx="46" cy="44" r="2.5" fill="#FF7043"/>
+  <circle cx="32" cy="14" r="2" fill="#FF8A65"/>
+  <circle cx="32" cy="50" r="2" fill="#FF8A65"/>
+  <!-- Connecting lines -->
+  <line x1="32" y1="32" x2="18" y2="20" stroke="#FF5722" stroke-width="1.5" opacity="0.6"/>
+  <line x1="32" y1="32" x2="46" y2="20" stroke="#FF5722" stroke-width="1.5" opacity="0.6"/>
+  <line x1="32" y1="32" x2="18" y2="44" stroke="#FF5722" stroke-width="1.5" opacity="0.6"/>
+  <line x1="32" y1="32" x2="46" y2="44" stroke="#FF5722" stroke-width="1.5" opacity="0.6"/>
+  <line x1="32" y1="32" x2="32" y2="14" stroke="#FF5722" stroke-width="1.5" opacity="0.6"/>
+  <line x1="32" y1="32" x2="32" y2="50" stroke="#FF5722" stroke-width="1.5" opacity="0.6"/>
+</svg>

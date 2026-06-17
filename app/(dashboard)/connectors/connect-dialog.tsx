@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { ConnectorSummary } from '@/connectors/types'
+import type { ConnectorSummary, CredentialField } from '@/connectors/types'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
@@ -19,23 +19,34 @@ interface Props {
 
 export function ConnectDialog({ connector, open, onOpenChange }: Props) {
   const router = useRouter()
-  const [step, setStep] = useState(0)           // 0 = guide, 1 = credentials
+  const [step, setStep] = useState(0)
   const [label, setLabel] = useState('')
-  const [apiKey, setApiKey] = useState('')
+  const [apiKey, setApiKey] = useState('')        // used for single-field auth
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; label?: string; error?: string } | null>(null)
 
   const guide = connector.auth.type === 'api_key' ? connector.auth.setupGuide : []
   const auth = connector.auth.type === 'api_key' ? connector.auth : null
+  const multiFields: CredentialField[] | undefined = auth?.fields
 
   function reset() {
-    setStep(0); setLabel(''); setApiKey(''); setError(null); setTestResult(null)
+    setStep(0); setLabel(''); setApiKey(''); setFieldValues({}); setError(null); setTestResult(null)
+  }
+
+  function buildCredentials(): Record<string, string> {
+    if (multiFields?.length) {
+      return Object.fromEntries(multiFields.map(f => [f.key, fieldValues[f.key] ?? '']))
+    }
+    return { api_key: apiKey }
   }
 
   async function handleConnect(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError(null); setTestResult(null)
+
+    const credentials = buildCredentials()
 
     const res = await fetch('/api/connections', {
       method: 'POST',
@@ -43,13 +54,12 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
       body: JSON.stringify({
         connectorSlug: connector.slug,
         label: label || connector.name,
-        credentials: { api_key: apiKey },
+        credentials,
       }),
     })
     const data = await res.json()
     if (!res.ok) { setError(data.error); setLoading(false); return }
 
-    // Test the connection immediately
     const testRes = await fetch(`/api/connections/${data.connection.id}/test`, { method: 'POST' })
     const testData = await testRes.json()
     setTestResult(testData)
@@ -69,6 +79,9 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
+            {connector.logoUrl && (
+              <img src={connector.logoUrl} alt="" className="h-6 w-6 rounded" />
+            )}
             Connect {connector.name}
             {connector.isSimulated && <Badge variant="secondary" className="text-xs">Simulated</Badge>}
           </DialogTitle>
@@ -106,20 +119,40 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
                 value={label}
                 onChange={e => setLabel(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">A friendly name shown in your workspace (e.g. "My Lodgify account")</p>
+              <p className="text-xs text-muted-foreground">A friendly name for this connection (e.g. "Production NetSuite")</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="conn-key">{auth?.keyLabel ?? 'API Key'}</Label>
-              <Input
-                id="conn-key"
-                type={connector.isSimulated ? 'text' : 'password'}
-                placeholder={auth?.keyPlaceholder}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                required
-              />
-              {auth?.keyHint && <p className="text-xs text-muted-foreground">{auth.keyHint}</p>}
-            </div>
+
+            {multiFields?.length ? (
+              multiFields.map(field => (
+                <div key={field.key} className="space-y-2">
+                  <Label htmlFor={`field-${field.key}`}>{field.label}</Label>
+                  <Input
+                    id={`field-${field.key}`}
+                    type={field.inputType ?? 'password'}
+                    placeholder={field.placeholder}
+                    value={fieldValues[field.key] ?? ''}
+                    onChange={e => setFieldValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    required
+                    autoComplete="off"
+                  />
+                  {field.hint && <p className="text-xs text-muted-foreground">{field.hint}</p>}
+                </div>
+              ))
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="conn-key">{auth?.keyLabel ?? 'API Key'}</Label>
+                <Input
+                  id="conn-key"
+                  type={connector.isSimulated ? 'text' : 'password'}
+                  placeholder={auth?.keyPlaceholder}
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
+                {auth?.keyHint && <p className="text-xs text-muted-foreground">{auth.keyHint}</p>}
+              </div>
+            )}
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 

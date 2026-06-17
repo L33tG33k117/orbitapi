@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#293E40"/>
+  <path d="M32 14 C22 14 14 22 14 32 C14 42 22 50 32 50 C42 50 50 42 50 32 C50 22 42 14 32 14Z" fill="#81B5A1"/>
+  <text x="32" y="38" font-family="sans-serif" font-weight="900" font-size="16" fill="white" text-anchor="middle">SN</text>
+</svg>

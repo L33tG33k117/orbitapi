@@ -7,6 +7,7 @@ const schema = z.object({
   workspaceId: z.string().uuid(),
   email: z.string().email(),
   role: z.enum(['admin', 'member']),
+  customRoleId: z.string().uuid().optional(),
 })
 
 export async function POST(request: Request) {
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
 
-  const { workspaceId, email, role } = parsed.data
+  const { workspaceId, email, role, customRoleId } = parsed.data
 
   const { data: callerMembership } = await supabase
     .from('memberships')
@@ -49,7 +50,10 @@ export async function POST(request: Request) {
 
   const { error } = await admin
     .from('memberships')
-    .upsert({ workspace_id: workspaceId, user_id: invitee.id, role }, { onConflict: 'workspace_id,user_id' })
+    .upsert(
+      { workspace_id: workspaceId, user_id: invitee.id, role, custom_role_id: customRoleId ?? null },
+      { onConflict: 'workspace_id,user_id' }
+    )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

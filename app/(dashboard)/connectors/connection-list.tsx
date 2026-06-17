@@ -3,15 +3,97 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { FlaskConical, Trash2, X, Clock, Zap } from 'lucide-react'
 
 interface Connection {
   id: string
   label: string
   status: string
+  is_simulated: boolean
   created_at: string
   connector: { slug: string; name: string; category: string; is_simulated: boolean } | null
+}
+
+interface DeleteModalProps {
+  connection: Connection
+  defaultMode: 'trash' | 'permanent'
+  onCancel: () => void
+  onConfirm: (mode: 'trash' | 'permanent') => void
+  loading: boolean
+}
+
+function DeleteModal({ connection, defaultMode, onCancel, onConfirm, loading }: DeleteModalProps) {
+  const [mode, setMode] = useState<'trash' | 'permanent'>(defaultMode)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-2xl space-y-5 p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-semibold">Remove connection</p>
+            <p className="text-sm text-muted-foreground mt-0.5 truncate max-w-xs">{connection.label}</p>
+          </div>
+          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <button
+            onClick={() => setMode('trash')}
+            className={`w-full text-left p-4 rounded-xl border transition-all space-y-1 ${
+              mode === 'trash'
+                ? 'border-primary bg-primary/8'
+                : 'border-border hover:border-muted-foreground/40'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Clock className={`h-4 w-4 shrink-0 ${mode === 'trash' ? 'text-primary' : 'text-muted-foreground'}`} />
+              <p className={`text-sm font-medium ${mode === 'trash' ? 'text-primary' : ''}`}>Move to Trash</p>
+              <span className="text-[10px] px-1.5 py-0 rounded-full bg-muted text-muted-foreground ml-auto">Recommended</span>
+            </div>
+            <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+              Connection is disabled and held for 7 days. Skills and groups are preserved. Restore at any time from the Trash bin.
+            </p>
+          </button>
+
+          <button
+            onClick={() => setMode('permanent')}
+            className={`w-full text-left p-4 rounded-xl border transition-all space-y-1 ${
+              mode === 'permanent'
+                ? 'border-destructive/60 bg-destructive/5'
+                : 'border-border hover:border-muted-foreground/40'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Zap className={`h-4 w-4 shrink-0 ${mode === 'permanent' ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <p className={`text-sm font-medium ${mode === 'permanent' ? 'text-destructive' : ''}`}>Delete Forever</p>
+            </div>
+            <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+              Immediately and permanently removes the connection and all its data. Cannot be undone.
+            </p>
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant={mode === 'permanent' ? 'destructive' : 'default'}
+            className="flex-1"
+            disabled={loading}
+            onClick={() => onConfirm(mode)}
+          >
+            {loading ? 'Removing…' : mode === 'trash' ? 'Move to Trash' : 'Delete Forever'}
+          </Button>
+          <Button variant="outline" onClick={onCancel} disabled={loading}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const statusColors: Record<string, string> = {
@@ -20,10 +102,20 @@ const statusColors: Record<string, string> = {
   disconnected: 'bg-gray-400',
 }
 
-export function ConnectionList({ connections, canManage }: { connections: Connection[]; canManage: boolean }) {
+export function ConnectionList({
+  connections,
+  canManage,
+  deletePreference = 'trash',
+}: {
+  connections: Connection[]
+  canManage: boolean
+  deletePreference?: 'trash' | 'permanent'
+}) {
   const router = useRouter()
   const [testing, setTesting] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; error?: string }>>({})
+  const [deleteTarget, setDeleteTarget] = useState<Connection | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function handleTest(id: string) {
     setTesting(id)
@@ -34,48 +126,88 @@ export function ConnectionList({ connections, canManage }: { connections: Connec
     router.refresh()
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Disconnect and remove this connection?')) return
-    await fetch(`/api/connections/${id}`, { method: 'DELETE' })
+  async function handleDelete(mode: 'trash' | 'permanent') {
+    if (!deleteTarget) return
+    setDeleting(true)
+    await fetch(`/api/connections/${deleteTarget.id}?mode=${mode}`, { method: 'DELETE' })
+    setDeleting(false)
+    setDeleteTarget(null)
     router.refresh()
   }
 
   return (
-    <div className="space-y-2">
-      {connections.map(c => (
-        <div key={c.id} className="border rounded-lg p-4 flex items-center gap-4">
-          <div className={`h-2 w-2 rounded-full shrink-0 ${statusColors[c.status] ?? 'bg-gray-400'}`} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium truncate">{c.label}</p>
-              {c.connector?.is_simulated && (
-                <Badge variant="secondary" className="text-xs">Simulated</Badge>
+    <>
+      <div className="space-y-2">
+        {connections.map(c => (
+          <div key={c.id} className="border rounded-lg p-4 flex items-center gap-4">
+            <div className="relative shrink-0">
+              <Image
+                src={`/logos/${c.connector?.slug ?? 'default'}.svg`}
+                alt={c.connector?.name ?? ''}
+                width={36}
+                height={36}
+                className="rounded-lg"
+                unoptimized
+              />
+              <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${statusColors[c.status] ?? 'bg-gray-400'}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium truncate">{c.label}</p>
+                {c.is_simulated && (
+                  <Badge className="text-[10px] px-1.5 py-0 bg-violet-500/15 text-violet-300 border border-violet-500/25 gap-1">
+                    <FlaskConical className="h-2.5 w-2.5" />
+                    Simulated
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{c.connector?.name} · {c.connector?.category}</p>
+              {testResults[c.id] && (
+                <p className={`text-xs mt-1 ${testResults[c.id].ok ? 'text-green-600' : 'text-destructive'}`}>
+                  {testResults[c.id].ok ? '✓ Connected' : `✗ ${testResults[c.id].error}`}
+                </p>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{c.connector?.name} · {c.connector?.category}</p>
-            {testResults[c.id] && (
-              <p className={`text-xs mt-1 ${testResults[c.id].ok ? 'text-green-600' : 'text-destructive'}`}>
-                {testResults[c.id].ok ? '✓ Connected' : `✗ ${testResults[c.id].error}`}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href={`/connectors/${c.id}`}>
-              <Button variant="outline" size="sm">Manage</Button>
-            </Link>
-            {canManage && (
-              <>
-                <Button variant="outline" size="sm" disabled={testing === c.id} onClick={() => handleTest(c.id)}>
-                  {testing === c.id ? 'Testing…' : 'Test'}
+            <div className="flex items-center gap-2 shrink-0">
+              <Link href={`/connectors/${c.id}`}>
+                <Button variant="outline" size="sm">{c.is_simulated ? 'Manage / Convert' : 'Manage'}</Button>
+              </Link>
+              <Link href={`/connectors/${c.id}/manual`}>
+                <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
+                  <span className="font-mono text-xs">{'>'}_</span>
+                  Manual
                 </Button>
-                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(c.id)}>
-                  Remove
-                </Button>
-              </>
-            )}
+              </Link>
+              {canManage && (
+                <>
+                  <Button variant="outline" size="sm" disabled={testing === c.id} onClick={() => handleTest(c.id)}>
+                    {testing === c.id ? 'Testing…' : 'Test'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive gap-1.5"
+                    onClick={() => setDeleteTarget(c)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {deleteTarget && (
+        <DeleteModal
+          connection={deleteTarget}
+          defaultMode={deletePreference}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          loading={deleting}
+        />
+      )}
+    </>
   )
 }

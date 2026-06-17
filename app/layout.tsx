@@ -1,23 +1,28 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { ErrorReporter } from '@/components/error-reporter'
+import { ThemeProvider } from '@/components/theme-provider'
 
-const geist = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
+// Wire the actual CSS vars the theme references (--font-sans / --font-geist-mono).
+const geist = Geist({ variable: '--font-sans', subsets: ['latin'] })
+const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'OrbitAPI',
-  description: 'Talk to any API in plain English',
+  description: 'The conversational execution layer for your APIs',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} h-full antialiased`}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
-        {children}
-        <ErrorReporter />
-        <Toaster />
+        <ThemeProvider>
+          {children}
+          <ErrorReporter />
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -16,7 +16,7 @@ export async function resolveCredentials(
 
   if (!secretId) return base
 
-  // Inline fallback (used when Vault is unavailable)
+  // Inline fallback — used when Vault is unavailable or not enabled
   if (secretId.startsWith('inline:')) {
     try {
       const json = Buffer.from(secretId.slice(7), 'base64').toString('utf8')
@@ -26,12 +26,13 @@ export async function resolveCredentials(
     }
   }
 
-  // Supabase Vault
+  // Supabase Vault — use the public wrapper RPC (vault.decrypted_secrets is a view,
+  // not a function, so it cannot be called via rpc() directly)
   try {
     const admin = createAdminClient()
-    const { data, error } = await admin.rpc('vault.decrypted_secrets', { secret_id: secretId })
+    const { data, error } = await admin.rpc('get_vault_secret', { secret_id: secretId })
     if (error || !data) return base
-    return { ...base, ...JSON.parse(data) }
+    return { ...base, ...JSON.parse(data as string) }
   } catch {
     return base
   }

@@ -2,12 +2,15 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
+import { getWorkspaceFeatures } from '@/lib/workspace-features'
+import { connectorLimit } from '@/lib/entitlements'
 import { z } from 'zod'
 
 const schema = z.object({
   connectorSlug: z.string(),
   label: z.string().min(1).max(80),
   credentials: z.record(z.string(), z.string()),
+  isSimulated: z.boolean().optional(),
 })
 
 export async function POST(request: Request) {
@@ -19,7 +22,7 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
 
-  const { connectorSlug, label, credentials } = parsed.data
+  const { connectorSlug, label, credentials, isSimulated = false } = parsed.data
 
   const manifest = getConnector(connectorSlug)
   if (!manifest) return NextResponse.json({ error: 'Unknown connector' }, { status: 404 })
@@ -37,6 +40,27 @@ export async function POST(request: Request) {
 
   // Get the connector row id
   const admin = createAdminClient()
+
+  // Plan limit: cap REAL (non-simulated) connectors per tier. Simulated/demo
+  // connections are always allowed and never count toward the limit.
+  if (!isSimulated) {
+    const features = await getWorkspaceFeatures()
+    const limit = connectorLimit(features?.tier ?? 'free')
+    if (Number.isFinite(limit)) {
+      const { count } = await admin
+        .from('connections')
+        .select('*', { count: 'exact', head: true })
+        .eq('workspace_id', membership.workspace_id)
+        .eq('is_simulated', false)
+        .neq('status', 'trashed')
+      if ((count ?? 0) >= limit) {
+        return NextResponse.json(
+          { error: 'plan_required', message: `Your plan includes ${limit} connectors. Upgrade to connect more.`, requiredTier: 'starter' },
+          { status: 403 },
+        )
+      }
+    }
+  }
   const { data: connectorRow } = await admin
     .from('connectors')
     .select('id')
@@ -45,19 +69,24 @@ export async function POST(request: Request) {
 
   if (!connectorRow) return NextResponse.json({ error: 'Connector not found in database' }, { status: 404 })
 
-  // Store credentials in Vault
-  const secretName = `connection_${user.id}_${connectorSlug}_${Date.now()}`
-  const { data: vaultData, error: vaultErr } = await admin.rpc('vault.create_secret', {
-    secret: JSON.stringify(credentials),
-    name: secretName,
-  })
+  // Simulated connections skip vault entirely — store placeholder
+  let vaultSecretId: string | null = null
+  if (isSimulated) {
+    vaultSecretId = `inline:${Buffer.from(JSON.stringify({ __simulated: true })).toString('base64')}`
+  } else {
+    // Store credentials in Vault
+    const secretName = `connection_${user.id}_${connectorSlug}_${Date.now()}`
+    const { data: vaultData, error: vaultErr } = await admin.rpc('vault.create_secret', {
+      secret: JSON.stringify(credentials),
+      name: secretName,
+    })
 
-  // Vault might not be enabled — fall back to encrypted column storage note
-  // In production, ensure Supabase Vault is enabled on the project
-  const vaultSecretId: string | null = vaultErr ? null : (vaultData as string)
-
-  if (vaultErr) {
-    console.warn('Vault not available, connection stored without encrypted credentials:', vaultErr.message)
+    if (vaultErr) {
+      console.warn('Vault not available, falling back to inline storage:', vaultErr.message)
+      vaultSecretId = `inline:${Buffer.from(JSON.stringify(credentials)).toString('base64')}`
+    } else {
+      vaultSecretId = vaultData as string
+    }
   }
 
   const { data: connection, error: connErr } = await admin
@@ -67,6 +96,7 @@ export async function POST(request: Request) {
       connector_id: connectorRow.id,
       label,
       vault_secret_id: vaultSecretId,
+      is_simulated: isSimulated,
       status: 'active',
       created_by: user.id,
     })
@@ -74,15 +104,6 @@ export async function POST(request: Request) {
     .single()
 
   if (connErr) return NextResponse.json({ error: connErr.message }, { status: 500 })
-
-  // If vault unavailable, store creds temporarily in a separate mechanism
-  // For now, store in a metadata field as a stopgap (replace with Vault in prod)
-  if (vaultErr && credentials) {
-    await admin
-      .from('connections')
-      .update({ vault_secret_id: `inline:${Buffer.from(JSON.stringify(credentials)).toString('base64')}` })
-      .eq('id', connection.id)
-  }
 
   // For simulated lights: create an initial device
   if (connectorSlug === 'simulated-lights') {
@@ -94,6 +115,16 @@ export async function POST(request: Request) {
       hex_color: '#FFFFFF',
       color_temp: 3000,
     }).select()
+  }
+
+  // For simulated Ring: create a default doorbell device
+  if (connectorSlug === 'simulated-ring') {
+    await admin.from('simulated_ring_devices').insert({
+      connection_id: connection.id,
+      device_name: 'Front Door',
+      device_type: 'doorbell',
+      location: 'Entrance',
+    })
   }
 
   return NextResponse.json({ connection }, { status: 201 })

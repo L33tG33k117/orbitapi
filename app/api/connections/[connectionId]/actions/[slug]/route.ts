@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
+import { simulateAction } from '@/lib/simulate-action'
 
 type Params = { params: Promise<{ connectionId: string; slug: string }> }
 
@@ -45,8 +46,11 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const body = await request.json().catch(() => ({}))
-  const creds = await resolveCredentials(connection)
-  const result = await action.execute(creds, body)
+
+  // Route simulated connections through the simulation engine
+  const result = connection.is_simulated
+    ? simulateAction(connectorSlug, slug, body)
+    : await action.execute(await resolveCredentials(connection), body)
 
   // Write audit log entry
   await admin.from('audit_log').insert({

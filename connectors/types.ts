@@ -6,11 +6,20 @@ export interface SetupStep {
 
 export type AuthType = 'api_key' | 'oauth2'
 
+export interface CredentialField {
+  key: string           // the key stored in credentials JSON
+  label: string
+  placeholder: string
+  hint?: string
+  inputType?: 'text' | 'password'   // default 'password'
+}
+
 export interface ApiKeyAuth {
   type: 'api_key'
-  keyLabel: string          // e.g. "API Key"
-  keyPlaceholder: string    // e.g. "lfy_live_..."
-  keyHint?: string          // shown beneath the input
+  keyLabel: string          // e.g. "API Key" — used when fields is absent
+  keyPlaceholder: string
+  keyHint?: string
+  fields?: CredentialField[] // when set, replaces the single api_key field
   setupGuide: SetupStep[]
 }
 

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#6E10FF"/>
+  <!-- SentinelOne "S" sentinel mark — angular S shape -->
+  <path d="M42 16 L22 16 L22 26 L38 26 L38 30 L22 30 L22 48 L42 48 L42 38 L26 38 L26 34 L42 34 Z" fill="#FFFFFF"/>
+</svg>

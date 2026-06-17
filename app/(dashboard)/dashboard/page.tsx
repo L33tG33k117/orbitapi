@@ -1,5 +1,35 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { Plug, Zap, Activity, ArrowRight, CheckCircle, XCircle, Clock, ChevronRight, Sparkles } from 'lucide-react'
+
+const RISK_COLORS: Record<string, string> = {
+  read: 'bg-blue-500/10 text-blue-400',
+  write: 'bg-amber-500/10 text-amber-400',
+  destructive: 'bg-red-500/10 text-red-400',
+}
+
+const STATUS_ICONS: Record<string, React.ElementType> = {
+  completed: CheckCircle,
+  failed: XCircle,
+  running: Clock,
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  completed: 'text-emerald-400',
+  failed: 'text-red-400',
+  running: 'text-amber-400',
+}
+
+function relativeTime(ts: string) {
+  const diff = Date.now() - new Date(ts).getTime()
+  const m = Math.floor(diff / 60_000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -11,53 +41,268 @@ export default async function DashboardPage() {
     .eq('user_id', user!.id)
     .single()
 
-  const { count: connectionCount } = await supabase
-    .from('connections')
-    .select('*', { count: 'exact', head: true })
-    .eq('workspace_id', membership?.workspace_id)
+  const wsId = membership?.workspace_id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const workspaceName = (membership?.workspace as any)?.name ?? 'Your workspace'
+  const firstName = (user?.user_metadata?.full_name as string | undefined)?.split(' ')[0] ?? ''
+
+  const admin = createAdminClient()
+  const today = new Date().toISOString().split('T')[0]
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+
+  const [
+    { count: connectionCount },
+    { count: actionsToday },
+    { count: enabledSkills },
+    { count: callsMonth },
+    { data: recentRuns },
+    { data: recentAudit },
+  ] = await Promise.all([
+    supabase.from('connections').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
+    admin.from('audit_log').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', wsId ?? '').gte('created_at', `${today}T00:00:00Z`),
+    admin.from('skills').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', wsId ?? '').eq('enabled', true),
+    admin.from('audit_log').select('*', { count: 'exact', head: true })
+      .eq('workspace_id', wsId ?? '').gte('created_at', monthStart),
+    admin.from('skill_runs').select('id, status, mode, started_at, skills(name)')
+      .eq('workspace_id', wsId ?? '').order('started_at', { ascending: false }).limit(5),
+    admin.from('audit_log').select('id, action_slug, risk, result_status, created_at, connections(label)')
+      .eq('workspace_id', wsId ?? '').order('created_at', { ascending: false }).limit(5),
+  ])
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const runs = (recentRuns ?? []) as any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const audit = (recentAudit ?? []) as any[]
+  const isEmpty = (connectionCount ?? 0) === 0
+
+  const stats = [
+    {
+      label: 'Connected APIs',
+      value: connectionCount ?? 0,
+      icon: Plug,
+      href: '/connectors',
+      linkLabel: 'Manage',
+      accent: 'from-[oklch(0.46_0.19_264)] to-[oklch(0.6_0.22_264)]',
+      iconColor: 'text-[oklch(0.7_0.2_264)]',
+      iconBg: 'bg-[oklch(0.46_0.19_264)]/10',
+    },
+    {
+      label: 'Actions today',
+      value: actionsToday ?? 0,
+      icon: Activity,
+      href: '/audit',
+      linkLabel: 'View log',
+      accent: 'from-amber-500 to-orange-500',
+      iconColor: 'text-amber-400',
+      iconBg: 'bg-amber-500/10',
+    },
+    {
+      label: 'Active skills',
+      value: enabledSkills ?? 0,
+      icon: Zap,
+      href: '/skills',
+      linkLabel: 'Manage',
+      accent: 'from-emerald-500 to-green-400',
+      iconColor: 'text-emerald-400',
+      iconBg: 'bg-emerald-500/10',
+    },
+    {
+      label: 'Calls this month',
+      value: (callsMonth ?? 0).toLocaleString(),
+      icon: Activity,
+      href: '/usage',
+      linkLabel: 'View usage',
+      accent: 'from-violet-500 to-purple-400',
+      iconColor: 'text-violet-400',
+      iconBg: 'bg-violet-500/10',
+    },
+  ]
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Welcome back</h1>
-        <p className="text-muted-foreground mt-1">{membership?.workspace?.name}</p>
+    <div className="p-8 space-y-8 max-w-5xl">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {firstName ? <>Welcome back, <span className="text-gradient">{firstName}</span></> : 'Overview'}
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">{workspaceName}</p>
+        </div>
+        <Link
+          href="/chat"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--brand-from)] to-[var(--brand-to)] text-white text-sm font-medium transition-all hover:opacity-95 orbit-glow"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Orbit Assistant
+        </Link>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Connected APIs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{connectionCount ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Actions today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">—</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Automations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">—</p>
-          </CardContent>
-        </Card>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map(s => {
+          const Icon = s.icon
+          return (
+            <div key={s.label} className="rounded-xl border bg-card overflow-hidden group hover:shadow-md transition-all duration-200">
+              <div className={`h-0.5 w-full bg-gradient-to-r ${s.accent}`} />
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground font-medium">{s.label}</p>
+                  <div className={`h-7 w-7 rounded-lg ${s.iconBg} flex items-center justify-center`}>
+                    <Icon className={`h-3.5 w-3.5 ${s.iconColor}`} />
+                  </div>
+                </div>
+                <p className="text-3xl font-bold tracking-tight">{s.value}</p>
+                <Link
+                  href={s.href}
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors group-hover:text-foreground/70"
+                >
+                  {s.linkLabel}
+                  <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+            </div>
+          )
+        })}
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Get started</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>1. Connect your first API from the <strong>Connectors</strong> catalog.</p>
-          <p>2. Ask <strong>Orbit Assistant</strong> anything about your data.</p>
-          <p>3. Set up an <strong>Automation</strong> to act on events automatically.</p>
-        </CardContent>
-      </Card>
+
+      {/* Empty onboarding state */}
+      {isEmpty && (
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-8">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-lg">Get started with OrbitAPI</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-8">Set up your first automated workflow in three steps.</p>
+          <div className="space-y-5">
+            {[
+              { step: 1, label: 'Connect your first API', desc: 'Browse 100+ API connectors — security, finance, communication, and more.', href: '/connectors', cta: 'Browse connectors' },
+              { step: 2, label: 'Create a group', desc: 'Bundle related connections together to scope your AI and skills.', href: '/groups', cta: 'Create a group' },
+              { step: 3, label: 'Build a skill', desc: 'Define an automated workflow that runs on a schedule or on demand.', href: '/skills', cta: 'Build a skill' },
+            ].map(item => (
+              <div key={item.step} className="flex items-start gap-4">
+                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 border border-primary/20">
+                  {item.step}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{item.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.desc}</p>
+                </div>
+                <Link
+                  href={item.href}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium shrink-0 transition-colors mt-0.5"
+                >
+                  {item.cta} <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Activity panels */}
+      {!isEmpty && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Recent skill runs */}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-emerald-400" />
+                <h2 className="font-semibold text-sm">Skill runs</h2>
+              </div>
+              <Link href="/skills" className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5">
+                View all <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border/40">
+              {runs.length === 0 ? (
+                <div className="px-5 py-10 text-center">
+                  <p className="text-sm text-muted-foreground">No skill runs yet.</p>
+                  <Link href="/skills" className="text-xs text-primary hover:text-primary/80 transition-colors mt-1 inline-block">Create a skill</Link>
+                </div>
+              ) : (
+                runs.map(r => {
+                  const StatusIcon = STATUS_ICONS[r.status] ?? Clock
+                  return (
+                    <div key={r.id} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/20 transition-colors">
+                      <StatusIcon className={`h-3.5 w-3.5 shrink-0 ${STATUS_COLORS[r.status] ?? 'text-muted-foreground'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{r.skills?.name ?? 'Unknown skill'}</p>
+                        <p className={`text-[11px] ${STATUS_COLORS[r.status] ?? 'text-muted-foreground'}`}>
+                          {r.status} · {r.mode === 'dry_run' ? 'dry run' : 'live'}
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground shrink-0">{relativeTime(r.started_at)}</span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Recent API actions */}
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-2">
+                <Activity className="h-3.5 w-3.5 text-amber-400" />
+                <h2 className="font-semibold text-sm">Recent actions</h2>
+              </div>
+              <Link href="/audit" className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5">
+                View all <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border/40">
+              {audit.length === 0 ? (
+                <div className="px-5 py-10 text-center">
+                  <p className="text-sm text-muted-foreground">No actions yet.</p>
+                  <Link href="/chat" className="text-xs text-primary hover:text-primary/80 transition-colors mt-1 inline-block">Try Orbit Assistant</Link>
+                </div>
+              ) : (
+                audit.map(a => (
+                  <div key={a.id} className="px-5 py-3 flex items-center gap-3 hover:bg-muted/20 transition-colors">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide shrink-0 ${RISK_COLORS[a.risk] ?? 'bg-muted text-muted-foreground'}`}>
+                      {a.risk}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-mono text-foreground/80 truncate">{a.action_slug}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">{a.connections?.label ?? ''}</p>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground shrink-0">{relativeTime(a.created_at)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick links */}
+      {!isEmpty && (
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/connectors"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Plug className="h-3.5 w-3.5 text-muted-foreground" />
+            API Connectors
+          </Link>
+          <Link
+            href="/usage"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+            Usage
+          </Link>
+          <Link
+            href="/skills"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg border bg-card text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+            Skills
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
