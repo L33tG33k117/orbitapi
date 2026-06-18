@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { SectionIntro } from '@/components/section-intro'
 import { CreateGroupForm } from './create-group-form'
 import { GroupDeleteButton } from './group-delete-button'
 
@@ -30,6 +31,8 @@ export default async function GroupsPage() {
           Bundle related connections together. Skills are attached to groups, and the AI only uses APIs in that group.
         </p>
       </div>
+
+      <SectionIntro id="groups" />
 
       {isAdmin && <CreateGroupForm />}
 

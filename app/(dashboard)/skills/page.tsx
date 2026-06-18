@@ -10,6 +10,7 @@ import { SKILL_TEMPLATES } from '@/lib/skill-templates'
 import { CreateSkillForm } from './create-skill-form'
 import { SkillTemplates } from './skill-templates'
 import { SkillDeleteButton } from './skill-delete-button'
+import { SectionIntro } from '@/components/section-intro'
 
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ groupId?: string }> }) {
   const { groupId } = await searchParams
@@ -73,6 +74,8 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
           AI agents with a specific role. Each skill uses a group&apos;s connections and can run autonomously or in supervised mode.
         </p>
       </div>
+
+      <SectionIntro id="skills" />
 
       {isAdmin && features && !hasCapability(features.tier, features.flags, 'skill_automation') && (
         <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-3">

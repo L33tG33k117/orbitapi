@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, X, Clock, AlertTriangle, ShieldAlert, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SectionIntro } from '@/components/section-intro'
 
 interface PendingAction {
   id: string
@@ -130,8 +131,29 @@ export default function ApprovalsPage() {
       <div>
         <h1 className="text-2xl font-bold">Approvals</h1>
         <p className="text-muted-foreground mt-1">
-          Review write and destructive actions queued by supervised skills before they execute.
+          When a skill wants to make a change, it queues the action here for your sign-off before it runs.
         </p>
+      </div>
+
+      <SectionIntro id="approvals" />
+
+      {/* Risk-level legend — explains what read / write / destructive mean */}
+      <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Action types</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 inline-flex items-center rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground shrink-0">read</span>
+            <p className="text-muted-foreground">Only looks things up — lists, searches, fetches. Never changes anything, so it runs without approval.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-400 shrink-0">write</span>
+            <p className="text-muted-foreground">Creates or updates something — sends a message, opens a ticket, changes a record. Needs your approval.</p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 inline-flex items-center rounded-full bg-red-500/15 px-2 py-0.5 font-medium text-red-400 shrink-0">destructive</span>
+            <p className="text-muted-foreground">Hard to undo — deletes data, isolates a host, cancels an order. Needs approval and a rollback plan.</p>
+          </div>
+        </div>
       </div>
 
       {error && (

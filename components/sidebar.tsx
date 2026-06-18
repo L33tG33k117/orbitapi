@@ -26,6 +26,18 @@ interface NavSection {
   items: NavItem[]
 }
 
+// Shown as the tooltip on locked (upgrade-gated) nav items so people understand
+// what the feature does and why it's worth upgrading — not just "Upgrade to unlock".
+const LOCKED_HINTS: Partial<Record<Capability, string>> = {
+  skills: 'Skills — AI agents that run your workflows across connectors on a schedule or trigger. Upgrade to unlock.',
+  playbooks: 'Playbooks — multi-step automations that chain actions across apps into one repeatable run. Upgrade to unlock.',
+  data_mapping: 'Data Mapping — automatically translate fields between connectors (e.g. a NetSuite invoice → a Slack alert) so data flows cleanly across apps. Upgrade to unlock.',
+  bundles: 'Bundles — ready-made packs of connectors, skills, and mappings you can install in one click. Upgrade to unlock.',
+  webhooks: 'Webhooks — let external services trigger your skills instantly via a secure URL. Upgrade to unlock.',
+  api_reference: 'API Reference — full, searchable docs for every action on your connectors. Upgrade to unlock.',
+  discover: 'Discover — AI-assisted exploration that suggests connectors and workflows for your stack. Upgrade to unlock.',
+}
+
 // Grouped navigation — sections keep a large feature set calm and scannable.
 const sections: NavSection[] = [
   {
@@ -125,7 +137,7 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
       <Link
         key={item.href}
         href={item.href}
-        title={locked ? 'Upgrade to unlock' : undefined}
+        title={locked ? ((item.capability && LOCKED_HINTS[item.capability]) ?? 'Upgrade to unlock') : undefined}
         className={cn(
           'group relative flex items-center gap-2.5 rounded-lg font-medium transition-all duration-150',
           item.indent ? 'ml-3.5 px-2.5 py-1.5 text-[13px]' : 'px-2.5 py-2 text-sm',

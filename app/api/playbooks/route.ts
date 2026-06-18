@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       workspace_id: membership.workspace_id,
       name: body.name.trim(),
       description: body.description ?? null,
-      group_id: body.group_id ?? null,
+      group_id: body.group_id || null,
       persona: body.persona ?? '',
       definition: body.definition ?? { steps: [] },
       autonomy_policy: body.autonomy_policy ?? undefined, // fall back to table default

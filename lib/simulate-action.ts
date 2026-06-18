@@ -45,6 +45,7 @@ const DATA: Record<string, Record<string, SimFn>> = {
       { text: `Another result for "${p.query ?? 'query'}"`, channel: { name: 'engineering' }, ts: past(0, 5) },
     ], total: 2 } } }),
     send_message: () => writeOk({ message: { ts: Date.now().toString(), text: '[Simulated message sent]' } }),
+    send_alert: () => writeOk({ message: { ts: Date.now().toString(), text: '[Simulated alert sent]' } }),
     post_rich_message: () => writeOk(),
     add_reaction: () => writeOk(),
     create_channel: () => writeOk({ channel: { id: simId('C'), name: 'new-channel' } }),
@@ -158,6 +159,9 @@ const DATA: Record<string, Record<string, SimFn>> = {
       { sys_id: simId(), number: 'INC0000001', short_description: 'Production DB down', priority: '1', state: '1', opened_at: past(0, 1) },
       { sys_id: simId(), number: 'INC0000002', short_description: 'Email notifications delayed', priority: '3', state: '2', opened_at: past(0, 4) },
     ] } }),
+    get_incident: (p) => ({ ok: true, data: { result: [
+      { sys_id: simId(), number: (p.number_or_sysid as string)?.toUpperCase?.().startsWith('INC') ? p.number_or_sysid : 'INC0000001', short_description: 'Email notifications delayed', priority: '2', state: '2', opened_at: past(0, 3) },
+    ] } }),
     create_incident: () => writeOk({ result: { sys_id: simId(), number: `INC${Date.now().toString().slice(-7)}`, state: '1' } }),
     update_incident: () => writeOk(),
     close_incident: () => writeOk({ result: { state: '7', close_notes: 'Simulated resolution' } }),
@@ -190,6 +194,7 @@ const DATA: Record<string, Record<string, SimFn>> = {
 
   sendgrid: {
     send_email: () => writeOk({ message_id: simId('msg') }),
+    send_alert_email: () => writeOk({ message_id: simId('msg') }),
     send_templated_email: () => writeOk({ message_id: simId('msg') }),
     list_templates: () => ({ ok: true, data: { result: [
       { id: 'd-001', name: 'Welcome Email', generation: 'dynamic' },
@@ -225,6 +230,7 @@ const DATA: Record<string, Record<string, SimFn>> = {
 
   twilio: {
     send_sms: () => writeOk({ sid: simId('SM'), status: 'queued', to: '+15550000000' }),
+    send_whatsapp: () => writeOk({ sid: simId('SM'), status: 'queued', to: 'whatsapp:+15550000000' }),
     send_mms: () => writeOk({ sid: simId('SM'), status: 'queued' }),
     get_message: (p) => ({ ok: true, data: { sid: p.message_sid, status: 'delivered', body: 'Simulated message', direction: 'outbound-api' } }),
     make_call: () => writeOk({ sid: simId('CA'), status: 'queued' }),
@@ -290,6 +296,7 @@ const DATA: Record<string, Record<string, SimFn>> = {
       { id: simId('AGENT'), computerName: 'MAC-DEV-01', osName: 'macOS', isActive: true, networkStatus: 'connected' },
     ] } }),
     get_agent: (p) => ({ ok: true, data: { data: [{ id: p.agent_id, computerName: 'LAPTOP-ABC', osName: 'Windows 11', isActive: true }] } }),
+    get_threat: (p) => ({ ok: true, data: { data: [{ id: p.threat_id ?? simId('THREAT'), agentRealtimeInfo: { agentComputerName: 'LAPTOP-ABC' }, threatInfo: { classification: 'Malware', confidenceLevel: 'malicious', createdAt: past(0, 1) } }] } }),
     isolate_agent: () => writeOk({ data: { affected: 1 } }),
     reconnect_agent: () => writeOk({ data: { affected: 1 } }),
     mitigate_threat: () => writeOk({ data: { affected: 1 } }),
@@ -321,8 +328,10 @@ const DATA: Record<string, Record<string, SimFn>> = {
       { id: simId('EP'), hostname: 'LAPTOP-ABC', os: { name: 'Windows 11' }, health: { overall: 'good' }, online: true },
       { id: simId('EP'), hostname: 'MAC-DEV-01', os: { name: 'macOS' }, health: { overall: 'good' }, online: true },
     ] } }),
+    get_endpoint: (p) => ({ ok: true, data: { id: p.endpoint_id ?? simId('EP'), hostname: 'LAPTOP-ABC', os: { name: 'Windows 11' }, health: { overall: 'good' }, online: true, isolation: { status: 'notIsolated' } } }),
     isolate_endpoint: () => writeOk({ items: [{ id: simId('EP') }] }),
     rejoin_endpoint: () => writeOk(),
+    remove_isolation: () => writeOk({ items: [{ id: simId('EP') }] }),
     scan_endpoint: () => writeOk({ items: [{ id: simId('EP') }] }),
     get_endpoint_threats: () => ({ ok: true, data: { items: [
       { id: simId('THREAT'), name: 'Troj/FakeVir-XXXX', type: 'trojan', detectedAt: past(0, 2) },
@@ -386,6 +395,7 @@ const DATA: Record<string, Record<string, SimFn>> = {
     get_case: (p) => ({ ok: true, data: { data: { _id: p.case_id, _source: { name: 'Simulated Case', status: 'open' } } } }),
     get_alert: (p) => ({ ok: true, data: { data: { _id: p.alert_id, _source: { alert_name: 'Simulated Alert', score: 80 } } } }),
     update_alert_status: () => writeOk(),
+    update_case: () => writeOk({ id: simId('CASE') }),
     create_case: () => writeOk({ id: simId('CASE') }),
     close_case: () => writeOk(),
     add_case_comment: () => writeOk({ id: simId('CMT') }),

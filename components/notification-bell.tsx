@@ -128,7 +128,7 @@ export function NotificationBell({ workspaceId }: { workspaceId: string }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-10 left-0 z-50 w-80 rounded-xl border bg-popover shadow-lg overflow-hidden">
+        <div className="absolute top-full right-0 mt-2 z-50 w-80 max-w-[calc(100vw-1rem)] rounded-xl border bg-popover shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <p className="text-sm font-semibold">Notifications</p>
             {unread > 0 && (

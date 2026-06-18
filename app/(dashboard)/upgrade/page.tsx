@@ -1,6 +1,10 @@
 import { Check, Zap, Building2, Rocket, Crown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
+import { getWorkspaceFeatures } from '@/lib/workspace-features'
+import type { WorkspaceTier } from '@/types'
+
+const TIER_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2, enterprise: 3 }
 
 const tiers = [
   {
@@ -110,29 +114,45 @@ const tiers = [
   },
 ]
 
-export default function UpgradePage() {
+export default async function UpgradePage() {
+  const features = await getWorkspaceFeatures()
+  const currentTier = (features?.tier ?? 'free') as WorkspaceTier
+  const currentRank = TIER_RANK[currentTier] ?? 0
+
   return (
     <div className="p-8 space-y-10 max-w-7xl">
       <div>
         <h1 className="text-2xl font-bold">Upgrade your plan</h1>
         <p className="text-muted-foreground mt-1">
-          Unlock AI-powered automation, skills, and autonomous agents for your team.
+          You&apos;re currently on the <span className="font-semibold text-foreground capitalize">{currentTier}</span> plan.
+          {currentRank < TIER_RANK.pro && ' Unlock AI-powered automation, skills, and autonomous agents for your team.'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {tiers.map(tier => {
           const Icon = tier.icon
+          const tierRank = TIER_RANK[tier.name.toLowerCase()] ?? 0
+          const isCurrent = tierRank === currentRank
+          const isLower = tierRank < currentRank
           return (
             <div
               key={tier.name}
               className={`rounded-2xl border p-6 space-y-6 flex flex-col ${
-                tier.highlight
-                  ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                  : 'border-border bg-card'
+                isCurrent
+                  ? 'border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20'
+                  : tier.highlight
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    : 'border-border bg-card'
               }`}
             >
-              {tier.highlight && (
+              {isCurrent ? (
+                <div className="flex">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 uppercase tracking-wider">
+                    Your plan
+                  </span>
+                </div>
+              ) : tier.highlight && (
                 <div className="flex">
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary uppercase tracking-wider">
                     Most popular
@@ -171,16 +191,36 @@ export default function UpgradePage() {
                 ))}
               </div>
 
-              <a
-                href={tier.ctaHref}
-                className={cn(
-                  buttonVariants({ variant: tier.ctaVariant }),
-                  'w-full justify-center',
-                  !tier.highlight && 'border-border'
-                )}
-              >
-                {tier.cta}
-              </a>
+              {isCurrent ? (
+                <div
+                  className={cn(
+                    buttonVariants({ variant: 'outline' }),
+                    'w-full justify-center border-emerald-500/40 text-emerald-400 pointer-events-none',
+                  )}
+                >
+                  Current plan
+                </div>
+              ) : isLower ? (
+                <div
+                  className={cn(
+                    buttonVariants({ variant: 'outline' }),
+                    'w-full justify-center border-border text-muted-foreground pointer-events-none',
+                  )}
+                >
+                  Included in your plan
+                </div>
+              ) : (
+                <a
+                  href={tier.ctaHref}
+                  className={cn(
+                    buttonVariants({ variant: tier.ctaVariant }),
+                    'w-full justify-center',
+                    !tier.highlight && 'border-border'
+                  )}
+                >
+                  {tier.cta}
+                </a>
+              )}
             </div>
           )
         })}

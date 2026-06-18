@@ -168,15 +168,19 @@ export function SkillEditor({
           <Input value={form.name} onChange={e => set('name', e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Group</Label>
+          <Label>Connectors this skill can use</Label>
           <select
             value={form.group_id}
             onChange={e => set('group_id', e.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
-            <option value="">No group</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            <option value="">All my connections</option>
+            {groups.map(g => <option key={g.id} value={g.id}>Only the “{g.name}” group</option>)}
           </select>
+          <p className="text-[11px] text-muted-foreground">
+            Pick a <a href="/groups" className="underline underline-offset-2 hover:text-foreground">group</a> to limit
+            this skill to specific connectors, or leave it on all connections.
+          </p>
         </div>
       </div>
 

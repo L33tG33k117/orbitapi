@@ -47,11 +47,11 @@ export function FeedbackButton() {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/40 p-4"
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border bg-card p-5 space-y-4 shadow-xl"
+            className="my-auto w-full max-w-md rounded-2xl border bg-card p-5 space-y-4 shadow-xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">

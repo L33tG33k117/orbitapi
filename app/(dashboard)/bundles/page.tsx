@@ -7,6 +7,7 @@ import { getConnector } from '@/connectors'
 import type { BundleManifest } from '@/lib/bundles'
 import { BundleCard, type BundleCardData } from './bundle-card'
 import { pageGate } from '@/components/page-gate'
+import { SectionIntro } from '@/components/section-intro'
 import { Package, Store } from 'lucide-react'
 
 // Resolve connector slugs → display names so users see real app names, not slugs.
@@ -54,6 +55,8 @@ export default async function BundlesPage() {
           <Store className="h-3.5 w-3.5" /> Browse marketplace
         </Link>
       </div>
+
+      <SectionIntro id="bundles" />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-1.5"><Package className="h-4 w-4 text-primary" /> Vertical bundles</h2>

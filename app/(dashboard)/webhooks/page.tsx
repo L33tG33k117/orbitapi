@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { pageGate } from '@/components/page-gate'
+import { SectionIntro } from '@/components/section-intro'
 import { WebhooksClient } from './webhooks-client'
 
 export default async function WebhooksPage() {
@@ -33,6 +34,8 @@ export default async function WebhooksPage() {
           playbook runs. Every delivery is logged and replay-testable.
         </p>
       </div>
+
+      <SectionIntro id="webhooks" />
       <WebhooksClient
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         initialEndpoints={(endpoints ?? []) as any}

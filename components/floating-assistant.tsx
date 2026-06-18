@@ -153,7 +153,7 @@ export function FloatingAssistant() {
       <button
         onClick={() => setOpen(o => !o)}
         className={cn(
-          'fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg font-medium text-sm transition-all duration-200',
+          'fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg font-medium text-sm transition-all duration-200 print:hidden',
           open
             ? 'bg-muted text-muted-foreground hover:bg-muted/80'
             : 'bg-primary text-primary-foreground hover:opacity-90 hover:scale-105',
@@ -166,7 +166,7 @@ export function FloatingAssistant() {
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-20 right-6 z-50 w-[360px] max-h-[540px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-20 right-6 z-50 w-[360px] max-h-[540px] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden print:hidden">
           {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 border-b bg-muted/30 shrink-0">
             <div className="h-7 w-7 rounded-lg bg-primary/20 flex items-center justify-center">

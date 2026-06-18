@@ -8,6 +8,7 @@ import { catalog } from '@/connectors/catalog'
 import { ConnectionList } from './connection-list'
 import { CatalogGrid } from './catalog-grid'
 import { RequestConnectorForm } from './request-connector-form'
+import { SectionIntro } from '@/components/section-intro'
 
 export default async function ConnectorsPage() {
   const supabase = await createClient()
@@ -78,6 +79,8 @@ export default async function ConnectorsPage() {
           A connector is a ready-made link to an app&apos;s API. Browse {catalog.length}+ — connect your security tools, communication platforms, ERP systems, and more.
         </p>
       </div>
+
+      <SectionIntro id="connectors" />
 
       {(connections ?? []).length > 0 && (
         <section className="space-y-3">

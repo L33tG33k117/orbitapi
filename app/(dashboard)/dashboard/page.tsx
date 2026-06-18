@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Plug, Zap, Activity, ArrowRight, CheckCircle, XCircle, Clock, ChevronRight, Sparkles } from 'lucide-react'
+import { Plug, Zap, Activity, CheckCircle, XCircle, Clock, ChevronRight, Sparkles } from 'lucide-react'
+import { GetStartedChecklist } from '@/components/get-started-checklist'
 
 const RISK_COLORS: Record<string, string> = {
   read: 'bg-blue-500/10 text-blue-400',
@@ -57,6 +58,10 @@ export default async function DashboardPage() {
     { count: callsMonth },
     { data: recentRuns },
     { data: recentAudit },
+    { count: skillsCount },
+    { count: groupsCount },
+    { count: conversationsCount },
+    { count: skillRunsCount },
   ] = await Promise.all([
     supabase.from('connections').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
     admin.from('audit_log').select('*', { count: 'exact', head: true })
@@ -69,7 +74,20 @@ export default async function DashboardPage() {
       .eq('workspace_id', wsId ?? '').order('started_at', { ascending: false }).limit(5),
     admin.from('audit_log').select('id, action_slug, risk, result_status, created_at, connections(label)')
       .eq('workspace_id', wsId ?? '').order('created_at', { ascending: false }).limit(5),
+    admin.from('skills').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
+    admin.from('groups').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
+    admin.from('conversations').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
+    admin.from('skill_runs').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
   ])
+
+  // Drives the Get Started checklist — each flag reflects real workspace state.
+  const checklist = {
+    connected: (connectionCount ?? 0) > 0,
+    askedAssistant: (conversationsCount ?? 0) > 0,
+    savedSkill: (skillsCount ?? 0) > 0,
+    grouped: (groupsCount ?? 0) > 0,
+    automated: (skillRunsCount ?? 0) > 0,
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const runs = (recentRuns ?? []) as any[]
@@ -167,39 +185,8 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {/* Empty onboarding state */}
-      {isEmpty && (
-        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-8">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-lg">Get started with OrbitAPI</h2>
-          </div>
-          <p className="text-sm text-muted-foreground mb-8">Set up your first automated workflow in three steps.</p>
-          <div className="space-y-5">
-            {[
-              { step: 1, label: 'Connect your first API', desc: 'Browse 100+ API connectors — security, finance, communication, and more.', href: '/connectors', cta: 'Browse connectors' },
-              { step: 2, label: 'Create a group', desc: 'Bundle related connections together to scope your AI and skills.', href: '/groups', cta: 'Create a group' },
-              { step: 3, label: 'Build a skill', desc: 'Define an automated workflow that runs on a schedule or on demand.', href: '/skills', cta: 'Build a skill' },
-            ].map(item => (
-              <div key={item.step} className="flex items-start gap-4">
-                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 border border-primary/20">
-                  {item.step}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{item.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.desc}</p>
-                </div>
-                <Link
-                  href={item.href}
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium shrink-0 transition-colors mt-0.5"
-                >
-                  {item.cta} <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Get started checklist — tracked from real state, dismissible, auto-hides when complete */}
+      <GetStartedChecklist state={checklist} />
 
       {/* Activity panels */}
       {!isEmpty && (
