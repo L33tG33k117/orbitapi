@@ -58,7 +58,7 @@ export default async function BundlesPage() {
 
       <SectionIntro id="bundles" />
 
-      <section className="space-y-3">
+      <section data-tour="bundles-list" className="space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-1.5"><Package className="h-4 w-4 text-primary" /> Vertical bundles</h2>
         <div className="grid sm:grid-cols-2 gap-3">
           {builtin.map(b => <BundleCard key={b.slug} {...b} />)}

@@ -58,7 +58,7 @@ export function GetStartedChecklist({ state }: { state: ChecklistState }) {
   if (!mounted || dismissed || allDone) return null
 
   return (
-    <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-6 sm:p-8">
+    <div data-tour="dash-getstarted" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-6 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />

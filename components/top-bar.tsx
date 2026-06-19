@@ -11,6 +11,7 @@ import {
 import { NotificationBell } from '@/components/notification-bell'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FeedbackButton } from '@/components/feedback-button'
+import { PageTour } from '@/components/page-tour'
 import { LogOut, User as UserIcon, Settings, ChevronDown, Menu } from 'lucide-react'
 
 interface TopBarProps {
@@ -69,6 +70,7 @@ export function TopBar({ user, role, workspaceId, impersonating }: TopBarProps) 
         </div>
       )}
 
+      <PageTour />
       <FeedbackButton />
       <ThemeToggle />
       {workspaceId && <NotificationBell workspaceId={workspaceId} />}

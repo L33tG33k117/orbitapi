@@ -150,6 +150,7 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/chat"
+          data-tour="dash-assistant"
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--brand-from)] to-[var(--brand-to)] text-white text-sm font-medium transition-all hover:opacity-95 orbit-glow"
         >
           <Sparkles className="h-3.5 w-3.5" />
@@ -158,7 +159,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div data-tour="dash-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map(s => {
           const Icon = s.icon
           return (

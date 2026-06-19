@@ -206,7 +206,7 @@ export function CatalogGrid({ catalog, availableConnectors, canManage, atConnect
   return (
     <div className="space-y-6">
       {/* Search — kept at the top of the catalog so it's the first thing you see */}
-      <div className="relative">
+      <div data-tour="connector-search" className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
           placeholder="Search API connectors by name, category, or what they do…"

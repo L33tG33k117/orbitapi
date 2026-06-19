@@ -49,7 +49,9 @@ export default async function PlaybooksPage() {
       <SectionIntro id="playbooks" />
 
       {isAdmin && (
-        <CreatePlaybookForm groups={(groups ?? []) as { id: string; name: string; color: string }[]} />
+        <div data-tour="playbook-create">
+          <CreatePlaybookForm groups={(groups ?? []) as { id: string; name: string; color: string }[]} />
+        </div>
       )}
 
       <div className="space-y-2">

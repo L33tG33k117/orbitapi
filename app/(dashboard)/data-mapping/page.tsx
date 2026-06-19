@@ -47,7 +47,9 @@ export default async function DataMappingPage() {
       </div>
 
       <SectionIntro id="data-mapping" />
-      <DataMappingClient connections={connections} />
+      <div data-tour="data-mapping">
+        <DataMappingClient connections={connections} />
+      </div>
     </div>
   )
 }

@@ -167,6 +167,7 @@ export function UsageClient({ data }: { data: UsageData }) {
           </div>
           <button
             onClick={exportPDF}
+            data-tour="usage-export"
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
           >
             <FileDown className="h-4 w-4" />
@@ -175,7 +176,7 @@ export function UsageClient({ data }: { data: UsageData }) {
         </div>
 
         {/* Date range controls */}
-        <div className="no-print flex flex-wrap items-center gap-2">
+        <div data-tour="usage-range" className="no-print flex flex-wrap items-center gap-2">
           <CalendarRange className="h-4 w-4 text-muted-foreground" />
           {PRESETS.map(p => (
             <button

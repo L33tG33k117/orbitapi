@@ -34,7 +34,7 @@ export default async function GroupsPage() {
 
       <SectionIntro id="groups" />
 
-      {isAdmin && <CreateGroupForm />}
+      {isAdmin && <div data-tour="group-create"><CreateGroupForm /></div>}
 
       <div className="space-y-2">
         {(groups ?? []).length === 0 && (

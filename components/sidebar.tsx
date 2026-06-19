@@ -192,7 +192,7 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-0.5">
+      <nav data-tour="sidebar-nav" className="flex-1 overflow-y-auto px-3 pb-4 space-y-0.5">
         {sections.map((section, i) => (
           <div key={section.label ?? i} className={cn(section.label && 'pt-3')}>
             {section.label && (

@@ -97,7 +97,7 @@ export default async function ConnectorsPage() {
         </section>
       )}
 
-      <section className="space-y-4">
+      <section data-tour="connector-catalog" className="space-y-4">
         <h2 className="text-lg font-semibold">API connector catalog</h2>
         <CatalogGrid
           catalog={sortedCatalog}

@@ -36,12 +36,14 @@ export default async function WebhooksPage() {
       </div>
 
       <SectionIntro id="webhooks" />
-      <WebhooksClient
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        initialEndpoints={(endpoints ?? []) as any}
-        skills={(skills ?? []) as { id: string; name: string }[]}
-        playbooks={(playbooks ?? []) as { id: string; name: string }[]}
-      />
+      <div data-tour="webhooks">
+        <WebhooksClient
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          initialEndpoints={(endpoints ?? []) as any}
+          skills={(skills ?? []) as { id: string; name: string }[]}
+          playbooks={(playbooks ?? []) as { id: string; name: string }[]}
+        />
+      </div>
     </div>
   )
 }

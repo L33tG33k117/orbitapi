@@ -138,7 +138,7 @@ export default function ApprovalsPage() {
       <SectionIntro id="approvals" />
 
       {/* Risk-level legend — explains what read / write / destructive mean */}
-      <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+      <div data-tour="approvals-legend" className="rounded-xl border border-border bg-muted/20 px-4 py-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Action types</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div className="flex items-start gap-2">
@@ -164,7 +164,7 @@ export default function ApprovalsPage() {
       )}
 
       {/* Filter tabs */}
-      <div className="flex gap-1 border-b border-border">
+      <div data-tour="approvals-filter" className="flex gap-1 border-b border-border">
         {(['pending', 'all'] as const).map(f => (
           <button
             key={f}

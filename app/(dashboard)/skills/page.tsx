@@ -88,17 +88,21 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       )}
 
       {isAdmin && (
-        <CreateSkillForm
-          groups={(groups ?? []) as { id: string; name: string; color: string }[]}
-          defaultGroupId={groupId}
-        />
+        <div data-tour="skill-create">
+          <CreateSkillForm
+            groups={(groups ?? []) as { id: string; name: string; color: string }[]}
+            defaultGroupId={groupId}
+          />
+        </div>
       )}
 
       {(skills ?? []).length === 0 && isAdmin && (
-        <SkillTemplates
-          templates={SKILL_TEMPLATES}
-          groups={(groups ?? []) as { id: string; name: string; color: string }[]}
-        />
+        <div data-tour="skill-templates">
+          <SkillTemplates
+            templates={SKILL_TEMPLATES}
+            groups={(groups ?? []) as { id: string; name: string; color: string }[]}
+          />
+        </div>
       )}
 
       <div className="space-y-2">
