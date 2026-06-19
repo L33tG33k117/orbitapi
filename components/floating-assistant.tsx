@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Sparkles, X, Send, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Markdown } from '@/components/markdown'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -191,7 +192,7 @@ export function FloatingAssistant() {
                     ? 'bg-primary text-primary-foreground rounded-br-sm'
                     : 'bg-muted text-foreground rounded-bl-sm',
                 )}>
-                  {m.content}
+                  {m.role === 'user' ? m.content : <Markdown text={m.content} />}
                 </div>
               </div>
             ))}

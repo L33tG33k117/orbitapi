@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MessageSquarePlus, Trash2, Clock, ChevronLeft, Save, Plug, ArrowRight } from 'lucide-react'
+import { Markdown } from '@/components/markdown'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -233,7 +234,9 @@ function ChatCore({
             }`}>
               {m.parts.map((part, i) => {
                 if (part.type === 'text') {
-                  return <span key={i} className="block" style={{ whiteSpace: 'pre-wrap' }}>{part.text}</span>
+                  return m.role === 'user'
+                    ? <span key={i} className="block" style={{ whiteSpace: 'pre-wrap' }}>{part.text}</span>
+                    : <Markdown key={i} text={part.text} />
                 }
                 if (part.type === 'dynamic-tool') {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
