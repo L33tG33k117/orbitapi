@@ -447,11 +447,119 @@ const INCIDENT_COMMANDER: BundleManifest = {
   ],
 }
 
+// ── Property Management ─────────────────────────────────────────────────────────
+const SUPERHOST_CONCIERGE: BundleManifest = {
+  slug: 'superhost-concierge',
+  name: 'Superhost Concierge',
+  description: 'The full short-term-rental stack — guest comms, smart-home check-in, and a daily ops brief.',
+  category: 'Short-Term Rental',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'lodgify', role: 'Bookings / PMS' },
+    { slug: 'twilio', role: 'Guest SMS' },
+    { slug: 'sendgrid', role: 'Guest email' },
+    { slug: 'simulated-lights', role: 'Smart lighting' },
+    { slug: 'simulated-ring', role: 'Doorbell / security', alternatives: ['eufy-security'] },
+  ],
+  groups: [{ key: 'host', name: 'Superhost', color: '#db2777', connectorSlugs: ['lodgify', 'twilio', 'sendgrid', 'simulated-lights', 'simulated-ring'] }],
+  playbooks: [{
+    name: 'Arrival Day Prep',
+    description: 'Each morning, brief the team on arrivals and ready the property for check-in.',
+    persona: 'You are a five-star vacation-rental host who anticipates every guest need.',
+    groupKey: 'host',
+    trigger_type: 'schedule',
+    schedule: '0 9 * * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Review today\'s arrivals', type: 'assess',
+        prompt: 'List today\'s Lodgify check-ins, note special requests or late arrivals, and flag anything needing prep. Score severity by how much attention the day needs.', next: 'notify' },
+      { id: 'notify', name: 'Post arrivals brief', type: 'notify', message: 'Arrivals brief (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Check-in Concierge', groupKey: 'host', autonomy: 'supervised',
+      description: 'Greets guests and readies the home for arrival.',
+      persona: 'You are an AI concierge for a short-term rental. For today\'s Lodgify arrivals, send warm check-in instructions by SMS (Twilio) and email (SendGrid), set the lights to a welcoming scene before arrival, and surface any issues to the host.' },
+    { name: 'Guest Support', groupKey: 'host', autonomy: 'supervised',
+      description: 'Answers guest questions during their stay.',
+      persona: 'You are an attentive guest-support agent. Answer guest questions promptly over SMS and email, handle common requests, and escalate anything urgent (lockouts, safety) to the host.' },
+  ],
+}
+
+// ── Home Automation ───────────────────────────────────────────────────────────
+const SMART_HOME_GUARDIAN: BundleManifest = {
+  slug: 'smart-home-guardian',
+  name: 'Smart Home Guardian',
+  description: 'Your home, watched — react to doorbell/motion events with lights and instant alerts.',
+  category: 'Smart Home',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'simulated-ring', role: 'Doorbell / cameras', alternatives: ['eufy-security'] },
+    { slug: 'simulated-lights', role: 'Smart lighting' },
+    { slug: 'slack', role: 'Alerts', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'home', name: 'Smart Home', color: '#7c3aed', connectorSlugs: ['simulated-ring', 'simulated-lights', 'slack'] }],
+  playbooks: [{
+    name: 'After-Hours Motion Response',
+    description: 'Assess recent security events and respond — lights on and an alert for anything suspicious.',
+    persona: 'You are a home security system that reacts calmly and only escalates when it matters.',
+    groupKey: 'home',
+    trigger_type: 'event',
+    autonomy_policy: { thresholds: [{ min: 7, max: 10, mode: 'auto' }, { min: 0, max: 6, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Assess recent events', type: 'assess',
+        prompt: 'Review recent doorbell/motion events. Decide whether anything looks suspicious versus routine (deliveries, residents). Score severity by how concerning it is.', next: 'lights' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ({ id: 'lights', name: 'Turn on the lights', type: 'action',
+        connector_slug: 'simulated-lights', action_slug: 'turn_all_on', next: 'notify' } as any),
+      { id: 'notify', name: 'Send a home alert', type: 'notify', message: 'Home security (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Home Guardian', groupKey: 'home', autonomy: 'autonomous',
+      description: 'Watches for events and responds with lights + alerts.',
+      persona: 'You are an AI home guardian. Watch doorbell and motion events; for anything suspicious after hours, turn on the lights and send an alert with a snapshot of what happened. Stay quiet for routine activity.' },
+  ],
+}
+
+// ── Finance (Revenue Operations) ────────────────────────────────────────────────
+const REVENUE_OPS: BundleManifest = {
+  slug: 'revenue-operations',
+  name: 'Revenue Operations',
+  description: 'Close the books faster — month-end checklists, financial summaries, and anomaly watch.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'netsuite', role: 'Financials / ERP', alternatives: ['quickbooks-online'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'revops', name: 'Revenue Ops', color: '#059669', connectorSlugs: ['netsuite', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Month-End Close Brief',
+    description: 'At month end, summarize financial position and flag what still needs to close.',
+    persona: 'You are a revenue operations analyst who makes the close painless.',
+    groupKey: 'revops',
+    trigger_type: 'schedule',
+    schedule: '0 9 28-31 * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Summarize financial position', type: 'assess',
+        prompt: 'Summarize revenue, AR balance, and open items for the period. Flag anomalies and anything outstanding for the close. Score severity by how much remains to close cleanly.', next: 'notify' },
+      { id: 'notify', name: 'Post close brief', type: 'notify', message: 'Month-end close (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Revenue Analyst', groupKey: 'revops', autonomy: 'supervised',
+      description: 'Tracks revenue health and runs the close checklist.',
+      persona: 'You are an AI revenue operations analyst. Track revenue, AR, and bookings; produce a clear monthly financial brief; run the month-end close checklist; and flag anomalies in Slack with suggested next steps.' },
+  ],
+}
+
 export const BUILTIN_BUNDLES: BundleManifest[] = [
   SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT,
   ACCOUNTANT, PAYROLL_PAYSTUBS, BILLING_DUNNING,
   THREAT_HUNTER, VULN_MANAGER, PHISHING_RESPONSE,
   CUSTOMER_SUCCESS, ONBOARDING_CONCIERGE, INCIDENT_COMMANDER,
+  SUPERHOST_CONCIERGE, SMART_HOME_GUARDIAN, REVENUE_OPS,
 ]
 
 export function getBuiltinBundle(slug: string): BundleManifest | undefined {
