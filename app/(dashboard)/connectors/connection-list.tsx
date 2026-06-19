@@ -14,7 +14,18 @@ interface Connection {
   status: string
   is_simulated: boolean
   created_at: string
+  vault_secret_id?: string | null
   connector: { slug: string; name: string; category: string; is_simulated: boolean } | null
+}
+
+// Derive a human health state. "Needs setup" catches real connections created
+// without credentials yet (e.g. installed by a bundle) — previously invisible
+// until a skill failed.
+function health(c: Connection): { label: string; dot: string; text: string } {
+  if (c.status === 'error') return { label: 'Error', dot: 'bg-red-500', text: 'text-red-500' }
+  if (!c.is_simulated && !c.vault_secret_id) return { label: 'Needs setup', dot: 'bg-amber-500', text: 'text-amber-500' }
+  if (c.status === 'disconnected') return { label: 'Disconnected', dot: 'bg-gray-400', text: 'text-muted-foreground' }
+  return { label: c.is_simulated ? 'Simulated' : 'Active', dot: 'bg-green-500', text: 'text-green-500' }
 }
 
 interface DeleteModalProps {
@@ -96,12 +107,6 @@ function DeleteModal({ connection, defaultMode, onCancel, onConfirm, loading }: 
   )
 }
 
-const statusColors: Record<string, string> = {
-  active: 'bg-green-500',
-  error: 'bg-red-500',
-  disconnected: 'bg-gray-400',
-}
-
 export function ConnectionList({
   connections,
   canManage,
@@ -138,7 +143,9 @@ export function ConnectionList({
   return (
     <>
       <div className="space-y-2">
-        {connections.map(c => (
+        {connections.map(c => {
+          const h = health(c)
+          return (
           <div key={c.id} className="border rounded-lg p-4 flex items-center gap-4">
             <div className="relative shrink-0">
               <Image
@@ -149,7 +156,7 @@ export function ConnectionList({
                 className="rounded-lg"
                 unoptimized
               />
-              <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${statusColors[c.status] ?? 'bg-gray-400'}`} />
+              <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${h.dot}`} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -160,6 +167,7 @@ export function ConnectionList({
                     Simulated
                   </Badge>
                 )}
+                <span className={`text-[10px] font-medium ${h.text}`}>· {h.label}</span>
               </div>
               <p className="text-xs text-muted-foreground">{c.connector?.name} · {c.connector?.category}</p>
               {testResults[c.id] && (
@@ -196,7 +204,8 @@ export function ConnectionList({
               )}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {deleteTarget && (
