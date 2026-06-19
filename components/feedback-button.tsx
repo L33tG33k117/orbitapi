@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { MessageSquarePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,8 @@ export function FeedbackButton() {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   async function send() {
     if (!message.trim()) return
@@ -45,9 +48,9 @@ export function FeedbackButton() {
         Feedback
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
-          className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-black/40 p-4"
+          className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-black/40 p-4"
           onClick={() => setOpen(false)}
         >
           <div
@@ -80,7 +83,8 @@ export function FeedbackButton() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )

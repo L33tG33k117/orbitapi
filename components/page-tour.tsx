@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
@@ -93,9 +94,10 @@ export function PageTour() {
         Show me around
       </button>
 
-      {/* First-visit nudge */}
-      {showNudge && (
-        <div className="fixed right-4 top-16 z-[60] w-72 rounded-xl border border-primary/30 bg-popover shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+      {/* First-visit nudge — portaled to body so the .glass TopBar (backdrop-filter)
+          doesn't become its containing block and mis-position the fixed card. */}
+      {showNudge && createPortal(
+        <div className="fixed right-4 top-16 z-[100] w-72 rounded-xl border border-primary/30 bg-popover shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <button
             onClick={markOffered}
             className="absolute right-2 top-2 text-muted-foreground hover:text-foreground p-0.5"
@@ -124,7 +126,8 @@ export function PageTour() {
               No thanks
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
