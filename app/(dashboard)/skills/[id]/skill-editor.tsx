@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Lock, Gauge } from 'lucide-react'
+import { Lock, Gauge, Plug, ShieldCheck, CheckCircle2, AlertTriangle, XCircle, Loader2 } from 'lucide-react'
 import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule } from '@/lib/schedules'
 import { estimateRunCredits, runsPerMonth, scaleEstimate, formatEstimate, type Efficiency } from '@/lib/ai-estimate'
 
@@ -35,6 +35,17 @@ interface Action {
 
 interface Group { id: string; name: string; color: string }
 
+// Active workspace connection, with the groups it belongs to (for live scoping).
+export interface ConnInfo { id: string; label: string; name: string; slug: string; reads: number; writes: number; groupIds: string[] }
+
+interface VerifyCheck { status: 'pass' | 'warn' | 'fail'; label: string; detail?: string }
+interface VerifyReport {
+  verdict: 'pass' | 'fail'
+  summary: string
+  checks: VerifyCheck[]
+  connectors: { slug: string; name: string; label: string; reads: number; writes: number }[]
+}
+
 const AUTONOMY_OPTIONS: { value: Autonomy; label: string; description: string }[] = [
   {
     value: 'supervised',
@@ -61,6 +72,7 @@ export function SkillEditor({
   webhooksEnabled = true,
   automationEnabled = true,
   efficiency = 'balanced',
+  connections = [],
 }: {
   skill: SkillData
   groups: Group[]
@@ -69,6 +81,7 @@ export function SkillEditor({
   webhooksEnabled?: boolean
   automationEnabled?: boolean
   efficiency?: Efficiency
+  connections?: ConnInfo[]
 }) {
   const router = useRouter()
   const [form, setForm] = useState(skill)
@@ -87,9 +100,46 @@ export function SkillEditor({
   const [scheduleHour, setScheduleHour] = useState(parsedSchedule.hour)
   const [scheduleEnabled, setScheduleEnabled] = useState(!!form.schedule)
 
+  // Skill Builder — verification gates Save (we don't ship broken skills).
+  const [verifyState, setVerifyState] = useState<'idle' | 'running' | 'passed' | 'failed'>('idle')
+  const [verifyReport, setVerifyReport] = useState<VerifyReport | null>(null)
+
+  // Connections this skill can use given the selected group (updates live).
+  const scopedConnections = useMemo(
+    () => form.group_id ? connections.filter(c => c.groupIds.includes(form.group_id)) : connections,
+    [connections, form.group_id],
+  )
+
+  // Editing anything that affects behavior invalidates a prior verification.
+  const VERIFY_KEYS: (keyof SkillData)[] = ['persona', 'trigger_prompt', 'group_id', 'blocked_slugs', 'autonomy']
   function set<K extends keyof SkillData>(key: K, value: SkillData[K]) {
     setForm(f => ({ ...f, [key]: value }))
     setSaved(false)
+    if (VERIFY_KEYS.includes(key)) { setVerifyState('idle'); setVerifyReport(null) }
+  }
+
+  async function verify() {
+    setVerifyState('running')
+    try {
+      const res = await fetch(`/api/skills/${skill.id}/verify`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          persona: form.persona, trigger_prompt: form.trigger_prompt,
+          group_id: form.group_id, blocked_slugs: form.blocked_slugs,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setVerifyReport({ verdict: 'fail', summary: data.error ?? 'Verification failed.', checks: [], connectors: [] })
+        setVerifyState('failed')
+        return
+      }
+      setVerifyReport(data as VerifyReport)
+      setVerifyState((data as VerifyReport).verdict === 'pass' ? 'passed' : 'failed')
+    } catch {
+      setVerifyReport({ verdict: 'fail', summary: 'Could not verify — please try again.', checks: [], connectors: [] })
+      setVerifyState('failed')
+    }
   }
 
   function handleDowChange(dow: string) {
@@ -164,7 +214,8 @@ export function SkillEditor({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+      <div className="space-y-6 min-w-0">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Name</Label>
@@ -444,9 +495,94 @@ export function SkillEditor({
       {error && <p className="text-sm text-destructive">{error}</p>}
       {saved && <p className="text-sm text-green-600">Saved.</p>}
 
-      <Button onClick={save} disabled={saving}>
-        {saving ? 'Saving…' : 'Save skill'}
-      </Button>
+      <div className="space-y-1.5">
+        <Button onClick={save} disabled={saving || verifyState !== 'passed'}>
+          {saving ? 'Saving…' : 'Save skill'}
+        </Button>
+        {verifyState !== 'passed' && (
+          <p className="text-xs text-muted-foreground">
+            {verifyState === 'failed'
+              ? 'Resolve the issues in the Skill Builder, then verify again to save.'
+              : 'Run “Verify skill” in the Skill Builder before saving.'}
+          </p>
+        )}
+      </div>
+      </div>
+
+      {/* Skill Builder — available connectors + verification (gates Save) */}
+      <aside className="lg:sticky lg:top-8 h-fit space-y-4 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold">Skill Builder</h3>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Available connectors {form.group_id ? '(in this group)' : '(all connections)'}
+          </p>
+          {scopedConnections.length === 0 ? (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-500">
+              No connectors available{form.group_id ? ' in this group' : ''}. This skill can&apos;t do anything until you connect one or pick a different group.
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {scopedConnections.map(c => (
+                <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5">
+                  <Plug className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{c.label}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{c.name}</p>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{c.reads}r · {c.writes}w</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={verify}
+          disabled={verifyState === 'running'}
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold py-2 hover:opacity-90 disabled:opacity-60 transition-opacity"
+        >
+          {verifyState === 'running' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+          {verifyState === 'running' ? 'Verifying…' : verifyState === 'passed' ? 'Verified — re-check' : 'Verify skill'}
+        </button>
+
+        {verifyReport && (
+          <div className="space-y-2">
+            <div className={`rounded-lg px-3 py-2 text-xs font-medium border ${
+              verifyReport.verdict === 'pass'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-red-500/10 text-red-400 border-red-500/20'
+            }`}>
+              {verifyReport.summary}
+            </div>
+            {verifyReport.checks.length > 0 && (
+              <ul className="space-y-1.5">
+                {verifyReport.checks.map((c, i) => {
+                  const Icon = c.status === 'pass' ? CheckCircle2 : c.status === 'warn' ? AlertTriangle : XCircle
+                  const color = c.status === 'pass' ? 'text-emerald-400' : c.status === 'warn' ? 'text-amber-400' : 'text-red-400'
+                  return (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <Icon className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${color}`} />
+                      <div className="min-w-0">
+                        <p className="font-medium">{c.label}</p>
+                        {c.detail && <p className="text-muted-foreground leading-snug">{c.detail}</p>}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+          Verification confirms the connectors this skill needs are connected and the logic holds up. A skill must pass before it can be saved.
+        </p>
+      </aside>
     </div>
   )
 }

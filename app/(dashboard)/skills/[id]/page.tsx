@@ -68,6 +68,26 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
     }
   }
 
+  // All active connections (with group membership) for the Skill Builder panel.
+  const { data: allConns } = await admin
+    .from('connections')
+    .select('id, label, connector:connectors(slug, name), group_connections(group_id)')
+    .eq('workspace_id', membership.workspace_id)
+    .eq('status', 'active')
+  const builderConnections = (allConns ?? []).map(c => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cn = c.connector as any
+    const manifest = getConnector(cn?.slug)
+    const actions = manifest?.actions ?? []
+    return {
+      id: c.id, label: c.label, name: cn?.name ?? cn?.slug ?? 'Connector', slug: cn?.slug ?? '',
+      reads: actions.filter(a => a.risk === 'read').length,
+      writes: actions.filter(a => a.risk !== 'read').length,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      groupIds: ((c as any).group_connections ?? []).map((gc: { group_id: string }) => gc.group_id),
+    }
+  })
+
   // Fetch recent runs
   const { data: runs } = await admin
     .from('skill_runs')
@@ -83,7 +103,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
   const efficiency = ((skill as unknown as { ai_efficiency?: Efficiency }).ai_efficiency ?? aiPower.efficiency) as Efficiency
 
   return (
-    <div className="p-8 space-y-8 max-w-3xl">
+    <div className="p-8 space-y-8 max-w-6xl">
       <div className="flex items-center gap-4">
         {group && (
           <div className="h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: group.color }} />
@@ -120,9 +140,10 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
         webhooksEnabled={features ? hasCapability(features.tier, features.flags, 'webhooks') : true}
         automationEnabled={features ? hasCapability(features.tier, features.flags, 'skill_automation') : true}
         efficiency={efficiency}
+        connections={builderConnections}
       />
 
-      <section className="space-y-3">
+      <section className="space-y-3 max-w-3xl">
         <h2 className="text-lg font-semibold">Run history</h2>
         <RunHistory
           skillId={id}
