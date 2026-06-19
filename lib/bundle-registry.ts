@@ -349,10 +349,109 @@ const PHISHING_RESPONSE: BundleManifest = {
   ],
 }
 
+// ── Customer Success ──────────────────────────────────────────────────────────
+const CUSTOMER_SUCCESS: BundleManifest = {
+  slug: 'customer-success',
+  name: 'Customer Success',
+  description: 'Protect revenue — watch for churn signals, prep QBRs, and keep accounts healthy.',
+  category: 'Customer Success',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'zendesk', role: 'Support', alternatives: ['plain', 'servicenow'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'cs', name: 'Customer Success', color: '#0d9488', connectorSlugs: ['zendesk', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'At-Risk Account Watch',
+    description: 'Scan support activity for churn signals and flag accounts that need a check-in.',
+    persona: 'You are a customer success lead who catches churn before it happens.',
+    groupKey: 'cs',
+    trigger_type: 'schedule',
+    schedule: '0 9 * * 1',
+    definition: { steps: [
+      { id: 'assess', name: 'Scan for churn signals', type: 'assess',
+        prompt: 'Review recent tickets and sentiment. Identify accounts showing churn risk (frustration, repeated issues, silence after escalations). Score severity by likelihood and account value.', next: 'notify' },
+      { id: 'notify', name: 'Flag at-risk accounts', type: 'notify', message: 'At-risk accounts (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'CS Manager', groupKey: 'cs', autonomy: 'supervised',
+      description: 'Monitors account health and preps customer touchpoints.',
+      persona: 'You are an AI customer success manager. Watch support activity for churn risk, draft proactive check-in emails (SendGrid), prep QBR talking points, and flag at-risk accounts in Slack with a recommended play.' },
+  ],
+}
+
+const ONBOARDING_CONCIERGE: BundleManifest = {
+  slug: 'onboarding-concierge',
+  name: 'Onboarding Concierge',
+  description: 'Get new customers to value fast — guided welcome sequences and proactive nudges when they stall.',
+  category: 'Customer Success',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'plain', role: 'Support', alternatives: ['zendesk'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'onb', name: 'Onboarding', color: '#2563eb', connectorSlugs: ['plain', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Stalled Onboarding Watch',
+    description: 'Spot new customers who have gone quiet during onboarding and nudge them.',
+    persona: 'You are an onboarding specialist focused on time-to-value.',
+    groupKey: 'onb',
+    trigger_type: 'schedule',
+    schedule: '0 10 * * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Find stalled onboardings', type: 'assess',
+        prompt: 'Review new-customer threads. Identify any that have stalled or gone silent during onboarding. Score severity by how stuck they appear and account value.', next: 'notify' },
+      { id: 'notify', name: 'Surface stalled accounts', type: 'notify', message: 'Stalled onboardings (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Onboarding Guide', groupKey: 'onb', autonomy: 'supervised',
+      description: 'Runs welcome sequences and nudges stalled customers.',
+      persona: 'You are an AI onboarding concierge. Send warm, helpful welcome emails (SendGrid), answer setup questions from support threads, and nudge customers who stall — escalating to Slack when a human should step in.' },
+  ],
+}
+
+// ── Incident Management ─────────────────────────────────────────────────────────
+const INCIDENT_COMMANDER: BundleManifest = {
+  slug: 'incident-commander',
+  name: 'Incident Commander',
+  description: 'Run major incidents calmly — page the right people, keep stakeholders updated, and capture the timeline.',
+  category: 'Incident Management',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'pagerduty', role: 'On-call paging', alternatives: ['servicenow'] },
+    { slug: 'servicenow', role: 'ITSM / records', alternatives: ['zendesk'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'ic', name: 'Incident Command', color: '#ea580c', connectorSlugs: ['pagerduty', 'servicenow', 'slack'] }],
+  playbooks: [{
+    name: 'Major Incident Comms',
+    description: 'On a major incident, assess impact and keep stakeholders informed on a cadence.',
+    persona: 'You are an incident commander who keeps everyone aligned under pressure.',
+    groupKey: 'ic',
+    trigger_type: 'manual',
+    autonomy_policy: { thresholds: [{ min: 9, max: 10, mode: 'auto' }, { min: 5, max: 8, mode: 'approval' }, { min: 0, max: 4, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Assess incident impact', type: 'assess',
+        prompt: 'Review active incidents. Summarize scope, impact, and current status. Score severity by user/business impact.', next: 'notify' },
+      { id: 'notify', name: 'Post stakeholder update', type: 'notify', message: 'Incident update (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Incident Commander', groupKey: 'ic', autonomy: 'supervised',
+      description: 'Coordinates response and keeps stakeholders updated.',
+      persona: 'You are an AI incident commander. When a major incident is active, summarize impact, page the right responders via PagerDuty, post regular stakeholder updates to Slack, and record the timeline in ServiceNow.' },
+  ],
+}
+
 export const BUILTIN_BUNDLES: BundleManifest[] = [
   SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT,
   ACCOUNTANT, PAYROLL_PAYSTUBS, BILLING_DUNNING,
   THREAT_HUNTER, VULN_MANAGER, PHISHING_RESPONSE,
+  CUSTOMER_SUCCESS, ONBOARDING_CONCIERGE, INCIDENT_COMMANDER,
 ]
 
 export function getBuiltinBundle(slug: string): BundleManifest | undefined {
