@@ -88,7 +88,30 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
           <DialogDescription>{connector.description}</DialogDescription>
         </DialogHeader>
 
-        {step === 0 && guide.length > 0 ? (
+        {connector.auth.type === 'oauth2' ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="oauth-label">Connection name</Label>
+              <Input
+                id="oauth-label"
+                placeholder={connector.name}
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              You&apos;ll be redirected to {connector.name} to authorize access, then sent back here. No keys to copy.
+            </p>
+            <Button
+              className="w-full"
+              onClick={() => {
+                window.location.href = `/api/oauth/${connector.slug}/start?label=${encodeURIComponent(label || connector.name)}`
+              }}
+            >
+              Connect with {connector.name} →
+            </Button>
+          </div>
+        ) : step === 0 && guide.length > 0 ? (
           <div className="space-y-4">
             <div className="space-y-4">
               {guide.map((s, i) => (
