@@ -79,7 +79,6 @@ export const catalog: CatalogEntry[] = [
 
   // ── Finance ───────────────────────────────────────────────────────────────
   { slug: 'netsuite',          name: 'NetSuite',                  category: 'Finance',               description: 'ERP — run SuiteQL, query financials, invoices, transactions, and customer records.', logoUrl: '/logos/netsuite.svg',     available: true,  badgeNew: true  },
-  { slug: 'quickbooks',        name: 'QuickBooks Online',         category: 'Finance',               description: 'Accounting — invoices, expenses, reports, and customer/vendor records.',             available: false },
   { slug: 'xero',              name: 'Xero',                      category: 'Finance',               description: 'Cloud accounting — invoices, bank reconciliation, and financial reports.',           available: false },
   { slug: 'stripe',            name: 'Stripe',                    category: 'Finance',               description: 'Payment processing — charges, customers, subscriptions, and dispute management.',   available: false },
   { slug: 'sage-intacct',      name: 'Sage Intacct',              category: 'Finance',               description: 'Cloud financial management for multi-entity and multi-currency organizations.',      available: false },
@@ -152,6 +151,7 @@ export const catalog: CatalogEntry[] = [
   { slug: 'databricks',        name: 'Databricks',                category: 'Data & Analytics',      description: 'Run notebooks and SQL queries on Databricks workspaces.',                          available: false },
   { slug: 'tableau',           name: 'Tableau',                   category: 'Data & Analytics',      description: 'Access Tableau workbooks, views, and published data sources.',                     available: false },
   { slug: 'power-bi',          name: 'Power BI',                  category: 'Data & Analytics',      description: 'Query Power BI datasets, reports, and trigger dataset refreshes.',                 available: false },
+  { slug: 'quickbooks-online', name: 'QuickBooks Online', category: 'Finance', description: 'Accounting on QuickBooks Online — invoices, customers, payments, bills, and reports.', logoUrl: '/logos/quickbooks-online.svg', available: true, badgeNew: true  },
 ]
 
 export const AVAILABLE_SLUGS = new Set(catalog.filter(c => c.available).map(c => c.slug))

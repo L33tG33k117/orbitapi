@@ -19,6 +19,8 @@ import { stellarCyberManifest } from './stellar-cyber'
 
 import { eufySecurityManifest } from './eufy-security'
 
+import { quickbooksOnlineManifest } from './quickbooks-online'
+
 export const connectors: ConnectorManifest[] = [
   lodgifyManifest,
   slackManifest,
@@ -36,6 +38,7 @@ export const connectors: ConnectorManifest[] = [
   microsoftDefenderManifest,
   stellarCyberManifest,
   eufySecurityManifest,
+  quickbooksOnlineManifest,
   simulatedLightsManifest,
   simulatedRingManifest,
 ]

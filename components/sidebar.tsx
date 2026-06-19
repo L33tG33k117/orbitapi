@@ -168,16 +168,21 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
 
   const navInner = (
     <>
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
+      {/* Logo — links home (Overview) */}
+      <Link
+        href="/dashboard"
+        aria-label="OrbitAPI home"
+        className="flex items-center gap-2.5 px-5 py-4 hover:bg-sidebar-accent/40 transition-colors"
+        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
+      >
         <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)] shadow-[0_4px_16px_-4px_var(--brand-to)]">
           <Orbit className="h-[18px] w-[18px] text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="font-bold text-[15px] tracking-tight text-gradient">OrbitAPI</span>
+          <span className="font-bold text-[15px] tracking-tight text-white">OrbitAPI</span>
           <p className="text-[11px] truncate text-sidebar-foreground/50 mt-px">{workspace.name}</p>
         </div>
-      </div>
+      </Link>
 
       {/* Search / Cmd+K */}
       <div className="px-3 py-2.5">

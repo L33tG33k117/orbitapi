@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import type { UserRole } from '@/types'
@@ -9,6 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { NotificationBell } from '@/components/notification-bell'
+import { AdminNotificationBell } from '@/components/admin-notification-bell'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FeedbackButton } from '@/components/feedback-button'
 import { PageTour } from '@/components/page-tour'
@@ -19,9 +21,11 @@ interface TopBarProps {
   role: UserRole
   workspaceId: string
   impersonating?: { id: string; name: string; email: string } | null
+  /** Show the Super Admin inbox bell instead of the workspace notification bell. */
+  adminInbox?: boolean
 }
 
-export function TopBar({ user, role, workspaceId, impersonating }: TopBarProps) {
+export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: TopBarProps) {
   const router = useRouter()
 
   async function signOut() {
@@ -50,7 +54,7 @@ export function TopBar({ user, role, workspaceId, impersonating }: TopBarProps) 
         >
           <Menu className="h-5 w-5" />
         </button>
-        <span className="font-bold text-sm tracking-tight text-gradient">OrbitAPI</span>
+        <Link href="/dashboard" aria-label="OrbitAPI home" className="font-bold text-sm tracking-tight text-gradient">OrbitAPI</Link>
       </div>
 
       {impersonating && (
@@ -73,7 +77,9 @@ export function TopBar({ user, role, workspaceId, impersonating }: TopBarProps) 
       <PageTour />
       <FeedbackButton />
       <ThemeToggle />
-      {workspaceId && <NotificationBell workspaceId={workspaceId} />}
+      {adminInbox
+        ? <AdminNotificationBell />
+        : workspaceId && <NotificationBell workspaceId={workspaceId} />}
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted transition-colors outline-none">

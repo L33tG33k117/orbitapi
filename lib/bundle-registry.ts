@@ -17,15 +17,14 @@ const SECURITY_SOC: BundleManifest = {
   category: 'Security',
   version: '1.0.0',
   connectors: [
-    { slug: 'crowdstrike' },
-    { slug: 'sentinelone' },
-    { slug: 'microsoft-defender' },
-    { slug: 'pagerduty' },
-    { slug: 'slack' },
+    { slug: 'crowdstrike', role: 'EDR / endpoint', alternatives: ['sentinelone', 'sophos', 'microsoft-defender'] },
+    { slug: 'microsoft-defender', role: 'Threat & vuln intel', alternatives: ['stellar-cyber'] },
+    { slug: 'pagerduty', role: 'On-call paging', alternatives: ['servicenow'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
   ],
   groups: [
     { key: 'soc', name: 'Security SOC', color: '#ef4444',
-      connectorSlugs: ['crowdstrike', 'sentinelone', 'microsoft-defender', 'pagerduty', 'slack'] },
+      connectorSlugs: ['crowdstrike', 'microsoft-defender', 'pagerduty', 'slack'] },
   ],
   playbooks: [
     {
@@ -62,7 +61,7 @@ const SECURITY_SOC: BundleManifest = {
         { id: 'approve', name: 'Human approval to isolate', type: 'approval', next: 'isolate' },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ id: 'isolate', name: 'Isolate endpoint', type: 'action',
-          connector_slug: 'sentinelone', action_slug: 'isolate_agent', next: 'notify' } as any),
+          connector_slug: 'crowdstrike', action_slug: 'contain_host', next: 'notify' } as any),
         { id: 'notify', name: 'Confirm isolation', type: 'notify', message: 'Endpoint isolated after approval: {{state.assessment}}' },
       ] },
     },
@@ -81,13 +80,12 @@ const SUPPORT_OPS: BundleManifest = {
   category: 'CRM & Support',
   version: '1.0.0',
   connectors: [
-    { slug: 'zendesk' },
-    { slug: 'plain' },
-    { slug: 'sendgrid' },
-    { slug: 'slack' },
+    { slug: 'zendesk', role: 'Ticketing', alternatives: ['plain', 'servicenow'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
   ],
   groups: [
-    { key: 'support', name: 'Support Ops', color: '#0ea5e9', connectorSlugs: ['zendesk', 'plain', 'sendgrid', 'slack'] },
+    { key: 'support', name: 'Support Ops', color: '#0ea5e9', connectorSlugs: ['zendesk', 'sendgrid', 'slack'] },
   ],
   playbooks: [
     {
@@ -107,7 +105,7 @@ const SUPPORT_OPS: BundleManifest = {
   skills: [
     { name: 'Support Triage', groupKey: 'support', autonomy: 'supervised',
       description: 'Reads incoming tickets, drafts responses, routes by topic.',
-      persona: 'You are an AI support agent. Read new Zendesk and Plain tickets, summarize the issue, draft a reply, and flag anything needing human attention in Slack.' },
+      persona: 'You are an AI support agent. Read new tickets from the connected help desk, summarize the issue, draft a reply, and flag anything needing human attention in Slack.' },
   ],
 }
 
@@ -118,10 +116,10 @@ const PROPERTY_MGMT: BundleManifest = {
   category: 'Short-Term Rental',
   version: '1.0.0',
   connectors: [
-    { slug: 'lodgify' },
-    { slug: 'twilio' },
-    { slug: 'sendgrid' },
-    { slug: 'slack' },
+    { slug: 'lodgify', role: 'Bookings / PMS' },
+    { slug: 'twilio', role: 'SMS' },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
   ],
   groups: [
     { key: 'pm', name: 'Property Management', color: '#10b981', connectorSlugs: ['lodgify', 'twilio', 'sendgrid', 'slack'] },

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { InstallButton } from './install-button'
-import { ChevronDown, ChevronRight, Plug, ShieldAlert, Zap, Gauge } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Check, Download, ChevronDown, ChevronRight, Plug, ShieldAlert, Zap, Gauge } from 'lucide-react'
 import { estimateRunCredits, formatCredits } from '@/lib/ai-estimate'
+import { InstallBundleDialog, type BundleConnectorChoice, type ExistingConnection } from './install-bundle-dialog'
 
 export interface BundleCardData {
   slug: string
@@ -14,13 +15,15 @@ export interface BundleCardData {
   installed: boolean
   installCount?: number
   isAdmin: boolean
-  connectors: { slug: string; name: string }[]
+  connectors: BundleConnectorChoice[]
   playbooks: { name: string; description?: string }[]
   skills: { name: string; description?: string }[]
+  existingConnections: ExistingConnection[]
 }
 
 export function BundleCard(b: BundleCardData) {
   const [open, setOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
     <div className="border rounded-xl bg-card overflow-hidden">
@@ -32,7 +35,11 @@ export function BundleCard(b: BundleCardData) {
               {b.category}{b.source === 'marketplace' && b.installCount != null ? ` · ${b.installCount} installs` : ''}
             </span>
           </div>
-          {b.isAdmin && <InstallButton slug={b.slug} source={b.source} installed={b.installed} />}
+          {b.isAdmin && (b.installed ? (
+            <Button size="sm" variant="outline" disabled><Check className="h-3.5 w-3.5" /> Installed</Button>
+          ) : (
+            <Button size="sm" onClick={() => setDialogOpen(true)}><Download className="h-3.5 w-3.5" /> Install</Button>
+          ))}
         </div>
         <p className="text-xs text-muted-foreground leading-snug">{b.description}</p>
 
@@ -89,9 +96,21 @@ export function BundleCard(b: BundleCardData) {
             </div>
           )}
           <p className="text-[11px] text-muted-foreground/70 pt-1">
-            Installing adds these to your workspace. API connectors install ready to configure with your credentials.
+            Installing adds these to your workspace. Reuse connectors you already have, or swap in a different vendor — no duplicates.
           </p>
         </div>
+      )}
+
+      {b.isAdmin && !b.installed && (
+        <InstallBundleDialog
+          slug={b.slug}
+          bundleName={b.name}
+          source={b.source}
+          connectors={b.connectors}
+          existingConnections={b.existingConnections}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+        />
       )}
     </div>
   )

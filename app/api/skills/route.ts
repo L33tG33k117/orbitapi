@@ -70,6 +70,9 @@ export async function POST(req: Request) {
       group_id: group_id || null,
       persona: persona ?? '',
       autonomy: !canAutomate ? 'manual' : (autonomy ?? 'supervised'),
+      // New skills start enabled so they're ready to run once configured/verified
+      // (the DB column defaults to false). Users can toggle off in the editor.
+      enabled: true,
     })
     .select()
     .single()

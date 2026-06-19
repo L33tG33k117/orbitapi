@@ -22,6 +22,35 @@ function writeOk(extra?: Record<string, unknown>): ActionResult {
 type SimFn = (params: Record<string, unknown>) => ActionResult
 
 const DATA: Record<string, Record<string, SimFn>> = {
+  'quickbooks-online': {
+    list_invoices: () => ({ ok: true, data: { QueryResponse: { Invoice: [
+      { Id: '1001', DocNumber: 'INV-1001', CustomerRef: { name: 'Acme Corp' }, TotalAmt: 15000.0, Balance: 15000.0, DueDate: past(-5), TxnDate: past(10) },
+      { Id: '1002', DocNumber: 'INV-1002', CustomerRef: { name: 'GlobalTech' }, TotalAmt: 8500.0, Balance: 4250.0, DueDate: past(-1), TxnDate: past(5) },
+    ] } } }),
+    get_invoice: (p) => ({ ok: true, data: { Invoice: {
+      Id: p.invoice_id ?? '1001', DocNumber: 'INV-1001', CustomerRef: { name: 'Acme Corp' },
+      TotalAmt: 15000.0, Balance: 15000.0, DueDate: past(-5), TxnDate: past(10),
+      Line: [{ Amount: 15000.0, Description: 'Professional services' }],
+    } } }),
+    list_customers: () => ({ ok: true, data: { QueryResponse: { Customer: [
+      { Id: '1', DisplayName: 'Acme Corp', PrimaryEmailAddr: { Address: 'billing@acme.com' }, Balance: 15000.0 },
+      { Id: '2', DisplayName: 'GlobalTech', PrimaryEmailAddr: { Address: 'accounts@globaltech.io' }, Balance: 4250.0 },
+    ] } } }),
+    create_customer: () => writeOk({ Customer: { Id: simId('cust'), DisplayName: 'New Customer' } }),
+    create_invoice: () => writeOk({ Invoice: { Id: simId('inv'), DocNumber: `INV-${Date.now().toString().slice(-4)}`, TotalAmt: 0 } }),
+    record_payment: () => writeOk({ Payment: { Id: simId('pmt'), TotalAmt: 15000.0 } }),
+    list_bills: () => ({ ok: true, data: { QueryResponse: { Bill: [
+      { Id: '2001', VendorRef: { name: 'Cloud Hosting Co' }, TotalAmt: 4200.0, Balance: 4200.0, DueDate: past(-3) },
+    ] } } }),
+    get_profit_and_loss: () => ({ ok: true, data: { Header: { ReportName: 'ProfitAndLoss', StartPeriod: past(30), EndPeriod: past(0) }, Rows: {
+      Row: [
+        { type: 'Section', group: 'Income', Summary: { ColData: [{ value: 'Total Income' }, { value: '245000.00' }] } },
+        { type: 'Section', group: 'Expenses', Summary: { ColData: [{ value: 'Total Expenses' }, { value: '178500.00' }] } },
+        { type: 'Section', group: 'NetIncome', Summary: { ColData: [{ value: 'Net Income' }, { value: '66500.00' }] } },
+      ],
+    } } }),
+  },
+
   slack: {
     list_channels: () => ({ ok: true, data: { channels: [
       { id: 'C001', name: 'general', is_private: false, num_members: 48 },
@@ -573,6 +602,16 @@ const DATA: Record<string, Record<string, SimFn>> = {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
+
+/**
+ * True when a connector + action has bespoke simulated data. When false,
+ * simulateAction() falls back to a generic stub — which is fine for an unknown
+ * connector, but a regression for a real connector's declared action.
+ * The parity test (scripts/test-sim-parity.mjs) uses this to fail on drift.
+ */
+export function hasSimulatedData(connectorSlug: string, actionSlug: string): boolean {
+  return Boolean(DATA[connectorSlug]?.[actionSlug])
+}
 
 /**
  * Returns simulated action result for a connector + action combo.

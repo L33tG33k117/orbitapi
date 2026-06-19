@@ -16,6 +16,9 @@ export interface ConnectorBuildResult {
     chatPhrases: string[]
     automations: { name: string; description: string }[]
   }
+  // Per-action sample success payloads for Simulate mode (action slug -> the
+  // `data` a successful call returns). Written into lib/simulate-action.ts on apply.
+  simulatedData?: Record<string, unknown>
 }
 
 const CATEGORIES = [
@@ -86,10 +89,32 @@ export const zendeskManifest: ConnectorManifest = {
   ],
 }`
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// Force a connector's slug to `preferred` across every slug-bearing field, so a
+// build claims an existing catalog placeholder's slug rather than creating a
+// parallel entry. Targeted replacements only (never a blind global replace —
+// the slug can appear inside real API URLs/descriptions).
+function forceSlug(r: ConnectorBuildResult, preferred: string): ConnectorBuildResult {
+  const from = r.slug
+  if (!from || from === preferred) { r.slug = preferred; return r }
+  const slugField = new RegExp(`slug:\\s*'${escapeRegExp(from)}'`, 'g')
+  const logoPath = new RegExp(`/logos/${escapeRegExp(from)}\\.svg`, 'g')
+  const importPath = new RegExp(`from '\\./${escapeRegExp(from)}'`, 'g')
+  r.manifestCode = r.manifestCode.replace(slugField, `slug: '${preferred}'`).replace(logoPath, `/logos/${preferred}.svg`)
+  r.catalogEntry = r.catalogEntry.replace(slugField, `slug: '${preferred}'`).replace(logoPath, `/logos/${preferred}.svg`)
+  r.importLine = r.importLine.replace(importPath, `from './${preferred}'`)
+  r.slug = preferred
+  return r
+}
+
 export async function buildConnector(
   connectorName: string,
   useCase: string | null,
   websiteUrl?: string | null,
+  preferredSlug?: string | null,
 ): Promise<ConnectorBuildResult> {
   const { text } = await generateText({
     model: anthropic('claude-opus-4-8'),
@@ -134,6 +159,7 @@ CATEGORIES: ${CATEGORIES.join(', ')}
 TASK: Build a complete, production-quality connector for: **${connectorName}**
 ${websiteUrl ? `API documentation / website: ${websiteUrl}` : ''}
 ${useCase ? `Use case context: ${useCase}` : ''}
+${preferredSlug ? `REQUIRED SLUG: use exactly "${preferredSlug}" as the slug everywhere (manifest slug, logoUrl path '/logos/${preferredSlug}.svg', import path './${preferredSlug}', and catalog entry). Do not invent a different slug.` : ''}
 
 CRITICAL GUARDRAILS — you MUST follow these:
 1. Only build this connector if ${connectorName} has a REAL, publicly documented REST or GraphQL API
@@ -152,6 +178,7 @@ Requirements:
 - logoUrl: '/logos/[slug].svg'
 - Pick the best matching category from the list above
 - Include 5 example chat phrases and 3-4 automation ideas
+- Include "simulatedData": for EVERY action slug, a realistic sample of the data field a successful call returns (used for Simulate mode so the connector demos with believable fake data, not a generic stub)
 
 Respond with ONLY a valid JSON object — no markdown, no explanation, no \`\`\` fences:
 {
@@ -170,6 +197,9 @@ Respond with ONLY a valid JSON object — no markdown, no explanation, no \`\`\`
     "automations": [
       { "name": "Automation Name", "description": "What this automation does automatically" }
     ]
+  },
+  "simulatedData": {
+    "action_slug": { "items": [ /* realistic sample of the data a successful call returns */ ] }
   }
 }`,
       },
@@ -178,11 +208,17 @@ Respond with ONLY a valid JSON object — no markdown, no explanation, no \`\`\`
 
   const cleaned = text.trim().replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim()
 
+  let parsed: ConnectorBuildResult
   try {
-    return JSON.parse(cleaned) as ConnectorBuildResult
+    parsed = JSON.parse(cleaned) as ConnectorBuildResult
   } catch {
     const match = cleaned.match(/\{[\s\S]+\}/)
-    if (match) return JSON.parse(match[0]) as ConnectorBuildResult
-    throw new Error(`Could not parse AI output. First 300 chars: ${text.slice(0, 300)}`)
+    if (!match) throw new Error(`Could not parse AI output. First 300 chars: ${text.slice(0, 300)}`)
+    parsed = JSON.parse(match[0]) as ConnectorBuildResult
   }
+
+  // Claim the requested slug even if the model picked its own (belt-and-suspenders
+  // for the prompt instruction above) — but only for validated builds.
+  if (preferredSlug && parsed.validated !== false) return forceSlug(parsed, preferredSlug)
+  return parsed
 }

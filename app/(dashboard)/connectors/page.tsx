@@ -56,15 +56,19 @@ export default async function ConnectorsPage() {
   const limit = connectorLimit(features?.tier ?? 'free')
   const atConnectorLimit = realConnectionCount >= limit
   const deletePreference = (profile?.connection_delete_preference as 'trash' | 'permanent') ?? 'trash'
-  const aiBuiltSlugs = new Set((recentBuilds ?? []).map(b => b.connector_slug!))
   const disabledSlugs = new Set((disabledOverrides ?? []).map(o => o.slug))
 
-  // Sort catalog so AI-built connectors appear first (affects which 5 show in "New" row)
-  const sortedCatalog = [...catalog].sort((a, b) => {
-    const aNew = aiBuiltSlugs.has(a.slug)
-    const bNew = aiBuiltSlugs.has(b.slug)
-    return aNew === bNew ? 0 : aNew ? -1 : 1
+  // Order built connectors by build recency (newest first) so the "New" row
+  // truly reflects the most recently added connectors. recentBuilds is already
+  // ordered created_at desc, so its index is the recency rank (0 = newest).
+  // Everything not built-from-a-request keeps its catalog order (rank Infinity).
+  const buildRank = new Map<string, number>()
+  ;(recentBuilds ?? []).forEach((b, i) => {
+    if (b.connector_slug && !buildRank.has(b.connector_slug)) buildRank.set(b.connector_slug, i)
   })
+  const sortedCatalog = [...catalog].sort(
+    (a, b) => (buildRank.get(a.slug) ?? Infinity) - (buildRank.get(b.slug) ?? Infinity),
+  )
 
   // Build a map of slug → ConnectorSummary for connectors with full implementations
   const availableConnectors = Object.fromEntries(

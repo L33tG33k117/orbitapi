@@ -5,17 +5,34 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { BUILTIN_BUNDLES } from '@/lib/bundle-registry'
 import { getConnector } from '@/connectors'
 import type { BundleManifest } from '@/lib/bundles'
-import { BundleCard, type BundleCardData } from './bundle-card'
+import { type BundleCardData } from './bundle-card'
+import { type ExistingConnection } from './install-bundle-dialog'
+import { BundlesClient } from './bundles-client'
 import { pageGate } from '@/components/page-gate'
 import { SectionIntro } from '@/components/section-intro'
-import { Package, Store } from 'lucide-react'
+import { Store } from 'lucide-react'
 
-// Resolve connector slugs → display names so users see real app names, not slugs.
-function enrich(manifest: BundleManifest, source: 'builtin' | 'marketplace', installed: boolean, isAdmin: boolean, installCount?: number): BundleCardData {
+const nameFor = (slug: string, fallback?: string) => getConnector(slug)?.name ?? fallback ?? slug
+
+// Resolve connector slugs → display names + alternatives so the bundle builder
+// can offer reuse/substitution, and users see real app names rather than slugs.
+function enrich(
+  manifest: BundleManifest,
+  source: 'builtin' | 'marketplace',
+  installed: boolean,
+  isAdmin: boolean,
+  existingConnections: ExistingConnection[],
+  installCount?: number,
+): BundleCardData {
   return {
     slug: manifest.slug, name: manifest.name, description: manifest.description, category: manifest.category,
-    source, installed, isAdmin, installCount,
-    connectors: (manifest.connectors ?? []).map(c => ({ slug: c.slug, name: getConnector(c.slug)?.name ?? c.label ?? c.slug })),
+    source, installed, isAdmin, installCount, existingConnections,
+    connectors: (manifest.connectors ?? []).map(c => ({
+      slug: c.slug,
+      name: nameFor(c.slug, c.label),
+      role: c.role,
+      alternatives: (c.alternatives ?? []).map(s => ({ slug: s, name: nameFor(s) })),
+    })),
     playbooks: (manifest.playbooks ?? []).map(p => ({ name: p.name, description: p.description })),
     skills: (manifest.skills ?? []).map(s => ({ name: s.name, description: s.description })),
   }
@@ -33,14 +50,29 @@ export default async function BundlesPage() {
   const isAdmin = membership.role !== 'member'
   const admin = createAdminClient()
 
-  const [{ data: installs }, { data: listings }] = await Promise.all([
+  const [{ data: installs }, { data: listings }, { data: conns }] = await Promise.all([
     admin.from('bundle_installations').select('bundle_slug').eq('workspace_id', membership.workspace_id),
     admin.from('marketplace_listings').select('*').eq('status', 'approved').eq('kind', 'bundle').order('install_count', { ascending: false }),
+    admin
+      .from('connections')
+      .select('id, label, vault_secret_id, connector:connectors(slug, name)')
+      .eq('workspace_id', membership.workspace_id)
+      .neq('status', 'trashed'),
   ])
   const installedSlugs = new Set((installs ?? []).map(i => i.bundle_slug))
 
-  const builtin = BUILTIN_BUNDLES.map(b => enrich(b, 'builtin', installedSlugs.has(b.slug), isAdmin))
-  const fromMarket = (listings ?? []).map(l => enrich(l.manifest as BundleManifest, 'marketplace', installedSlugs.has(l.slug), isAdmin, l.install_count))
+  const existingConnections: ExistingConnection[] = (conns ?? []).map(c => ({
+    id: c.id,
+    label: c.label,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    slug: (c.connector as any)?.slug ?? '',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    name: (c.connector as any)?.name ?? '',
+    configured: !!c.vault_secret_id,
+  }))
+
+  const builtin = BUILTIN_BUNDLES.map(b => enrich(b, 'builtin', installedSlugs.has(b.slug), isAdmin, existingConnections))
+  const fromMarket = (listings ?? []).map(l => enrich(l.manifest as BundleManifest, 'marketplace', installedSlugs.has(l.slug), isAdmin, existingConnections, l.install_count))
 
   return (
     <div className="p-8 space-y-8 max-w-4xl">
@@ -58,21 +90,7 @@ export default async function BundlesPage() {
 
       <SectionIntro id="bundles" />
 
-      <section data-tour="bundles-list" className="space-y-3">
-        <h2 className="text-sm font-semibold flex items-center gap-1.5"><Package className="h-4 w-4 text-primary" /> Vertical bundles</h2>
-        <div className="grid sm:grid-cols-2 gap-3">
-          {builtin.map(b => <BundleCard key={b.slug} {...b} />)}
-        </div>
-      </section>
-
-      {fromMarket.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-1.5"><Store className="h-4 w-4 text-primary" /> From the marketplace</h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {fromMarket.map(b => <BundleCard key={b.slug} {...b} />)}
-          </div>
-        </section>
-      )}
+      <BundlesClient builtin={builtin} marketplace={fromMarket} />
     </div>
   )
 }

@@ -216,6 +216,35 @@ export function SkillEditor({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
       <div className="space-y-6 min-w-0">
+      {/* Enable / disable — kept at the top so the skill's state is obvious.
+          Turning it off dims the config below to signal the skill won't run. */}
+      <div className="flex items-center justify-between gap-4 rounded-xl border bg-card px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{form.enabled ? 'Enabled' : 'Disabled'}</p>
+          <p className="text-xs text-muted-foreground">
+            {form.enabled
+              ? 'This skill is active and will run on its schedule, triggers, or webhooks.'
+              : 'This skill is turned off — it won’t run until you enable it.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={form.enabled}
+          aria-label={form.enabled ? 'Disable skill' : 'Enable skill'}
+          onClick={() => set('enabled', !form.enabled)}
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+            form.enabled ? 'bg-green-500' : 'bg-muted-foreground/30'
+          }`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+            form.enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+          }`} />
+        </button>
+      </div>
+
+      {/* Config — dimmed (but still editable) when the skill is disabled. */}
+      <div className={form.enabled ? 'space-y-6' : 'space-y-6 opacity-50 transition-opacity'}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Name</Label>
@@ -480,16 +509,6 @@ export function SkillEditor({
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.enabled}
-            onChange={e => set('enabled', e.target.checked)}
-            className="h-4 w-4 rounded"
-          />
-          Enabled
-        </label>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
