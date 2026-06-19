@@ -1,0 +1,37 @@
+name: CI
+
+# Quality gate for the platform. Runs on every push and PR. Keeps the
+# self-extending connector catalog and the bundle registry honest: type
+# safety, no duplicate/broken connectors, complete simulation data, and
+# valid bundles. None of these steps need secrets — they analyze code only.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Connector integrity (no dups, complete manifests, valid actions)
+        run: npm run check:connectors
+
+      - name: Bundle integrity (connectors/alternatives/groups/actions resolve)
+        run: npm run check:bundles
+
+      - name: Simulation data parity (every action has demo data)
+        run: npm run test:sim-parity
