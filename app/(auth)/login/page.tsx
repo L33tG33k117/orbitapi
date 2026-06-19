@@ -35,6 +35,22 @@ export default function LoginPage() {
     })
   }
 
+  // Enterprise SSO/SAML. Routes the user to their org's IdP if a provider is
+  // registered for their email domain in Supabase Auth (an admin/provider step).
+  async function handleSSO() {
+    setError(null)
+    const domain = email.split('@')[1]?.trim()
+    if (!domain) { setError('Enter your work email above, then choose SSO.'); return }
+    setLoading(true)
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.signInWithSSO({
+      domain,
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+    })
+    if (error) { setError(error.message); setLoading(false); return }
+    if (data?.url) window.location.href = data.url
+  }
+
   return (
     <div
       className="min-h-screen flex"
@@ -136,6 +152,15 @@ export default function LoginPage() {
                 {loading ? 'Signing in…' : 'Sign in'}
               </Button>
             </form>
+
+            <button
+              type="button"
+              onClick={handleSSO}
+              disabled={loading}
+              className="w-full text-center text-sm text-white/45 hover:text-white/80 transition-colors disabled:opacity-50"
+            >
+              Use single sign-on (SSO)
+            </button>
           </div>
 
           <p className="text-center text-sm text-white/40">
