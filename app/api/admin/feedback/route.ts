@@ -10,9 +10,11 @@ export async function GET() {
 
   // feedback.user_id references auth.users (not profiles), so we can't embed
   // profiles directly — fetch the rows, then resolve profiles/workspaces by id.
+  // select('*') so the optional `diagnostics` column is included when migration
+  // 039 is applied, and simply absent (no error) before it is.
   const { data: rows } = await admin
     .from('feedback')
-    .select('id, message, page_url, status, created_at, user_id, workspace_id')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(200)
 
@@ -34,6 +36,8 @@ export async function GET() {
     page_url: r.page_url,
     status: r.status,
     created_at: r.created_at,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    diagnostics: (r as any).diagnostics ?? null,
     user: r.user_id ? pMap.get(r.user_id) ?? null : null,
     workspace: r.workspace_id ? wMap.get(r.workspace_id) ?? null : null,
   }))
