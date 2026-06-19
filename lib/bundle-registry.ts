@@ -251,9 +251,108 @@ const BILLING_DUNNING: BundleManifest = {
   ],
 }
 
+// ── Security ──────────────────────────────────────────────────────────────────
+const THREAT_HUNTER: BundleManifest = {
+  slug: 'threat-hunter',
+  name: 'Threat Hunter',
+  description: 'Proactive hunting — sweep EDR + XDR telemetry for IOCs and emerging tactics, and brief the team on findings.',
+  category: 'Security',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'crowdstrike', role: 'EDR / endpoint', alternatives: ['sentinelone', 'sophos', 'microsoft-defender'] },
+    { slug: 'stellar-cyber', role: 'XDR / SIEM', alternatives: ['microsoft-defender'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'hunt', name: 'Threat Hunting', color: '#dc2626', connectorSlugs: ['crowdstrike', 'stellar-cyber', 'slack'] }],
+  playbooks: [{
+    name: 'Daily IOC Sweep',
+    description: 'Hunt across endpoint + XDR telemetry for indicators of compromise and rank what to chase.',
+    persona: 'You are a threat hunter who thinks like an adversary.',
+    groupKey: 'hunt',
+    trigger_type: 'schedule',
+    schedule: '0 7 * * *',
+    autonomy_policy: { thresholds: [{ min: 8, max: 10, mode: 'approval' }, { min: 0, max: 7, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Sweep telemetry', type: 'assess',
+        prompt: 'Review recent detections and XDR alerts. Identify indicators of compromise and suspicious tactics worth hunting. Score severity by likelihood of an active intrusion.', next: 'notify' },
+      { id: 'notify', name: 'Brief the team', type: 'notify', message: 'Threat hunt (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Threat Hunter', groupKey: 'hunt', autonomy: 'supervised',
+      description: 'Correlates EDR + XDR signals and hunts for active threats.',
+      persona: 'You are an AI threat hunter. Correlate detections and alerts across the connected EDR and XDR tools, look for patterns that suggest an active adversary (lateral movement, credential access, C2), and post prioritized hunting leads to Slack.' },
+  ],
+}
+
+const VULN_MANAGER: BundleManifest = {
+  slug: 'vulnerability-manager',
+  name: 'Vulnerability Manager',
+  description: 'Stay ahead of CVEs — prioritize exposures by real risk and open tickets for the ones that matter.',
+  category: 'Security',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'microsoft-defender', role: 'Vulnerability data', alternatives: ['crowdstrike'] },
+    { slug: 'servicenow', role: 'Ticketing', alternatives: ['pagerduty', 'zendesk'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'vuln', name: 'Vulnerability Mgmt', color: '#9333ea', connectorSlugs: ['microsoft-defender', 'servicenow', 'slack'] }],
+  playbooks: [{
+    name: 'Critical CVE Triage',
+    description: 'Rank exposed vulnerabilities by exploitability and asset criticality, then escalate the worst.',
+    persona: 'You are a vulnerability manager who prioritizes by real-world risk, not just CVSS.',
+    groupKey: 'vuln',
+    trigger_type: 'schedule',
+    schedule: '0 8 * * 1',
+    definition: { steps: [
+      { id: 'assess', name: 'Prioritize vulnerabilities', type: 'assess',
+        prompt: 'List current vulnerabilities and exposed machines. Prioritize by exploitability, exposure, and asset criticality. Score severity by the worst actively-exploitable exposure.', next: 'notify' },
+      { id: 'notify', name: 'Report top risks', type: 'notify', message: 'Vulnerability triage (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Vulnerability Prioritizer', groupKey: 'vuln', autonomy: 'supervised',
+      description: 'Ranks CVEs by real risk and drafts remediation tickets.',
+      persona: 'You are an AI vulnerability manager. Pull vulnerability and exposed-machine data, prioritize by exploitability and asset criticality, open ServiceNow tickets for criticals, and summarize the risk posture in Slack.' },
+  ],
+}
+
+const PHISHING_RESPONSE: BundleManifest = {
+  slug: 'phishing-response',
+  name: 'Phishing Response',
+  description: 'Triage suspected phishing fast — assess reported messages and endpoint alerts, then escalate real threats.',
+  category: 'Security',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'microsoft-defender', role: 'Email / endpoint security', alternatives: ['crowdstrike', 'sophos'] },
+    { slug: 'pagerduty', role: 'On-call paging', alternatives: ['servicenow'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'phish', name: 'Phishing Response', color: '#e11d48', connectorSlugs: ['microsoft-defender', 'pagerduty', 'slack'] }],
+  playbooks: [{
+    name: 'Suspected Phishing Triage',
+    description: 'Assess security alerts for phishing indicators and page on-call for confirmed campaigns.',
+    persona: 'You are a SOC analyst specializing in email-borne threats.',
+    groupKey: 'phish',
+    trigger_type: 'manual',
+    autonomy_policy: { thresholds: [{ min: 8, max: 10, mode: 'approval' }, { min: 0, max: 7, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Assess phishing signals', type: 'assess',
+        prompt: 'Review recent security alerts for phishing indicators (malicious URLs, credential harvesting, suspicious senders). Score severity by blast radius and whether credentials may be compromised.', next: 'notify' },
+      { id: 'notify', name: 'Alert the SOC', type: 'notify', message: 'Phishing triage (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Phishing Analyst', groupKey: 'phish', autonomy: 'supervised',
+      description: 'Triages reported phishing and recommends containment.',
+      persona: 'You are an AI phishing analyst. Investigate reported messages and related endpoint alerts, judge whether it is a real campaign, recommend containment (block sender/URL, reset affected creds), post findings to Slack, and page on-call via PagerDuty only for confirmed active campaigns.' },
+  ],
+}
+
 export const BUILTIN_BUNDLES: BundleManifest[] = [
   SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT,
   ACCOUNTANT, PAYROLL_PAYSTUBS, BILLING_DUNNING,
+  THREAT_HUNTER, VULN_MANAGER, PHISHING_RESPONSE,
 ]
 
 export function getBuiltinBundle(slug: string): BundleManifest | undefined {
