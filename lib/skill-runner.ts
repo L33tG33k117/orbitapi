@@ -43,25 +43,41 @@ export async function runSkill({
 
   if (!skill) throw new Error('Skill not found')
 
+  // A skill with no persona has no instructions — it would just run a generic
+  // "do something" workflow against whatever connectors exist. Refuse it.
+  if (!skill.persona || !skill.persona.trim()) {
+    throw new Error('This skill has no persona yet. Add instructions and verify it before running.')
+  }
+
   // Enforce AI Power — block the run if the workspace is out of credits.
   const power = await getAiPower(workspaceId)
   if (power.remaining <= 0) throw new Error(OUT_OF_AI_POWER)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const group = skill.group as any
-  const connectionIds: string[] = group
+  // A group scopes the skill to specific connections; NO group means "all my
+  // connections" (matches the editor label + chat behavior).
+  const groupConnIds: string[] | null = group
     ? (group.group_connections ?? []).map((gc: { connection_id: string }) => gc.connection_id)
-    : []
+    : null
 
-  // Load connections
+  // Load connections (scoped to the group, or all active workspace connections).
   let connections: { id: string; label: string; vault_secret_id: string | null; connector: { slug: string; name: string } }[] = []
-  if (connectionIds.length > 0) {
-    const { data } = await admin
+  {
+    let q = admin
       .from('connections')
       .select('id, label, vault_secret_id, connector:connectors(slug, name)')
-      .in('id', connectionIds)
+      .eq('workspace_id', workspaceId)
       .eq('status', 'active')
+    if (groupConnIds) q = q.in('id', groupConnIds.length ? groupConnIds : ['00000000-0000-0000-0000-000000000000'])
+    const { data } = await q
     connections = (data ?? []) as unknown as typeof connections
+  }
+
+  // No connectors = nothing the skill can actually do — refuse rather than let
+  // the model improvise.
+  if (connections.length === 0) {
+    throw new Error('No connectors are available to this skill. Add a connection (or choose a group that has connections) before running.')
   }
 
   const blockedSlugs: string[] = skill.blocked_slugs ?? []
@@ -200,7 +216,7 @@ export async function runSkill({
     // Resolve the model from the skill's Efficiency (or the workspace default).
     const chosenModel = modelFor((skill as { ai_efficiency?: Efficiency }).ai_efficiency, power.efficiency)
 
-    const systemPrompt = `${skill.persona || 'You are an autonomous AI assistant.'}
+    const systemPrompt = `${skill.persona}
 
 Today's date is ${today}.
 Run mode: ${mode === 'dry_run' ? 'DRY RUN — write actions will be logged but NOT executed. Read actions execute normally.' : 'LIVE — all actions will execute.'}

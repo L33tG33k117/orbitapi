@@ -150,6 +150,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
           initialRuns={(runs ?? []) as Parameters<typeof RunHistory>[0]['initialRuns']}
           isAdmin={isAdmin}
           autonomy={skill.autonomy as 'supervised' | 'manual' | 'autonomous'}
+          runnable={!!(skill.persona && skill.persona.trim())}
         />
       </section>
     </div>

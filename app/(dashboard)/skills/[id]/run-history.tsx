@@ -113,11 +113,13 @@ export function RunHistory({
   initialRuns,
   isAdmin,
   autonomy = 'supervised',
+  runnable = true,
 }: {
   skillId: string
   initialRuns: Run[]
   isAdmin: boolean
   autonomy?: 'supervised' | 'manual' | 'autonomous'
+  runnable?: boolean
 }) {
   const [runs, setRuns] = useState(initialRuns)
   const [running, setRunning] = useState(false)
@@ -156,11 +158,13 @@ export function RunHistory({
         <div className="flex items-center gap-3">
           <Button
             onClick={triggerRun}
-            disabled={running}
+            disabled={running || !runnable}
             variant={autonomy === 'supervised' ? 'secondary' : 'default'}
+            title={!runnable ? 'Add a persona and verify the skill before running' : undefined}
           >
             {running ? 'Running…' : buttonLabel}
           </Button>
+          {!runnable && <p className="text-sm text-muted-foreground">Add a persona and verify this skill before running it.</p>}
           {runError && <p className="text-sm text-destructive">{runError}</p>}
         </div>
       )}

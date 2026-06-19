@@ -30,9 +30,14 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   const admin = createAdminClient()
-  const { data: skill } = await admin.from('skills').select('workspace_id').eq('id', id).single()
+  const { data: skill } = await admin.from('skills').select('workspace_id, persona').eq('id', id).single()
   if (!skill || skill.workspace_id !== membership.workspace_id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  // Don't run a skill with no instructions — it would just improvise.
+  if (!skill.persona || !skill.persona.trim()) {
+    return NextResponse.json({ error: 'This skill has no persona yet. Add instructions and verify it before running.' }, { status: 400 })
   }
 
   const body = await req.json().catch(() => ({}))
