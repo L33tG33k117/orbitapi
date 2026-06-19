@@ -146,7 +146,115 @@ const PROPERTY_MGMT: BundleManifest = {
   ],
 }
 
-export const BUILTIN_BUNDLES: BundleManifest[] = [SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT]
+// ── Finance ───────────────────────────────────────────────────────────────────
+const ACCOUNTANT: BundleManifest = {
+  slug: 'accountant',
+  name: 'Accountant',
+  description: 'Your books on autopilot — chase overdue invoices, draft dunning emails, and get a weekly financial brief.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'netsuite', role: 'Accounting / ERP', alternatives: ['quickbooks-online'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'acct', name: 'Accounting', color: '#16a34a', connectorSlugs: ['netsuite', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Overdue Invoice Chaser',
+    description: 'Each morning, review open invoices and surface the ones past due for follow-up.',
+    persona: 'You are a meticulous accounts-receivable clerk.',
+    groupKey: 'acct',
+    trigger_type: 'schedule',
+    schedule: '0 9 * * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Review open invoices', type: 'assess',
+        prompt: 'List open invoices and identify which are past their due date and by how much. Score severity by total overdue amount and days late.', next: 'notify' },
+      { id: 'notify', name: 'Post AR summary', type: 'notify', message: 'Overdue AR (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'AR Clerk', groupKey: 'acct', autonomy: 'supervised',
+      description: 'Tracks receivables and drafts payment reminders.',
+      persona: 'You are an AI accounts-receivable clerk. Review open invoices, identify overdue accounts, draft polite-but-firm payment-reminder emails (SendGrid), and summarize collections risk in Slack.' },
+    { name: 'Financial Reporter', groupKey: 'acct', autonomy: 'supervised',
+      description: 'Compiles periodic financial summaries.',
+      persona: 'You are an AI financial analyst. Pull revenue, AR balance, and open invoices, then write a concise weekly financial brief and post it to Slack.' },
+  ],
+}
+
+const PAYROLL_PAYSTUBS: BundleManifest = {
+  slug: 'payroll-paystubs',
+  name: 'Payroll & Paystubs',
+  description: 'Run-day helper — prep the payroll summary, distribute paystubs, and flag anything that looks off.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'quickbooks-online', role: 'Accounting / payroll', alternatives: ['netsuite'] },
+    { slug: 'sendgrid', role: 'Paystub email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'pay', name: 'Payroll', color: '#0891b2', connectorSlugs: ['quickbooks-online', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Payroll Run Summary',
+    description: 'Summarize the upcoming payroll run and surface anomalies before approval.',
+    persona: 'You are a payroll coordinator who double-checks every run.',
+    groupKey: 'pay',
+    trigger_type: 'schedule',
+    schedule: '0 8 * * 5',
+    definition: { steps: [
+      { id: 'assess', name: 'Review payroll figures', type: 'assess',
+        prompt: 'Summarize this pay period: total payroll, headcount, and any figures that look unusual versus a normal run. Score severity by size of any anomaly.', next: 'notify' },
+      { id: 'notify', name: 'Post payroll summary', type: 'notify', message: 'Payroll run summary (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Payroll Assistant', groupKey: 'pay', autonomy: 'supervised',
+      description: 'Preps payroll, distributes paystubs, flags discrepancies.',
+      persona: 'You are an AI payroll assistant. Prepare the payroll run summary, email each employee their paystub via SendGrid, and flag any discrepancies (missing hours, unusual amounts) in Slack for human review before anything is finalized.' },
+  ],
+}
+
+const BILLING_DUNNING: BundleManifest = {
+  slug: 'billing-dunning',
+  name: 'Billing & Dunning',
+  description: 'Recover revenue automatically — find overdue balances and run a polite multi-channel reminder sequence.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'quickbooks-online', role: 'Billing', alternatives: ['netsuite'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'twilio', role: 'SMS' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'bill', name: 'Billing', color: '#ca8a04', connectorSlugs: ['quickbooks-online', 'sendgrid', 'twilio', 'slack'] }],
+  playbooks: [{
+    name: 'Dunning Sequence',
+    description: 'Find overdue balances and escalate reminders by how late they are.',
+    persona: 'You are a collections specialist who recovers revenue without burning customer goodwill.',
+    groupKey: 'bill',
+    trigger_type: 'schedule',
+    schedule: '0 10 * * 1',
+    autonomy_policy: { thresholds: [
+      { min: 8, max: 10, mode: 'approval' },
+      { min: 0, max: 7, mode: 'notify' },
+    ] },
+    definition: { steps: [
+      { id: 'assess', name: 'Find overdue balances', type: 'assess',
+        prompt: 'List overdue invoices and bucket them by days late (1–30, 31–60, 60+). Score severity by the oldest/largest overdue balance.', next: 'notify' },
+      { id: 'notify', name: 'Report collections status', type: 'notify', message: 'Dunning run (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Dunning Agent', groupKey: 'bill', autonomy: 'supervised',
+      description: 'Sends staged payment reminders across email and SMS.',
+      persona: 'You are an AI collections agent. Identify overdue invoices, send staged reminders — a gentle email (SendGrid) first, an SMS (Twilio) when very overdue — and escalate accounts 60+ days late to Slack for a human.' },
+  ],
+}
+
+export const BUILTIN_BUNDLES: BundleManifest[] = [
+  SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT,
+  ACCOUNTANT, PAYROLL_PAYSTUBS, BILLING_DUNNING,
+]
 
 export function getBuiltinBundle(slug: string): BundleManifest | undefined {
   return BUILTIN_BUNDLES.find(b => b.slug === slug)
