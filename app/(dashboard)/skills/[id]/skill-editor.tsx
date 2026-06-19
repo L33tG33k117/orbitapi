@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Lock } from 'lucide-react'
+import { Lock, Gauge } from 'lucide-react'
 import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule } from '@/lib/schedules'
+import { estimateRunCredits, runsPerMonth, scaleEstimate, formatEstimate, type Efficiency } from '@/lib/ai-estimate'
 
 type Autonomy = 'supervised' | 'manual' | 'autonomous'
 
@@ -59,6 +60,7 @@ export function SkillEditor({
   isAdmin,
   webhooksEnabled = true,
   automationEnabled = true,
+  efficiency = 'balanced',
 }: {
   skill: SkillData
   groups: Group[]
@@ -66,6 +68,7 @@ export function SkillEditor({
   isAdmin: boolean
   webhooksEnabled?: boolean
   automationEnabled?: boolean
+  efficiency?: Efficiency
 }) {
   const router = useRouter()
   const [form, setForm] = useState(skill)
@@ -168,15 +171,19 @@ export function SkillEditor({
           <Input value={form.name} onChange={e => set('name', e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Group</Label>
+          <Label>Connectors this skill can use</Label>
           <select
             value={form.group_id}
             onChange={e => set('group_id', e.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
-            <option value="">No group</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            <option value="">All my connections</option>
+            {groups.map(g => <option key={g.id} value={g.id}>Only the “{g.name}” group</option>)}
           </select>
+          <p className="text-[11px] text-muted-foreground">
+            Pick a <a href="/groups" className="underline underline-offset-2 hover:text-foreground">group</a> to limit
+            this skill to specific connectors, or leave it on all connections.
+          </p>
         </div>
       </div>
 
@@ -296,6 +303,31 @@ export function SkillEditor({
           )}
         </div>
       )}
+
+      {/* Estimated AI Power — helps the user gauge ongoing cost before saving */}
+      {(() => {
+        const runEst = estimateRunCredits(efficiency)
+        const scheduled = scheduleEnabled && form.autonomy !== 'manual'
+        const monthly = scheduled ? scaleEstimate(runEst, runsPerMonth(scheduleDow)) : null
+        return (
+          <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1">
+            <div className="flex items-center gap-1.5">
+              <Gauge className="h-3.5 w-3.5 text-primary" />
+              <p className="text-xs font-semibold">Estimated AI Power</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              About <span className="font-medium text-foreground">{formatEstimate(runEst)}</span> per run
+              {scheduled && monthly
+                ? <> · roughly <span className="font-medium text-foreground">{formatEstimate(monthly)} / month</span> at this schedule</>
+                : form.autonomy === 'manual' ? ' — runs only when you trigger it' : null}.
+            </p>
+            <p className="text-[11px] text-muted-foreground/70">
+              Rough estimate; actual usage depends on the task and how much data it reads. Track your balance on{' '}
+              <a href="/ai-power" className="underline underline-offset-2 hover:text-foreground">AI Power</a>.
+            </p>
+          </div>
+        )
+      })()}
 
       {/* Trigger condition — autonomous only */}
       {form.autonomy === 'autonomous' && (

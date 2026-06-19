@@ -8,7 +8,7 @@ import type { UIMessage } from 'ai'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { MessageSquarePlus, Trash2, Clock, ChevronLeft, Save } from 'lucide-react'
+import { MessageSquarePlus, Trash2, Clock, ChevronLeft, Save, Plug, ArrowRight } from 'lucide-react'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -403,7 +403,15 @@ const DEFAULT_SUGGESTIONS = [
   'Send me a test SMS via Twilio',
 ]
 
-export function ChatUI({ skills = [] }: { skills?: Skill[] }) {
+// Shown when the workspace has no connections — the data prompts above would
+// just confuse a brand-new user (and the assistant can't fulfil them).
+const ONBOARDING_SUGGESTIONS = [
+  'How do I connect my first app?',
+  'What can OrbitAPI do for me?',
+  'Can I try a connector without API keys?',
+]
+
+export function ChatUI({ skills = [], hasConnections = true }: { skills?: Skill[]; hasConnections?: boolean }) {
   const [activeSkillId, setActiveSkillId] = useState<string>('')
   const [skillRunStatus, setSkillRunStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [skillRunMsg, setSkillRunMsg] = useState('')
@@ -423,7 +431,7 @@ export function ChatUI({ skills = [] }: { skills?: Skill[] }) {
   const activeSkill = skills.find(s => s.id === activeSkillId) ?? null
   const suggestions = activeSkill
     ? [`Run your standard workflow`, `What does ${activeSkill.name} see right now?`]
-    : DEFAULT_SUGGESTIONS
+    : hasConnections ? DEFAULT_SUGGESTIONS : ONBOARDING_SUGGESTIONS
 
   // Load conversation list on mount
   const loadConversations = useCallback(async () => {
@@ -508,6 +516,23 @@ export function ChatUI({ skills = [] }: { skills?: Skill[] }) {
 
       {/* Main chat area */}
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* No-connections banner — the assistant can't fetch real data yet */}
+        {!hasConnections && (
+          <a
+            href="/connectors"
+            className="flex items-center gap-3 px-4 py-2.5 border-b bg-primary/5 hover:bg-primary/10 transition-colors shrink-0"
+          >
+            <Plug className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">No apps connected yet</p>
+              <p className="text-xs text-muted-foreground">The assistant can&apos;t pull real data until you connect (or simulate) an app.</p>
+            </div>
+            <span className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
+              Connect one <ArrowRight className="h-3 w-3" />
+            </span>
+          </a>
+        )}
+
         {/* Skill context picker */}
         {skills.length > 0 && (
           <div className="px-4 py-2 border-b bg-muted/30 flex items-center gap-3 shrink-0 flex-wrap">

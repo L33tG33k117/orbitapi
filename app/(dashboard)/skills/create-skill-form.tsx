@@ -107,18 +107,23 @@ export function CreateSkillForm({ groups, defaultGroupId }: { groups: Group[]; d
       <form onSubmit={handleSubmit} className="border rounded-xl p-4 space-y-4 bg-card">
         <h2 className="font-medium">Create skill</h2>
         <div className="space-y-1.5">
-          <Label htmlFor="sgroup">Group (optional)</Label>
+          <Label htmlFor="sgroup">Which connectors should this skill use?</Label>
           <select
             id="sgroup"
             value={groupId}
             onChange={e => setGroupId(e.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
-            <option value="">No group — uses all connections</option>
+            <option value="">All my connections</option>
             {groups.map(g => (
-              <option key={g.id} value={g.id}>{g.name}</option>
+              <option key={g.id} value={g.id}>Only the “{g.name}” group</option>
             ))}
           </select>
+          <p className="text-[11px] text-muted-foreground">
+            A skill works through your connected APIs. Leave this on “All my connections” to let it use every
+            connector, or pick a <a href="/groups" className="underline underline-offset-2 hover:text-foreground">group</a> to
+            limit it to just those connectors (e.g. only NetSuite for an invoice checker).
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="sname">Skill name</Label>

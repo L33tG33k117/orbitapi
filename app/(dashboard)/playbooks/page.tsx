@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { scheduleLabel } from '@/lib/schedules'
 import { pageGate } from '@/components/page-gate'
 import { CreatePlaybookForm } from './create-playbook-form'
+import { SectionIntro } from '@/components/section-intro'
 
 // Feature #1 — Autonomous response playbooks with approval chains.
 export default async function PlaybooksPage() {
@@ -45,8 +46,12 @@ export default async function PlaybooksPage() {
         </p>
       </div>
 
+      <SectionIntro id="playbooks" />
+
       {isAdmin && (
-        <CreatePlaybookForm groups={(groups ?? []) as { id: string; name: string; color: string }[]} />
+        <div data-tour="playbook-create">
+          <CreatePlaybookForm groups={(groups ?? []) as { id: string; name: string; color: string }[]} />
+        </div>
       )}
 
       <div className="space-y-2">

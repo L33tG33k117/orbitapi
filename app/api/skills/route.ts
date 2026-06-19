@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       workspace_id: membership.workspace_id,
       name: name.trim(),
       description,
-      group_id: group_id ?? null,
+      group_id: group_id || null,
       persona: persona ?? '',
       autonomy: !canAutomate ? 'manual' : (autonomy ?? 'supervised'),
     })

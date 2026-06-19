@@ -60,7 +60,7 @@ export async function PUT(req: Request, { params }: Params) {
   const { error } = await admin.from('skills').update({
     name: body.name,
     description: body.description,
-    group_id: body.group_id ?? null,
+    group_id: body.group_id || null,
     persona: body.persona,
     blocked_slugs: body.blocked_slugs ?? [],
     autonomy,

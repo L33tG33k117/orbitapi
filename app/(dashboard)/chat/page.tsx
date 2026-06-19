@@ -31,13 +31,20 @@ export default async function ChatPage() {
   }
 
   const admin = createAdminClient()
-  const { data: skills } = membership
-    ? await admin
-        .from('skills')
-        .select('id, name, description, autonomy, group:groups(name, color)')
-        .eq('workspace_id', membership.workspace_id)
-        .order('name')
-    : { data: [] }
+  const [{ data: skills }, { count: connectionCount }] = membership
+    ? await Promise.all([
+        admin
+          .from('skills')
+          .select('id, name, description, autonomy, group:groups(name, color)')
+          .eq('workspace_id', membership.workspace_id)
+          .order('name'),
+        admin
+          .from('connections')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', membership.workspace_id)
+          .neq('status', 'trashed'),
+      ])
+    : [{ data: [] }, { count: 0 }]
 
   return (
     <div className="flex flex-col h-full">
@@ -54,6 +61,7 @@ export default async function ChatPage() {
             autonomy: string;
             group: { name: string; color: string } | null
           }[]}
+          hasConnections={(connectionCount ?? 0) > 0}
         />
       </div>
     </div>

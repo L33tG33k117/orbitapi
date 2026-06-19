@@ -10,6 +10,7 @@ import { SKILL_TEMPLATES } from '@/lib/skill-templates'
 import { CreateSkillForm } from './create-skill-form'
 import { SkillTemplates } from './skill-templates'
 import { SkillDeleteButton } from './skill-delete-button'
+import { SectionIntro } from '@/components/section-intro'
 
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ groupId?: string }> }) {
   const { groupId } = await searchParams
@@ -74,6 +75,8 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
         </p>
       </div>
 
+      <SectionIntro id="skills" />
+
       {isAdmin && features && !hasCapability(features.tier, features.flags, 'skill_automation') && (
         <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
@@ -85,17 +88,21 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       )}
 
       {isAdmin && (
-        <CreateSkillForm
-          groups={(groups ?? []) as { id: string; name: string; color: string }[]}
-          defaultGroupId={groupId}
-        />
+        <div data-tour="skill-create">
+          <CreateSkillForm
+            groups={(groups ?? []) as { id: string; name: string; color: string }[]}
+            defaultGroupId={groupId}
+          />
+        </div>
       )}
 
       {(skills ?? []).length === 0 && isAdmin && (
-        <SkillTemplates
-          templates={SKILL_TEMPLATES}
-          groups={(groups ?? []) as { id: string; name: string; color: string }[]}
-        />
+        <div data-tour="skill-templates">
+          <SkillTemplates
+            templates={SKILL_TEMPLATES}
+            groups={(groups ?? []) as { id: string; name: string; color: string }[]}
+          />
+        </div>
       )}
 
       <div className="space-y-2">

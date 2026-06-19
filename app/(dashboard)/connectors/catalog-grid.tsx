@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
-import { Lock, FlaskConical } from 'lucide-react'
+import { Lock, FlaskConical, Search } from 'lucide-react'
 import { ConnectDialog } from './connect-dialog'
 import { SimulateDialog } from './simulate-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -205,6 +205,17 @@ export function CatalogGrid({ catalog, availableConnectors, canManage, atConnect
 
   return (
     <div className="space-y-6">
+      {/* Search — kept at the top of the catalog so it's the first thing you see */}
+      <div data-tour="connector-search" className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Search API connectors by name, category, or what they do…"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setActiveCategory(ALL) }}
+          className="pl-9 h-11"
+        />
+      </div>
+
       {/* New connectors row */}
       {newEntries.length > 0 && !search && activeCategory === ALL && (
         <section className="space-y-3">
@@ -229,14 +240,8 @@ export function CatalogGrid({ catalog, availableConnectors, canManage, atConnect
         </section>
       )}
 
-      {/* Search + category filter */}
+      {/* Category filter */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <Input
-          placeholder="Search API connectors…"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setActiveCategory(ALL) }}
-          className="max-w-xs"
-        />
         <div className="flex items-center gap-1.5 flex-wrap">
           {categories.map(cat => (
             <button

@@ -8,6 +8,7 @@ import { catalog } from '@/connectors/catalog'
 import { ConnectionList } from './connection-list'
 import { CatalogGrid } from './catalog-grid'
 import { RequestConnectorForm } from './request-connector-form'
+import { SectionIntro } from '@/components/section-intro'
 
 export default async function ConnectorsPage() {
   const supabase = await createClient()
@@ -79,6 +80,8 @@ export default async function ConnectorsPage() {
         </p>
       </div>
 
+      <SectionIntro id="connectors" />
+
       {(connections ?? []).length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -94,7 +97,7 @@ export default async function ConnectorsPage() {
         </section>
       )}
 
-      <section className="space-y-4">
+      <section data-tour="connector-catalog" className="space-y-4">
         <h2 className="text-lg font-semibold">API connector catalog</h2>
         <CatalogGrid
           catalog={sortedCatalog}

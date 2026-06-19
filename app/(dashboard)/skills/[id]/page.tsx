@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWorkspaceFeatures } from '@/lib/workspace-features'
 import { hasCapability } from '@/lib/entitlements'
+import { getAiPower, type Efficiency } from '@/lib/ai-power'
 import { getConnector } from '@/connectors'
 import { scheduleLabel } from '@/lib/schedules'
 import { SkillEditor } from './skill-editor'
@@ -77,6 +78,10 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
 
   const isAdmin = membership.role !== 'member'
 
+  // Effective efficiency drives the AI Power estimate shown in the editor.
+  const aiPower = await getAiPower(membership.workspace_id)
+  const efficiency = ((skill as unknown as { ai_efficiency?: Efficiency }).ai_efficiency ?? aiPower.efficiency) as Efficiency
+
   return (
     <div className="p-8 space-y-8 max-w-3xl">
       <div className="flex items-center gap-4">
@@ -114,6 +119,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
         isAdmin={isAdmin}
         webhooksEnabled={features ? hasCapability(features.tier, features.flags, 'webhooks') : true}
         automationEnabled={features ? hasCapability(features.tier, features.flags, 'skill_automation') : true}
+        efficiency={efficiency}
       />
 
       <section className="space-y-3">

@@ -49,6 +49,9 @@ export async function PATCH(req: Request, { params }: Params) {
   ]) {
     if (key in body) patch[key] = body[key]
   }
+  // group_id is a uuid column — an empty string from a "No group" <select>
+  // must become null, not '' (which throws invalid-uuid).
+  if ('group_id' in patch) patch.group_id = patch.group_id || null
 
   const { data, error } = await ctx.admin
     .from('playbooks').update(patch).eq('id', id).select().single()

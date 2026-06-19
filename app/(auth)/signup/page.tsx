@@ -105,6 +105,8 @@ export default function SignupPage() {
                 <Label htmlFor="fullName" className="text-white/70 text-sm">Full name</Label>
                 <Input
                   id="fullName"
+                  name="fullName"
+                  autoComplete="name"
                   placeholder="Jane Smith"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
@@ -116,6 +118,8 @@ export default function SignupPage() {
                 <Label htmlFor="workspaceName" className="text-white/70 text-sm">Workspace</Label>
                 <Input
                   id="workspaceName"
+                  name="workspaceName"
+                  autoComplete="organization"
                   placeholder="My Company"
                   value={workspaceName}
                   onChange={e => setWorkspaceName(e.target.value)}
@@ -128,7 +132,9 @@ export default function SignupPage() {
               <Label htmlFor="email" className="text-white/70 text-sm">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@company.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -140,7 +146,9 @@ export default function SignupPage() {
               <Label htmlFor="password" className="text-white/70 text-sm">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="8+ characters"
                 minLength={8}
                 value={password}
@@ -154,6 +162,8 @@ export default function SignupPage() {
                 <Label htmlFor="inviteCode" className="text-white/70 text-sm">Invite code</Label>
                 <Input
                   id="inviteCode"
+                  name="inviteCode"
+                  autoComplete="off"
                   placeholder="Enter your beta invite code"
                   value={inviteCode}
                   onChange={e => setInviteCode(e.target.value)}

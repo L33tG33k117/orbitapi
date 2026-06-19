@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { pageGate } from '@/components/page-gate'
+import { SectionIntro } from '@/components/section-intro'
 import { DataMappingClient } from './data-mapping-client'
 
 export default async function DataMappingPage() {
@@ -44,7 +45,11 @@ export default async function DataMappingPage() {
           mappings, previews the transformed record against a live sample, and you approve before automating.
         </p>
       </div>
-      <DataMappingClient connections={connections} />
+
+      <SectionIntro id="data-mapping" />
+      <div data-tour="data-mapping">
+        <DataMappingClient connections={connections} />
+      </div>
     </div>
   )
 }

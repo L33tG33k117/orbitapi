@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { InstallButton } from './install-button'
-import { ChevronDown, ChevronRight, Plug, ShieldAlert, Zap } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plug, ShieldAlert, Zap, Gauge } from 'lucide-react'
+import { estimateRunCredits, formatCredits } from '@/lib/ai-estimate'
 
 export interface BundleCardData {
   slug: string
@@ -34,6 +35,14 @@ export function BundleCard(b: BundleCardData) {
           {b.isAdmin && <InstallButton slug={b.slug} source={b.source} installed={b.installed} />}
         </div>
         <p className="text-xs text-muted-foreground leading-snug">{b.description}</p>
+
+        {b.skills.length > 0 && (
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Gauge className="h-3 w-3 text-primary shrink-0" />
+            Est. <span className="font-medium text-foreground">~{formatCredits(estimateRunCredits('balanced').typical)} AI Power</span> per skill run
+            <span className="text-muted-foreground/60">· installing is free</span>
+          </p>
+        )}
 
         <button
           onClick={() => setOpen(o => !o)}

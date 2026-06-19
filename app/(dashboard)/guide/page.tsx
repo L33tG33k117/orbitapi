@@ -200,6 +200,53 @@ export default function GuidePage() {
         </div>
       </div>
 
+      {/* How it all fits together — the mental model new users are missing */}
+      <div className="rounded-2xl border bg-card p-6 mb-10">
+        <h2 className="font-semibold text-lg">How it all fits together</h2>
+        <p className="text-sm text-muted-foreground mt-1 mb-6 max-w-2xl">
+          Each layer builds on the one below it. You don&apos;t need all of them on day one — start at the bottom
+          and climb as far as your workflow needs.
+        </p>
+
+        {/* Top → bottom on screen = highest layer → foundation. Arrows point UP
+            because each layer builds on the one below it (Connectors = bottom). */}
+        <div className="space-y-2.5">
+          {[
+            { icon: ShieldAlert, name: 'Playbooks  +  Bundles', tone: 'from-fuchsia-500/20 to-fuchsia-500/5 border-fuchsia-500/30 text-fuchsia-300', desc: 'Orchestrate multiple steps and skills into a workflow — or install a ready-made Bundle of all of the below.' },
+            { icon: MessageSquare, name: 'Assistant  +  Skills', tone: 'from-violet-500/20 to-violet-500/5 border-violet-500/30 text-violet-300', desc: 'Act on your connectors. Ask the Assistant one-off, or save a repeatable Skill (an agent with a persona).' },
+            { icon: Layers, name: 'Groups', tone: 'from-cyan-500/20 to-cyan-500/5 border-cyan-500/30 text-cyan-300', desc: 'Optional. Bundle connectors so an agent only touches the right apps.' },
+            { icon: Plug, name: 'Connectors', tone: 'from-blue-500/20 to-blue-500/5 border-blue-500/30 text-blue-300', desc: 'The foundation — link the apps you use (or simulate them). Everything above acts through these.' },
+          ].map((layer, i, arr) => {
+            const Icon = layer.icon
+            return (
+              <div key={layer.name}>
+                <div className={`flex items-start gap-3 rounded-xl border bg-gradient-to-r ${layer.tone} px-4 py-3`}>
+                  <div className="h-8 w-8 rounded-lg bg-background/40 flex items-center justify-center shrink-0">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-foreground">{layer.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{layer.desc}</p>
+                  </div>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className="flex justify-center py-1">
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50 -rotate-90" />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground/70">Running throughout:</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"><ClipboardCheck className="h-3 w-3" /> Approvals gate risky actions</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"><Webhook className="h-3 w-3" /> Webhooks trigger from outside events</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1"><Shuffle className="h-3 w-3" /> Data Mapping moves records between apps</span>
+        </div>
+      </div>
+
       <div className="flex gap-8">
         {/* Sticky table of contents */}
         <nav className="hidden lg:block w-44 shrink-0">
