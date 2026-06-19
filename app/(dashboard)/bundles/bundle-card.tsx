@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Check, Download, ChevronDown, ChevronRight, Plug, ShieldAlert, Zap, Gauge } from 'lucide-react'
 import { estimateRunCredits, formatCredits } from '@/lib/ai-estimate'
@@ -22,8 +24,23 @@ export interface BundleCardData {
 }
 
 export function BundleCard(b: BundleCardData) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [removing, setRemoving] = useState(false)
+
+  async function uninstall() {
+    if (!confirm(`Remove “${b.name}”? This deletes the skills, playbooks, groups, and connections it created. Connectors you already had are kept.`)) return
+    setRemoving(true)
+    const res = await fetch('/api/bundles/uninstall', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: b.slug }),
+    })
+    const data = await res.json()
+    setRemoving(false)
+    if (!res.ok) { toast.error(data.error ?? 'Uninstall failed'); return }
+    toast.success(`Removed ${b.name}`)
+    router.refresh()
+  }
 
   return (
     <div className="border rounded-xl bg-card overflow-hidden">
@@ -36,7 +53,12 @@ export function BundleCard(b: BundleCardData) {
             </span>
           </div>
           {b.isAdmin && (b.installed ? (
-            <Button size="sm" variant="outline" disabled><Check className="h-3.5 w-3.5" /> Installed</Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-500"><Check className="h-3.5 w-3.5" /> Installed</span>
+              <button onClick={uninstall} disabled={removing} className="text-xs text-muted-foreground hover:text-destructive underline underline-offset-2 disabled:opacity-50">
+                {removing ? 'Removing…' : 'Remove'}
+              </button>
+            </div>
           ) : (
             <Button size="sm" onClick={() => setDialogOpen(true)}><Download className="h-3.5 w-3.5" /> Install</Button>
           ))}
