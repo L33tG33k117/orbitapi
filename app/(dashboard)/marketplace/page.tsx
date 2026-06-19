@@ -1,10 +1,23 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { InstallButton } from '../bundles/install-button'
+import { getConnector } from '@/connectors'
+import type { BundleManifest } from '@/lib/bundles'
+import { MarketplaceInstall } from './marketplace-install'
+import { type ExistingConnection } from '../bundles/install-bundle-dialog'
 import { PublishForm } from './publish-form'
 import { ReviewButtons } from './review-buttons'
 import { Store, Star } from 'lucide-react'
+
+const nameFor = (slug: string, fallback?: string) => getConnector(slug)?.name ?? fallback ?? slug
+function manifestConnectors(manifest: BundleManifest) {
+  return (manifest?.connectors ?? []).map(c => ({
+    slug: c.slug,
+    name: nameFor(c.slug, c.label),
+    role: c.role,
+    alternatives: (c.alternatives ?? []).map(s => ({ slug: s, name: nameFor(s) })),
+  }))
+}
 
 export default async function MarketplacePage() {
   const supabase = await createClient()
@@ -26,6 +39,21 @@ export default async function MarketplacePage() {
   ])
   const superAdmin = profile?.super_admin ?? false
   const installedSlugs = new Set((installs ?? []).map(i => i.bundle_slug))
+
+  const { data: conns } = await admin
+    .from('connections')
+    .select('id, label, vault_secret_id, connector:connectors(slug, name)')
+    .eq('workspace_id', membership.workspace_id)
+    .neq('status', 'trashed')
+  const existingConnections: ExistingConnection[] = (conns ?? []).map(c => ({
+    id: c.id,
+    label: c.label,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    slug: (c.connector as any)?.slug ?? '',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    name: (c.connector as any)?.name ?? '',
+    configured: !!c.vault_secret_id,
+  }))
 
   const { data: pending } = superAdmin
     ? await admin.from('marketplace_listings').select('*').eq('status', 'pending').order('created_at')
@@ -68,7 +96,15 @@ export default async function MarketplacePage() {
                   <p className="font-medium text-sm">{l.name}</p>
                   <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{l.category}</span>
                 </div>
-                {isAdmin && <InstallButton slug={l.slug} source="marketplace" installed={installedSlugs.has(l.slug)} />}
+                {isAdmin && (
+                  <MarketplaceInstall
+                    slug={l.slug}
+                    name={l.name}
+                    installed={installedSlugs.has(l.slug)}
+                    connectors={manifestConnectors(l.manifest as BundleManifest)}
+                    existingConnections={existingConnections}
+                  />
+                )}
               </div>
               <p className="text-xs text-muted-foreground leading-snug">{l.description}</p>
               <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
