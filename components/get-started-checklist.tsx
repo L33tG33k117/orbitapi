@@ -85,6 +85,24 @@ export function GetStartedChecklist({ state }: { state: ChecklistState }) {
         <span className="text-xs font-medium text-muted-foreground shrink-0">{done} of {total}</span>
       </div>
 
+      {/* Fastest path to an "aha" for a brand-new workspace: install a vertical
+          bundle that runs entirely on realistic demo data — no API keys at all. */}
+      {done === 0 && (
+        <Link
+          href="/bundles"
+          className="mb-5 flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] p-3.5 hover:bg-primary/[0.1] transition-colors"
+        >
+          <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+            <Sparkles className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">See it work in one click</p>
+            <p className="text-xs text-muted-foreground">Install a starter bundle — connectors, skills, and playbooks that run on realistic demo data. No API keys needed.</p>
+          </div>
+          <ArrowRight className="h-4 w-4 text-primary shrink-0" />
+        </Link>
+      )}
+
       <ol className="space-y-2.5">
         {STEPS.map((s, i) => {
           const complete = state[s.key]
