@@ -22,6 +22,29 @@ function writeOk(extra?: Record<string, unknown>): ActionResult {
 type SimFn = (params: Record<string, unknown>) => ActionResult
 
 const DATA: Record<string, Record<string, SimFn>> = {
+  'google-drive': {
+    list_files: () => ({ ok: true, data: { files: [
+      { id: 'f_' + simId(), name: 'Q2 Financials.xlsx', mimeType: 'application/vnd.google-apps.spreadsheet', modifiedTime: past(0, 3), webViewLink: 'https://drive.google.com/file/d/sim1/view', owners: [{ displayName: 'Alice Smith' }] },
+      { id: 'f_' + simId(), name: 'Onboarding Guide.pdf', mimeType: 'application/pdf', size: '482311', modifiedTime: past(1), webViewLink: 'https://drive.google.com/file/d/sim2/view', owners: [{ displayName: 'Bob Jones' }] },
+      { id: 'f_' + simId(), name: 'Roadmap.docx', mimeType: 'application/vnd.google-apps.document', modifiedTime: past(2), webViewLink: 'https://drive.google.com/file/d/sim3/view', owners: [{ displayName: 'Alice Smith' }] },
+    ] } }),
+    search_files: (p) => ({ ok: true, data: { files: [
+      { id: 'f_' + simId(), name: `${p.query ?? 'result'} — notes.docx`, mimeType: 'application/vnd.google-apps.document', modifiedTime: past(0, 5), webViewLink: 'https://drive.google.com/file/d/sim4/view', owners: [{ displayName: 'Alice Smith' }] },
+    ] } }),
+    get_file: (p) => ({ ok: true, data: {
+      id: p.file_id ?? 'f_sim', name: 'Q2 Financials.xlsx', mimeType: 'application/vnd.google-apps.spreadsheet',
+      modifiedTime: past(0, 3), webViewLink: 'https://drive.google.com/file/d/sim1/view', owners: [{ displayName: 'Alice Smith' }], parents: ['root'],
+    } }),
+    list_folders: () => ({ ok: true, data: { files: [
+      { id: 'fd_' + simId(), name: 'Finance', mimeType: 'application/vnd.google-apps.folder', modifiedTime: past(5) },
+      { id: 'fd_' + simId(), name: 'Engineering', mimeType: 'application/vnd.google-apps.folder', modifiedTime: past(3) },
+    ] } }),
+    get_storage_quota: () => ({ ok: true, data: {
+      storageQuota: { limit: '16106127360', usage: '4821934080', usageInDrive: '3221225472' },
+      user: { displayName: 'Alice Smith', emailAddress: 'alice@example.com' },
+    } }),
+  },
+
   'quickbooks-online': {
     list_invoices: () => ({ ok: true, data: { QueryResponse: { Invoice: [
       { Id: '1001', DocNumber: 'INV-1001', CustomerRef: { name: 'Acme Corp' }, TotalAmt: 15000.0, Balance: 15000.0, DueDate: past(-5), TxnDate: past(10) },

@@ -118,7 +118,7 @@ export const catalog: CatalogEntry[] = [
 
   // ── Productivity ──────────────────────────────────────────────────────────
   { slug: 'gmail',             name: 'Gmail',                     category: 'Productivity',          description: 'Read, search, and send emails via the Gmail API.',                                   available: false },
-  { slug: 'google-drive',      name: 'Google Drive',              category: 'Productivity',          description: 'Upload, list, download, and manage files in Google Drive.',                          available: false },
+  { slug: 'google-drive',      name: 'Google Drive',              category: 'Productivity',          description: 'Browse, search, and read files and folders in Google Drive.',                       logoUrl: '/logos/google-drive.svg', available: true, badgeNew: true },
   { slug: 'google-calendar',   name: 'Google Calendar',           category: 'Productivity',          description: 'Read and create calendar events and check availability.',                            available: false },
   { slug: 'google-sheets',     name: 'Google Sheets',             category: 'Productivity',          description: 'Read and append rows to Google Sheets spreadsheets.',                               available: false },
   { slug: 'outlook',           name: 'Microsoft Outlook',         category: 'Productivity',          description: 'Read and send emails via Microsoft Graph.',                                          available: false },

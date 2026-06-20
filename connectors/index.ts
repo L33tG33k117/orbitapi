@@ -21,6 +21,8 @@ import { eufySecurityManifest } from './eufy-security'
 
 import { quickbooksOnlineManifest } from './quickbooks-online'
 
+import { googleDriveManifest } from './google-drive'
+
 export const connectors: ConnectorManifest[] = [
   lodgifyManifest,
   slackManifest,
@@ -39,6 +41,7 @@ export const connectors: ConnectorManifest[] = [
   stellarCyberManifest,
   eufySecurityManifest,
   quickbooksOnlineManifest,
+  googleDriveManifest,
   simulatedLightsManifest,
   simulatedRingManifest,
 ]
