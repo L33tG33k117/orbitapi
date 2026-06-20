@@ -25,6 +25,20 @@ function installErrorCapture() {
     push(e.message, e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : undefined))
   window.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) =>
     push(e.reason?.message ?? String(e.reason), 'unhandledrejection'))
+
+  // Also capture console.error output (React warnings, caught-but-logged errors)
+  // — often the only trace of a problem the user can see. Safe: wrapped so a
+  // logging failure never recurses, and the original console.error still runs.
+  const origError = console.error.bind(console)
+  console.error = (...args: unknown[]) => {
+    try {
+      const text = args.map(a => {
+        try { return typeof a === 'string' ? a : (a as { message?: string })?.message ?? String(a) } catch { return '' }
+      }).join(' ').trim()
+      if (text) push(text, 'console.error')
+    } catch { /* ignore */ }
+    origError(...args)
+  }
 }
 
 function collectDiagnostics() {
