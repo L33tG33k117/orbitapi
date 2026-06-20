@@ -36,6 +36,23 @@ function generateId(): string {
   return crypto.randomUUID()
 }
 
+// The chat API returns structured errors (e.g. 402 OUT_OF_AI_POWER with a
+// user-friendly `message`). Surface that instead of a generic failure so users
+// know what happened and what to do.
+function parseChatError(error: Error | undefined): { message: string; outOfPower: boolean } {
+  if (!error) return { message: '', outOfPower: false }
+  let message = 'Something went wrong. Please try again.'
+  let outOfPower = false
+  try {
+    const body = JSON.parse(error.message)
+    if (body?.error === 'OUT_OF_AI_POWER') outOfPower = true
+    if (typeof body?.message === 'string') message = body.message
+    else if (typeof body?.error === 'string' && body.error !== 'OUT_OF_AI_POWER') message = body.error
+  } catch { /* not JSON */ }
+  if (/out of ai power/i.test(error.message)) { outOfPower = true; if (message === 'Something went wrong. Please try again.') message = error.message }
+  return { message, outOfPower }
+}
+
 function relativeTime(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime()
   const m = Math.floor(diff / 60_000)
@@ -270,7 +287,21 @@ function ChatCore({
             <div className="bg-muted rounded-2xl px-4 py-3 text-sm text-muted-foreground animate-pulse">Thinking…</div>
           </div>
         )}
-        {error && <p className="text-sm text-destructive text-center">Something went wrong. Please try again.</p>}
+        {error && (() => {
+          const { message, outOfPower } = parseChatError(error)
+          if (outOfPower) {
+            return (
+              <div className="mx-auto max-w-md rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-center space-y-2">
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">{message}</p>
+                <div className="flex items-center justify-center gap-2">
+                  <Button size="sm" onClick={() => router.push('/upgrade')}>Upgrade plan</Button>
+                  <Button size="sm" variant="outline" onClick={() => router.push('/ai-power')}>Get a Power Pack</Button>
+                </div>
+              </div>
+            )
+          }
+          return <p className="text-sm text-destructive text-center">{message}</p>
+        })()}
         <div ref={bottomRef} />
       </div>
 
