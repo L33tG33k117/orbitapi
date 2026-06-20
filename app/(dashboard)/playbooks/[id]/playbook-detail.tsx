@@ -42,7 +42,7 @@ interface Props {
 }
 
 const NODE_META: Record<NodeType, { label: string; icon: React.ComponentType<{ className?: string }>; hint: string }> = {
-  assess:   { label: 'Assess', icon: Gauge, hint: 'AI reads data and scores severity 0–10' },
+  assess:   { label: 'Assess', icon: Gauge, hint: 'AI reads data and scores confidence 0–10' },
   action:   { label: 'Action', icon: Wrench, hint: 'Run a connector action (gated by autonomy policy)' },
   condition:{ label: 'Condition', icon: GitBranch, hint: 'Branch on state, e.g. state.open > 0' },
   approval: { label: 'Approval', icon: ShieldCheck, hint: 'Pause for a human to approve' },
@@ -179,13 +179,13 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
             <div>
               <h2 className="font-medium text-sm">Autonomy policy</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                How write actions behave at a given severity. This is what lets one playbook auto-act on
-                critical events while requiring approval on uncertain ones.
+                How write actions behave at a given confidence level. This is what lets one playbook auto-act
+                when the AI is highly confident while requiring approval when it&apos;s uncertain.
               </p>
             </div>
             {thresholds.map((t, i) => (
               <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground w-16">Severity</span>
+                <span className="text-muted-foreground w-16">Confidence</span>
                 <Input type="number" min={0} max={10} value={t.min} className="w-16"
                   onChange={e => setThresholds(ts => ts.map((x, idx) => idx === i ? { ...x, min: Number(e.target.value) } : x))} />
                 <span className="text-muted-foreground">to</span>
@@ -328,7 +328,7 @@ function RunRow({ run }: { run: Run }) {
         <div className="flex-1 min-w-0">
           <p className="text-xs">
             {run.mode === 'dry_run' ? 'Dry run' : 'Live'} · {new Date(run.started_at).toLocaleString()}
-            {run.severity != null && ` · severity ${run.severity}`}
+            {run.severity != null && ` · confidence ${run.severity}`}
             {run.autonomy_decision && ` · ${run.autonomy_decision}`}
           </p>
           {run.summary && <p className="text-[11px] text-muted-foreground truncate">{run.summary}</p>}
