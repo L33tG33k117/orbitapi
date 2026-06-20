@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ActionDebugPanel } from './action-debug-panel'
+import { ActionsList } from './actions-list'
 import { SimulatedLightsPanel } from './simulated-lights-panel'
 import { GrantsPanel } from './grants-panel'
 import { EditCredentialsPanel } from './edit-credentials-panel'
@@ -177,22 +178,7 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Available actions</h2>
-        <div className="border rounded-lg divide-y">
-          {manifest.actions.map(a => (
-            <div key={a.slug} className="px-4 py-3 flex items-start gap-3">
-              <Badge
-                variant={a.risk === 'read' ? 'outline' : a.risk === 'write' ? 'secondary' : 'destructive'}
-                className="text-xs mt-0.5 shrink-0"
-              >
-                {a.risk}
-              </Badge>
-              <div>
-                <p className="text-sm font-medium">{a.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 font-mono">{a.slug}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ActionsList actions={manifest.actions.map(a => ({ slug: a.slug, name: a.name, risk: a.risk }))} />
       </section>
 
       {isAdmin && (
