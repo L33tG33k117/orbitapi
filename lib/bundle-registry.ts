@@ -17,15 +17,14 @@ const SECURITY_SOC: BundleManifest = {
   category: 'Security',
   version: '1.0.0',
   connectors: [
-    { slug: 'crowdstrike' },
-    { slug: 'sentinelone' },
-    { slug: 'microsoft-defender' },
-    { slug: 'pagerduty' },
-    { slug: 'slack' },
+    { slug: 'crowdstrike', role: 'EDR / endpoint', alternatives: ['sentinelone', 'sophos', 'microsoft-defender'] },
+    { slug: 'microsoft-defender', role: 'Threat & vuln intel', alternatives: ['stellar-cyber'] },
+    { slug: 'pagerduty', role: 'On-call paging', alternatives: ['servicenow'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
   ],
   groups: [
     { key: 'soc', name: 'Security SOC', color: '#ef4444',
-      connectorSlugs: ['crowdstrike', 'sentinelone', 'microsoft-defender', 'pagerduty', 'slack'] },
+      connectorSlugs: ['crowdstrike', 'microsoft-defender', 'pagerduty', 'slack'] },
   ],
   playbooks: [
     {
@@ -62,7 +61,7 @@ const SECURITY_SOC: BundleManifest = {
         { id: 'approve', name: 'Human approval to isolate', type: 'approval', next: 'isolate' },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ id: 'isolate', name: 'Isolate endpoint', type: 'action',
-          connector_slug: 'sentinelone', action_slug: 'isolate_agent', next: 'notify' } as any),
+          connector_slug: 'crowdstrike', action_slug: 'contain_host', next: 'notify' } as any),
         { id: 'notify', name: 'Confirm isolation', type: 'notify', message: 'Endpoint isolated after approval: {{state.assessment}}' },
       ] },
     },
@@ -81,13 +80,12 @@ const SUPPORT_OPS: BundleManifest = {
   category: 'CRM & Support',
   version: '1.0.0',
   connectors: [
-    { slug: 'zendesk' },
-    { slug: 'plain' },
-    { slug: 'sendgrid' },
-    { slug: 'slack' },
+    { slug: 'zendesk', role: 'Ticketing', alternatives: ['plain', 'servicenow'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
   ],
   groups: [
-    { key: 'support', name: 'Support Ops', color: '#0ea5e9', connectorSlugs: ['zendesk', 'plain', 'sendgrid', 'slack'] },
+    { key: 'support', name: 'Support Ops', color: '#0ea5e9', connectorSlugs: ['zendesk', 'sendgrid', 'slack'] },
   ],
   playbooks: [
     {
@@ -107,7 +105,7 @@ const SUPPORT_OPS: BundleManifest = {
   skills: [
     { name: 'Support Triage', groupKey: 'support', autonomy: 'supervised',
       description: 'Reads incoming tickets, drafts responses, routes by topic.',
-      persona: 'You are an AI support agent. Read new Zendesk and Plain tickets, summarize the issue, draft a reply, and flag anything needing human attention in Slack.' },
+      persona: 'You are an AI support agent. Read new tickets from the connected help desk, summarize the issue, draft a reply, and flag anything needing human attention in Slack.' },
   ],
 }
 
@@ -118,10 +116,10 @@ const PROPERTY_MGMT: BundleManifest = {
   category: 'Short-Term Rental',
   version: '1.0.0',
   connectors: [
-    { slug: 'lodgify' },
-    { slug: 'twilio' },
-    { slug: 'sendgrid' },
-    { slug: 'slack' },
+    { slug: 'lodgify', role: 'Bookings / PMS' },
+    { slug: 'twilio', role: 'SMS' },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
   ],
   groups: [
     { key: 'pm', name: 'Property Management', color: '#10b981', connectorSlugs: ['lodgify', 'twilio', 'sendgrid', 'slack'] },
@@ -148,7 +146,421 @@ const PROPERTY_MGMT: BundleManifest = {
   ],
 }
 
-export const BUILTIN_BUNDLES: BundleManifest[] = [SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT]
+// ── Finance ───────────────────────────────────────────────────────────────────
+const ACCOUNTANT: BundleManifest = {
+  slug: 'accountant',
+  name: 'Accountant',
+  description: 'Your books on autopilot — chase overdue invoices, draft dunning emails, and get a weekly financial brief.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'netsuite', role: 'Accounting / ERP', alternatives: ['quickbooks-online'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'acct', name: 'Accounting', color: '#16a34a', connectorSlugs: ['netsuite', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Overdue Invoice Chaser',
+    description: 'Each morning, review open invoices and surface the ones past due for follow-up.',
+    persona: 'You are a meticulous accounts-receivable clerk.',
+    groupKey: 'acct',
+    trigger_type: 'schedule',
+    schedule: '0 9 * * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Review open invoices', type: 'assess',
+        prompt: 'List open invoices and identify which are past their due date and by how much. Score severity by total overdue amount and days late.', next: 'notify' },
+      { id: 'notify', name: 'Post AR summary', type: 'notify', message: 'Overdue AR (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'AR Clerk', groupKey: 'acct', autonomy: 'supervised',
+      description: 'Tracks receivables and drafts payment reminders.',
+      persona: 'You are an AI accounts-receivable clerk. Review open invoices, identify overdue accounts, draft polite-but-firm payment-reminder emails (SendGrid), and summarize collections risk in Slack.' },
+    { name: 'Financial Reporter', groupKey: 'acct', autonomy: 'supervised',
+      description: 'Compiles periodic financial summaries.',
+      persona: 'You are an AI financial analyst. Pull revenue, AR balance, and open invoices, then write a concise weekly financial brief and post it to Slack.' },
+  ],
+}
+
+const PAYROLL_PAYSTUBS: BundleManifest = {
+  slug: 'payroll-paystubs',
+  name: 'Payroll & Paystubs',
+  description: 'Run-day helper — prep the payroll summary, distribute paystubs, and flag anything that looks off.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'quickbooks-online', role: 'Accounting / payroll', alternatives: ['netsuite'] },
+    { slug: 'sendgrid', role: 'Paystub email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'pay', name: 'Payroll', color: '#0891b2', connectorSlugs: ['quickbooks-online', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Payroll Run Summary',
+    description: 'Summarize the upcoming payroll run and surface anomalies before approval.',
+    persona: 'You are a payroll coordinator who double-checks every run.',
+    groupKey: 'pay',
+    trigger_type: 'schedule',
+    schedule: '0 8 * * 5',
+    definition: { steps: [
+      { id: 'assess', name: 'Review payroll figures', type: 'assess',
+        prompt: 'Summarize this pay period: total payroll, headcount, and any figures that look unusual versus a normal run. Score severity by size of any anomaly.', next: 'notify' },
+      { id: 'notify', name: 'Post payroll summary', type: 'notify', message: 'Payroll run summary (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Payroll Assistant', groupKey: 'pay', autonomy: 'supervised',
+      description: 'Preps payroll, distributes paystubs, flags discrepancies.',
+      persona: 'You are an AI payroll assistant. Prepare the payroll run summary, email each employee their paystub via SendGrid, and flag any discrepancies (missing hours, unusual amounts) in Slack for human review before anything is finalized.' },
+  ],
+}
+
+const BILLING_DUNNING: BundleManifest = {
+  slug: 'billing-dunning',
+  name: 'Billing & Dunning',
+  description: 'Recover revenue automatically — find overdue balances and run a polite multi-channel reminder sequence.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'quickbooks-online', role: 'Billing', alternatives: ['netsuite'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'twilio', role: 'SMS' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'bill', name: 'Billing', color: '#ca8a04', connectorSlugs: ['quickbooks-online', 'sendgrid', 'twilio', 'slack'] }],
+  playbooks: [{
+    name: 'Dunning Sequence',
+    description: 'Find overdue balances and escalate reminders by how late they are.',
+    persona: 'You are a collections specialist who recovers revenue without burning customer goodwill.',
+    groupKey: 'bill',
+    trigger_type: 'schedule',
+    schedule: '0 10 * * 1',
+    autonomy_policy: { thresholds: [
+      { min: 8, max: 10, mode: 'approval' },
+      { min: 0, max: 7, mode: 'notify' },
+    ] },
+    definition: { steps: [
+      { id: 'assess', name: 'Find overdue balances', type: 'assess',
+        prompt: 'List overdue invoices and bucket them by days late (1–30, 31–60, 60+). Score severity by the oldest/largest overdue balance.', next: 'notify' },
+      { id: 'notify', name: 'Report collections status', type: 'notify', message: 'Dunning run (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Dunning Agent', groupKey: 'bill', autonomy: 'supervised',
+      description: 'Sends staged payment reminders across email and SMS.',
+      persona: 'You are an AI collections agent. Identify overdue invoices, send staged reminders — a gentle email (SendGrid) first, an SMS (Twilio) when very overdue — and escalate accounts 60+ days late to Slack for a human.' },
+  ],
+}
+
+// ── Security ──────────────────────────────────────────────────────────────────
+const THREAT_HUNTER: BundleManifest = {
+  slug: 'threat-hunter',
+  name: 'Threat Hunter',
+  description: 'Proactive hunting — sweep EDR + XDR telemetry for IOCs and emerging tactics, and brief the team on findings.',
+  category: 'Security',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'crowdstrike', role: 'EDR / endpoint', alternatives: ['sentinelone', 'sophos', 'microsoft-defender'] },
+    { slug: 'stellar-cyber', role: 'XDR / SIEM', alternatives: ['microsoft-defender'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'hunt', name: 'Threat Hunting', color: '#dc2626', connectorSlugs: ['crowdstrike', 'stellar-cyber', 'slack'] }],
+  playbooks: [{
+    name: 'Daily IOC Sweep',
+    description: 'Hunt across endpoint + XDR telemetry for indicators of compromise and rank what to chase.',
+    persona: 'You are a threat hunter who thinks like an adversary.',
+    groupKey: 'hunt',
+    trigger_type: 'schedule',
+    schedule: '0 7 * * *',
+    autonomy_policy: { thresholds: [{ min: 8, max: 10, mode: 'approval' }, { min: 0, max: 7, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Sweep telemetry', type: 'assess',
+        prompt: 'Review recent detections and XDR alerts. Identify indicators of compromise and suspicious tactics worth hunting. Score severity by likelihood of an active intrusion.', next: 'notify' },
+      { id: 'notify', name: 'Brief the team', type: 'notify', message: 'Threat hunt (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Threat Hunter', groupKey: 'hunt', autonomy: 'supervised',
+      description: 'Correlates EDR + XDR signals and hunts for active threats.',
+      persona: 'You are an AI threat hunter. Correlate detections and alerts across the connected EDR and XDR tools, look for patterns that suggest an active adversary (lateral movement, credential access, C2), and post prioritized hunting leads to Slack.' },
+  ],
+}
+
+const VULN_MANAGER: BundleManifest = {
+  slug: 'vulnerability-manager',
+  name: 'Vulnerability Manager',
+  description: 'Stay ahead of CVEs — prioritize exposures by real risk and open tickets for the ones that matter.',
+  category: 'Security',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'microsoft-defender', role: 'Vulnerability data', alternatives: ['crowdstrike'] },
+    { slug: 'servicenow', role: 'Ticketing', alternatives: ['pagerduty', 'zendesk'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'vuln', name: 'Vulnerability Mgmt', color: '#9333ea', connectorSlugs: ['microsoft-defender', 'servicenow', 'slack'] }],
+  playbooks: [{
+    name: 'Critical CVE Triage',
+    description: 'Rank exposed vulnerabilities by exploitability and asset criticality, then escalate the worst.',
+    persona: 'You are a vulnerability manager who prioritizes by real-world risk, not just CVSS.',
+    groupKey: 'vuln',
+    trigger_type: 'schedule',
+    schedule: '0 8 * * 1',
+    definition: { steps: [
+      { id: 'assess', name: 'Prioritize vulnerabilities', type: 'assess',
+        prompt: 'List current vulnerabilities and exposed machines. Prioritize by exploitability, exposure, and asset criticality. Score severity by the worst actively-exploitable exposure.', next: 'notify' },
+      { id: 'notify', name: 'Report top risks', type: 'notify', message: 'Vulnerability triage (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Vulnerability Prioritizer', groupKey: 'vuln', autonomy: 'supervised',
+      description: 'Ranks CVEs by real risk and drafts remediation tickets.',
+      persona: 'You are an AI vulnerability manager. Pull vulnerability and exposed-machine data, prioritize by exploitability and asset criticality, open ServiceNow tickets for criticals, and summarize the risk posture in Slack.' },
+  ],
+}
+
+const PHISHING_RESPONSE: BundleManifest = {
+  slug: 'phishing-response',
+  name: 'Phishing Response',
+  description: 'Triage suspected phishing fast — assess reported messages and endpoint alerts, then escalate real threats.',
+  category: 'Security',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'microsoft-defender', role: 'Email / endpoint security', alternatives: ['crowdstrike', 'sophos'] },
+    { slug: 'pagerduty', role: 'On-call paging', alternatives: ['servicenow'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'phish', name: 'Phishing Response', color: '#e11d48', connectorSlugs: ['microsoft-defender', 'pagerduty', 'slack'] }],
+  playbooks: [{
+    name: 'Suspected Phishing Triage',
+    description: 'Assess security alerts for phishing indicators and page on-call for confirmed campaigns.',
+    persona: 'You are a SOC analyst specializing in email-borne threats.',
+    groupKey: 'phish',
+    trigger_type: 'manual',
+    autonomy_policy: { thresholds: [{ min: 8, max: 10, mode: 'approval' }, { min: 0, max: 7, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Assess phishing signals', type: 'assess',
+        prompt: 'Review recent security alerts for phishing indicators (malicious URLs, credential harvesting, suspicious senders). Score severity by blast radius and whether credentials may be compromised.', next: 'notify' },
+      { id: 'notify', name: 'Alert the SOC', type: 'notify', message: 'Phishing triage (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Phishing Analyst', groupKey: 'phish', autonomy: 'supervised',
+      description: 'Triages reported phishing and recommends containment.',
+      persona: 'You are an AI phishing analyst. Investigate reported messages and related endpoint alerts, judge whether it is a real campaign, recommend containment (block sender/URL, reset affected creds), post findings to Slack, and page on-call via PagerDuty only for confirmed active campaigns.' },
+  ],
+}
+
+// ── Customer Success ──────────────────────────────────────────────────────────
+const CUSTOMER_SUCCESS: BundleManifest = {
+  slug: 'customer-success',
+  name: 'Customer Success',
+  description: 'Protect revenue — watch for churn signals, prep QBRs, and keep accounts healthy.',
+  category: 'Customer Success',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'zendesk', role: 'Support', alternatives: ['plain', 'servicenow'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'cs', name: 'Customer Success', color: '#0d9488', connectorSlugs: ['zendesk', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'At-Risk Account Watch',
+    description: 'Scan support activity for churn signals and flag accounts that need a check-in.',
+    persona: 'You are a customer success lead who catches churn before it happens.',
+    groupKey: 'cs',
+    trigger_type: 'schedule',
+    schedule: '0 9 * * 1',
+    definition: { steps: [
+      { id: 'assess', name: 'Scan for churn signals', type: 'assess',
+        prompt: 'Review recent tickets and sentiment. Identify accounts showing churn risk (frustration, repeated issues, silence after escalations). Score severity by likelihood and account value.', next: 'notify' },
+      { id: 'notify', name: 'Flag at-risk accounts', type: 'notify', message: 'At-risk accounts (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'CS Manager', groupKey: 'cs', autonomy: 'supervised',
+      description: 'Monitors account health and preps customer touchpoints.',
+      persona: 'You are an AI customer success manager. Watch support activity for churn risk, draft proactive check-in emails (SendGrid), prep QBR talking points, and flag at-risk accounts in Slack with a recommended play.' },
+  ],
+}
+
+const ONBOARDING_CONCIERGE: BundleManifest = {
+  slug: 'onboarding-concierge',
+  name: 'Onboarding Concierge',
+  description: 'Get new customers to value fast — guided welcome sequences and proactive nudges when they stall.',
+  category: 'Customer Success',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'plain', role: 'Support', alternatives: ['zendesk'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'onb', name: 'Onboarding', color: '#2563eb', connectorSlugs: ['plain', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Stalled Onboarding Watch',
+    description: 'Spot new customers who have gone quiet during onboarding and nudge them.',
+    persona: 'You are an onboarding specialist focused on time-to-value.',
+    groupKey: 'onb',
+    trigger_type: 'schedule',
+    schedule: '0 10 * * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Find stalled onboardings', type: 'assess',
+        prompt: 'Review new-customer threads. Identify any that have stalled or gone silent during onboarding. Score severity by how stuck they appear and account value.', next: 'notify' },
+      { id: 'notify', name: 'Surface stalled accounts', type: 'notify', message: 'Stalled onboardings (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Onboarding Guide', groupKey: 'onb', autonomy: 'supervised',
+      description: 'Runs welcome sequences and nudges stalled customers.',
+      persona: 'You are an AI onboarding concierge. Send warm, helpful welcome emails (SendGrid), answer setup questions from support threads, and nudge customers who stall — escalating to Slack when a human should step in.' },
+  ],
+}
+
+// ── Incident Management ─────────────────────────────────────────────────────────
+const INCIDENT_COMMANDER: BundleManifest = {
+  slug: 'incident-commander',
+  name: 'Incident Commander',
+  description: 'Run major incidents calmly — page the right people, keep stakeholders updated, and capture the timeline.',
+  category: 'Incident Management',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'pagerduty', role: 'On-call paging', alternatives: ['servicenow'] },
+    { slug: 'servicenow', role: 'ITSM / records', alternatives: ['zendesk'] },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'ic', name: 'Incident Command', color: '#ea580c', connectorSlugs: ['pagerduty', 'servicenow', 'slack'] }],
+  playbooks: [{
+    name: 'Major Incident Comms',
+    description: 'On a major incident, assess impact and keep stakeholders informed on a cadence.',
+    persona: 'You are an incident commander who keeps everyone aligned under pressure.',
+    groupKey: 'ic',
+    trigger_type: 'manual',
+    autonomy_policy: { thresholds: [{ min: 9, max: 10, mode: 'auto' }, { min: 5, max: 8, mode: 'approval' }, { min: 0, max: 4, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Assess incident impact', type: 'assess',
+        prompt: 'Review active incidents. Summarize scope, impact, and current status. Score severity by user/business impact.', next: 'notify' },
+      { id: 'notify', name: 'Post stakeholder update', type: 'notify', message: 'Incident update (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Incident Commander', groupKey: 'ic', autonomy: 'supervised',
+      description: 'Coordinates response and keeps stakeholders updated.',
+      persona: 'You are an AI incident commander. When a major incident is active, summarize impact, page the right responders via PagerDuty, post regular stakeholder updates to Slack, and record the timeline in ServiceNow.' },
+  ],
+}
+
+// ── Property Management ─────────────────────────────────────────────────────────
+const SUPERHOST_CONCIERGE: BundleManifest = {
+  slug: 'superhost-concierge',
+  name: 'Superhost Concierge',
+  description: 'The full short-term-rental stack — guest comms, smart-home check-in, and a daily ops brief.',
+  category: 'Short-Term Rental',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'lodgify', role: 'Bookings / PMS' },
+    { slug: 'twilio', role: 'Guest SMS' },
+    { slug: 'sendgrid', role: 'Guest email' },
+    { slug: 'simulated-lights', role: 'Smart lighting' },
+    { slug: 'simulated-ring', role: 'Doorbell / security', alternatives: ['eufy-security'] },
+  ],
+  groups: [{ key: 'host', name: 'Superhost', color: '#db2777', connectorSlugs: ['lodgify', 'twilio', 'sendgrid', 'simulated-lights', 'simulated-ring'] }],
+  playbooks: [{
+    name: 'Arrival Day Prep',
+    description: 'Each morning, brief the team on arrivals and ready the property for check-in.',
+    persona: 'You are a five-star vacation-rental host who anticipates every guest need.',
+    groupKey: 'host',
+    trigger_type: 'schedule',
+    schedule: '0 9 * * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Review today\'s arrivals', type: 'assess',
+        prompt: 'List today\'s Lodgify check-ins, note special requests or late arrivals, and flag anything needing prep. Score severity by how much attention the day needs.', next: 'notify' },
+      { id: 'notify', name: 'Post arrivals brief', type: 'notify', message: 'Arrivals brief (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Check-in Concierge', groupKey: 'host', autonomy: 'supervised',
+      description: 'Greets guests and readies the home for arrival.',
+      persona: 'You are an AI concierge for a short-term rental. For today\'s Lodgify arrivals, send warm check-in instructions by SMS (Twilio) and email (SendGrid), set the lights to a welcoming scene before arrival, and surface any issues to the host.' },
+    { name: 'Guest Support', groupKey: 'host', autonomy: 'supervised',
+      description: 'Answers guest questions during their stay.',
+      persona: 'You are an attentive guest-support agent. Answer guest questions promptly over SMS and email, handle common requests, and escalate anything urgent (lockouts, safety) to the host.' },
+  ],
+}
+
+// ── Home Automation ───────────────────────────────────────────────────────────
+const SMART_HOME_GUARDIAN: BundleManifest = {
+  slug: 'smart-home-guardian',
+  name: 'Smart Home Guardian',
+  description: 'Your home, watched — react to doorbell/motion events with lights and instant alerts.',
+  category: 'Smart Home',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'simulated-ring', role: 'Doorbell / cameras', alternatives: ['eufy-security'] },
+    { slug: 'simulated-lights', role: 'Smart lighting' },
+    { slug: 'slack', role: 'Alerts', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'home', name: 'Smart Home', color: '#7c3aed', connectorSlugs: ['simulated-ring', 'simulated-lights', 'slack'] }],
+  playbooks: [{
+    name: 'After-Hours Motion Response',
+    description: 'Assess recent security events and respond — lights on and an alert for anything suspicious.',
+    persona: 'You are a home security system that reacts calmly and only escalates when it matters.',
+    groupKey: 'home',
+    trigger_type: 'event',
+    autonomy_policy: { thresholds: [{ min: 7, max: 10, mode: 'auto' }, { min: 0, max: 6, mode: 'notify' }] },
+    definition: { steps: [
+      { id: 'assess', name: 'Assess recent events', type: 'assess',
+        prompt: 'Review recent doorbell/motion events. Decide whether anything looks suspicious versus routine (deliveries, residents). Score severity by how concerning it is.', next: 'lights' },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ({ id: 'lights', name: 'Turn on the lights', type: 'action',
+        connector_slug: 'simulated-lights', action_slug: 'turn_all_on', next: 'notify' } as any),
+      { id: 'notify', name: 'Send a home alert', type: 'notify', message: 'Home security (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Home Guardian', groupKey: 'home', autonomy: 'autonomous',
+      description: 'Watches for events and responds with lights + alerts.',
+      persona: 'You are an AI home guardian. Watch doorbell and motion events; for anything suspicious after hours, turn on the lights and send an alert with a snapshot of what happened. Stay quiet for routine activity.' },
+  ],
+}
+
+// ── Finance (Revenue Operations) ────────────────────────────────────────────────
+const REVENUE_OPS: BundleManifest = {
+  slug: 'revenue-operations',
+  name: 'Revenue Operations',
+  description: 'Close the books faster — month-end checklists, financial summaries, and anomaly watch.',
+  category: 'Finance',
+  version: '1.0.0',
+  connectors: [
+    { slug: 'netsuite', role: 'Financials / ERP', alternatives: ['quickbooks-online'] },
+    { slug: 'sendgrid', role: 'Email' },
+    { slug: 'slack', role: 'Team chat', alternatives: ['teams'] },
+  ],
+  groups: [{ key: 'revops', name: 'Revenue Ops', color: '#059669', connectorSlugs: ['netsuite', 'sendgrid', 'slack'] }],
+  playbooks: [{
+    name: 'Month-End Close Brief',
+    description: 'At month end, summarize financial position and flag what still needs to close.',
+    persona: 'You are a revenue operations analyst who makes the close painless.',
+    groupKey: 'revops',
+    trigger_type: 'schedule',
+    schedule: '0 9 28-31 * *',
+    definition: { steps: [
+      { id: 'assess', name: 'Summarize financial position', type: 'assess',
+        prompt: 'Summarize revenue, AR balance, and open items for the period. Flag anomalies and anything outstanding for the close. Score severity by how much remains to close cleanly.', next: 'notify' },
+      { id: 'notify', name: 'Post close brief', type: 'notify', message: 'Month-end close (severity {{state.severity}}): {{state.assessment}}' },
+    ] },
+  }],
+  skills: [
+    { name: 'Revenue Analyst', groupKey: 'revops', autonomy: 'supervised',
+      description: 'Tracks revenue health and runs the close checklist.',
+      persona: 'You are an AI revenue operations analyst. Track revenue, AR, and bookings; produce a clear monthly financial brief; run the month-end close checklist; and flag anomalies in Slack with suggested next steps.' },
+  ],
+}
+
+export const BUILTIN_BUNDLES: BundleManifest[] = [
+  SECURITY_SOC, SUPPORT_OPS, PROPERTY_MGMT,
+  ACCOUNTANT, PAYROLL_PAYSTUBS, BILLING_DUNNING,
+  THREAT_HUNTER, VULN_MANAGER, PHISHING_RESPONSE,
+  CUSTOMER_SUCCESS, ONBOARDING_CONCIERGE, INCIDENT_COMMANDER,
+  SUPERHOST_CONCIERGE, SMART_HOME_GUARDIAN, REVENUE_OPS,
+]
 
 export function getBuiltinBundle(slug: string): BundleManifest | undefined {
   return BUILTIN_BUNDLES.find(b => b.slug === slug)

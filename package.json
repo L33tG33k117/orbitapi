@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:sim-parity": "node --no-warnings scripts/test-sim-parity.mjs",
+    "check:connectors": "node --no-warnings scripts/check-connectors.mjs",
+    "check:bundles": "node --no-warnings scripts/check-bundles.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.83",

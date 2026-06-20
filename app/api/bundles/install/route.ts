@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const denied = await capabilityGuard('bundles')
   if (denied) return denied
 
-  const { slug, source } = await req.json()
+  const { slug, source, resolutions } = await req.json()
   if (!slug) return NextResponse.json({ error: 'slug required' }, { status: 400 })
 
   let manifest: BundleManifest | undefined
@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       userId: user.id,
       source: source === 'marketplace' ? 'marketplace' : 'builtin',
       listingId,
+      resolutions: resolutions ?? undefined,
     })
     return NextResponse.json({ ok: true, ...result })
   } catch (err) {

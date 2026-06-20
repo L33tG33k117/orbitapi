@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react'
 import { CreditCard, CheckCircle, AlertTriangle, ExternalLink, Zap, Rocket, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+// Plan ordering so we can tell whether a card is below the workspace's current
+// tier (already included) vs. a genuine upgrade. Without this, a Pro workspace
+// wrongly sees "Upgrade to Starter" on the lower plan.
+const TIER_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2, enterprise: 3 }
+
 const PLANS = [
   {
     tier: 'starter',
@@ -162,14 +167,16 @@ export default function BillingPage() {
           {PLANS.map(plan => {
             const Icon = plan.icon
             const isCurrent = currentTier === plan.tier
+            // A plan ranked below the current tier is already included — never an "upgrade".
+            const isLower = (TIER_RANK[plan.tier] ?? 0) < (TIER_RANK[currentTier] ?? 0)
             return (
               <div
                 key={plan.tier}
                 className={`rounded-xl border p-5 flex flex-col gap-4 ${
-                  plan.popular
-                    ? 'border-primary bg-primary/5'
-                    : isCurrent
-                      ? 'border-green-500/40 bg-green-500/5'
+                  isCurrent
+                    ? 'border-green-500/40 bg-green-500/5'
+                    : plan.popular
+                      ? 'border-primary bg-primary/5'
                       : 'border-border bg-card'
                 }`}
               >
@@ -198,19 +205,21 @@ export default function BillingPage() {
                   ))}
                 </ul>
                 <Button
-                  variant={isCurrent ? 'outline' : plan.popular ? 'default' : 'outline'}
+                  variant={isCurrent || isLower ? 'outline' : plan.popular ? 'default' : 'outline'}
                   size="sm"
-                  disabled={isCurrent || !!checkoutLoading}
-                  onClick={() => !isCurrent && startCheckout(plan.tier)}
+                  disabled={isCurrent || isLower || !!checkoutLoading}
+                  onClick={() => !isCurrent && !isLower && startCheckout(plan.tier)}
                   className="w-full justify-center"
                 >
                   {isCurrent
                     ? 'Current plan'
-                    : checkoutLoading === plan.tier
-                      ? 'Redirecting…'
-                      : plan.tier === 'enterprise'
-                        ? 'Contact sales'
-                        : `Upgrade to ${plan.name}`}
+                    : isLower
+                      ? 'Included in your plan'
+                      : checkoutLoading === plan.tier
+                        ? 'Redirecting…'
+                        : plan.tier === 'enterprise'
+                          ? 'Contact sales'
+                          : `Upgrade to ${plan.name}`}
                 </Button>
               </div>
             )

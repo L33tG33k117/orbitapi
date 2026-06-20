@@ -17,6 +17,22 @@ export interface BundleConnector {
   slug: string
   /** Label for the created connection (defaults to the connector name). */
   label?: string
+  /** Human role this connector plays in the bundle, e.g. "EDR", "Team chat". */
+  role?: string
+  /** Other connector slugs that can fill this role (e.g. Sophos for CrowdStrike).
+   *  Used by the bundle builder to let users reuse what they already have or pick
+   *  a different vendor instead of being locked to the primary slug. */
+  alternatives?: string[]
+}
+
+// How the installer should fulfil each bundle connector. Keyed by the bundle's
+// DECLARED primary slug. Either reuse an existing connection or create one for a
+// chosen connector slug (the primary or one of its alternatives).
+export interface ConnectorResolution {
+  /** Reuse this existing connection id (no new connection created). */
+  connectionId?: string
+  /** The connector slug actually chosen (primary or an alternative). */
+  connectorSlug: string
 }
 
 export interface BundleGroup {
@@ -72,6 +88,10 @@ export interface InstallResult {
     playbooks: string[]
     skills: string[]
   }
+  /** Connections created fresh by this install that still need credentials. */
+  needsSetup: { connectionId: string; slug: string; name: string }[]
+  /** Existing connections the install reused instead of duplicating. */
+  reused: { connectionId: string; slug: string }[]
 }
 
 // Install a bundle into a workspace. Idempotent at the bundle level:
@@ -83,9 +103,11 @@ export async function installBundle(opts: {
   userId: string
   source?: 'builtin' | 'marketplace'
   listingId?: string | null
+  /** Per-connector choices from the bundle builder, keyed by declared primary slug. */
+  resolutions?: Record<string, ConnectorResolution>
 }): Promise<InstallResult> {
   const admin = createAdminClient()
-  const { manifest, workspaceId, userId } = opts
+  const { manifest, workspaceId, userId, resolutions } = opts
 
   // Guard: already installed?
   const { data: existing } = await admin
@@ -95,20 +117,50 @@ export async function installBundle(opts: {
     .eq('bundle_slug', manifest.slug)
     .maybeSingle()
   if (existing) {
-    return { installationId: existing.id, created: existing.created_resources as InstallResult['created'] }
+    return {
+      installationId: existing.id,
+      created: existing.created_resources as InstallResult['created'],
+      needsSetup: [], reused: [],
+    }
   }
 
   const created: InstallResult['created'] = { connections: [], groups: [], playbooks: [], skills: [] }
+  const needsSetup: InstallResult['needsSetup'] = []
+  const reused: InstallResult['reused'] = []
+  // declared primary slug → the connector slug actually used (for playbook safety).
+  const chosenByDeclared: Record<string, string> = {}
 
-  // 1. Resolve connector slugs → connector ids, and create a connection each.
-  //    Bundles ship with simulated connectors so they run with demo data and
-  //    no real credentials (the dual-mode differentiator).
+  // 1. Resolve each bundle connector. The builder may tell us to reuse an existing
+  //    connection (no duplicate) or substitute an alternative vendor. Without a
+  //    resolution we fall back to creating a fresh connection for the primary slug.
   const connBySlug: Record<string, string> = {}
   for (const c of manifest.connectors) {
+    const res = resolutions?.[c.slug]
+
+    // Reuse an existing connection the user already has.
+    if (res?.connectionId) {
+      const { data: existingConn } = await admin
+        .from('connections')
+        .select('id, connector:connectors(slug)')
+        .eq('id', res.connectionId)
+        .eq('workspace_id', workspaceId)
+        .neq('status', 'trashed')
+        .maybeSingle()
+      if (existingConn) {
+        connBySlug[c.slug] = existingConn.id
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        chosenByDeclared[c.slug] = (existingConn.connector as any)?.slug ?? c.slug
+        reused.push({ connectionId: existingConn.id, slug: chosenByDeclared[c.slug] })
+        continue
+      }
+    }
+
+    // Otherwise create a fresh connection for the chosen connector (primary or alt).
+    const chosenSlug = res?.connectorSlug ?? c.slug
     const { data: connector } = await admin
       .from('connectors')
       .select('id, name')
-      .eq('slug', c.slug)
+      .eq('slug', chosenSlug)
       .maybeSingle()
     if (!connector) continue // connector not registered — skip gracefully
     const { data: conn } = await admin
@@ -116,7 +168,7 @@ export async function installBundle(opts: {
       .insert({
         workspace_id: workspaceId,
         connector_id: connector.id,
-        label: c.label ?? `${connector.name} (demo)`,
+        label: c.label ?? connector.name,
         status: 'active',
         created_by: userId,
       })
@@ -124,7 +176,9 @@ export async function installBundle(opts: {
       .single()
     if (conn) {
       connBySlug[c.slug] = conn.id
+      chosenByDeclared[c.slug] = chosenSlug
       created.connections.push(conn.id)
+      needsSetup.push({ connectionId: conn.id, slug: chosenSlug, name: connector.name })
     }
   }
 
@@ -153,7 +207,12 @@ export async function installBundle(opts: {
     const remappedSteps = (p.definition?.steps ?? []).map(step => {
       const s = step as Record<string, unknown>
       if (s.connector_slug && !s.connection_id) {
-        return { ...s, connection_id: connBySlug[s.connector_slug as string] ?? null }
+        const declared = s.connector_slug as string
+        // Only wire the connection when the user kept the same vendor — a
+        // substitute (e.g. Sophos for CrowdStrike) has different action slugs,
+        // so we leave it unset for the user to fix rather than fail at runtime.
+        const sameVendor = chosenByDeclared[declared] === declared
+        return { ...s, connection_id: sameVendor ? (connBySlug[declared] ?? null) : null }
       }
       return s
     })
@@ -214,7 +273,7 @@ export async function installBundle(opts: {
     await admin.rpc('increment_listing_installs', { p_listing_id: opts.listingId }).then(() => {}, () => {})
   }
 
-  return { installationId: install?.id ?? '', created }
+  return { installationId: install?.id ?? '', created, needsSetup, reused }
 }
 
 // Remove everything a bundle installation created (best-effort, child-first).

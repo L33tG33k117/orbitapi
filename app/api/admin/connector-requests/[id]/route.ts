@@ -3,7 +3,17 @@ import { requireSuperAdmin } from '@/lib/admin-guard'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { buildConnector } from '@/lib/build-connector'
 import { createNotification } from '@/lib/notify'
-import { applyConnectorBuild } from '@/lib/apply-connector-build'
+import { applyConnectorBuild, registerConnectorRow } from '@/lib/apply-connector-build'
+import { catalog } from '@/connectors/catalog'
+
+// Match a requested connector to an existing catalog entry by normalized name,
+// so a build claims that slug (e.g. a "coming soon" placeholder) instead of
+// creating a duplicate card under a parallel slug.
+function findExistingSlug(connectorName: string): string | undefined {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const target = norm(connectorName)
+  return catalog.find(c => norm(c.name) === target || c.slug === connectorName.toLowerCase().trim())?.slug
+}
 
 // Allow up to 60 s — AI generation takes 15–30 s
 export const maxDuration = 60
@@ -47,6 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           request.connector_name,
           request.use_case ?? null,
           request.website_url ?? null,
+          findExistingSlug(request.connector_name) ?? null,
         )
 
         // If AI flagged the API as unvalidated, mark as failed with a clear message
@@ -73,6 +84,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               import_line: result.importLine,
               export_entry: result.exportEntry,
               logo_svg: result.logoSvg,
+              simulated_data: result.simulatedData ?? null,
               updated_at: new Date().toISOString(),
             })
             .eq('id', buildRow.id)
@@ -83,7 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           // Auto-apply: write files to disk so the connector appears immediately on next reload
           if (result.slug && result.manifestCode && result.catalogEntry && result.importLine && result.exportEntry) {
             try {
-              applyConnectorBuild({
+              const applied = applyConnectorBuild({
                 slug: result.slug,
                 connectorName: request.connector_name,
                 manifestCode: result.manifestCode,
@@ -91,7 +103,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 importLine: result.importLine,
                 exportEntry: result.exportEntry,
                 logoSvg: result.logoSvg,
+                simulatedData: result.simulatedData ?? null,
               })
+              // Seed the DB row so the connector is actually connectable (not just
+              // listed). Without this it 404s with "Connector not found in database".
+              if (applied.ok) await registerConnectorRow(admin, applied.meta)
             } catch (applyErr) {
               console.error('Auto-apply failed (files can be applied manually from admin panel):', applyErr)
             }

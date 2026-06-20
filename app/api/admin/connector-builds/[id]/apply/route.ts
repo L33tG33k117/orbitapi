@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/admin-guard'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { applyConnectorBuild } from '@/lib/apply-connector-build'
+import { applyConnectorBuild, registerConnectorRow } from '@/lib/apply-connector-build'
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireSuperAdmin()
@@ -12,7 +12,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const { data: build } = await admin
     .from('connector_builds')
-    .select('id, connector_slug, connector_name, status, manifest_code, catalog_entry, import_line, export_entry, logo_svg')
+    .select('id, connector_slug, connector_name, status, manifest_code, catalog_entry, import_line, export_entry, logo_svg, simulated_data')
     .eq('id', id)
     .single()
 
@@ -30,10 +30,20 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     importLine: build.import_line,
     exportEntry: build.export_entry,
     logoSvg: build.logo_svg,
+    simulatedData: (build.simulated_data as Record<string, unknown> | null) ?? null,
   })
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 500 })
+  }
+
+  // Seed the `connectors` DB row. Without this the connector shows in the
+  // catalog (from code) but can't be connected — /api/connections looks up
+  // connectors.id for the connection FK and 404s with "Connector not found
+  // in database". Built connectors are always real (non-simulated).
+  const { error: seedErr } = await registerConnectorRow(admin, result.meta)
+  if (seedErr) {
+    return NextResponse.json({ error: `Files written but DB seed failed: ${seedErr.message}` }, { status: 500 })
   }
 
   // Persist applied_at so the admin panel shows correct state across page loads

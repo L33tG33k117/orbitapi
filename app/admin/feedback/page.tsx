@@ -6,12 +6,20 @@ import { toast } from 'sonner'
 
 type Status = 'new' | 'acknowledged' | 'actioned'
 
+interface Diagnostics {
+  path?: string
+  viewport?: string
+  userAgent?: string
+  errors?: { message: string; source?: string; at?: string }[]
+}
+
 interface FeedbackRow {
   id: string
   message: string
   page_url: string | null
   status: Status
   created_at: string
+  diagnostics: Diagnostics | null
   user: { email: string; full_name: string | null } | null
   workspace: { name: string } | null
 }
@@ -118,9 +126,29 @@ export default function AdminFeedbackPage() {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground/80">{r.user?.full_name || r.user?.email || 'Unknown'}</span>
                 {r.workspace?.name && <span>· {r.workspace.name}</span>}
-                {r.page_url && <span>· <code className="text-[11px]">{r.page_url}</code></span>}
+                {(r.diagnostics?.path || r.page_url) && <span>· <code className="text-[11px]">{r.diagnostics?.path || r.page_url}</code></span>}
+                {r.diagnostics?.viewport && <span>· {r.diagnostics.viewport}</span>}
                 <span>· {new Date(r.created_at).toLocaleString()}</span>
               </div>
+
+              {r.diagnostics && (r.diagnostics.errors?.length || r.diagnostics.userAgent) && (
+                <details className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                  <summary className="text-xs font-medium cursor-pointer text-muted-foreground">
+                    Diagnostics{r.diagnostics.errors?.length ? ` · ${r.diagnostics.errors.length} error${r.diagnostics.errors.length !== 1 ? 's' : ''}` : ''}
+                  </summary>
+                  <div className="mt-2 space-y-1.5 text-xs">
+                    {(r.diagnostics.errors ?? []).map((e, i) => (
+                      <div key={i} className="text-red-400">
+                        <span className="font-mono">{e.message}</span>
+                        {e.source && <span className="text-muted-foreground"> — {e.source}</span>}
+                      </div>
+                    ))}
+                    {r.diagnostics.userAgent && (
+                      <p className="text-muted-foreground break-all pt-1">{r.diagnostics.userAgent}</p>
+                    )}
+                  </div>
+                </details>
+              )}
               <div className="flex flex-wrap gap-2 pt-1">
                 {r.status === 'new' && (
                   <button

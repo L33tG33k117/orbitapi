@@ -8,15 +8,17 @@ import {
   Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus, X,
 } from 'lucide-react'
 
+type BadgeKey = 'feedback' | 'requests' | 'reports'
+
 const items = [
   { href: '/admin/overview',            label: 'Overview',   icon: LayoutDashboard },
   { href: '/admin/workspaces',          label: 'Workspaces', icon: Building2 },
   { href: '/admin/users',               label: 'Users',      icon: Users },
   { href: '/admin/analytics',           label: 'Analytics',  icon: BarChart2 },
-  { href: '/admin/feedback',            label: 'Feedback',   icon: MessageSquarePlus },
+  { href: '/admin/feedback',            label: 'Feedback',   icon: MessageSquarePlus, badge: 'feedback' as BadgeKey },
   { href: '/admin/bans',                label: 'Bans',       icon: Ban },
-  { href: '/admin/connector-requests',  label: 'Requests',   icon: Plug },
-  { href: '/admin/connector-reports',   label: 'Reports',    icon: Flag },
+  { href: '/admin/connector-requests',  label: 'Requests',   icon: Plug, badge: 'requests' as BadgeKey },
+  { href: '/admin/connector-reports',   label: 'Reports',    icon: Flag, badge: 'reports' as BadgeKey },
   { href: '/admin/sandbox',             label: 'Sandbox',    icon: FlaskConical, highlight: true },
 ]
 
@@ -25,15 +27,23 @@ interface NavItem {
   label: string
   icon: React.ComponentType<{ className?: string }>
   highlight?: boolean
+  badge?: BadgeKey
 }
 
 interface AdminSidebarProps {
   email: string
   fullName: string | null
   openReports?: number
+  newFeedback?: number
+  pendingRequests?: number
 }
 
-export function AdminSidebar({ email, fullName, openReports = 0 }: AdminSidebarProps) {
+export function AdminSidebar({ email, fullName, openReports = 0, newFeedback = 0, pendingRequests = 0 }: AdminSidebarProps) {
+  const counts: Record<BadgeKey, number> = {
+    feedback: newFeedback,
+    requests: pendingRequests,
+    reports: openReports,
+  }
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -62,6 +72,7 @@ export function AdminSidebar({ email, fullName, openReports = 0 }: AdminSidebarP
         {(items as NavItem[]).map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           const Icon = item.icon
+          const badgeCount = item.badge ? counts[item.badge] : 0
           return (
             <Link
               key={item.href}
@@ -90,9 +101,9 @@ export function AdminSidebar({ email, fullName, openReports = 0 }: AdminSidebarP
             >
               <Icon className="h-4 w-4 shrink-0" />
               <span className="flex-1 truncate">{item.label}</span>
-              {item.href === '/admin/connector-reports' && openReports > 0 && !active && (
+              {badgeCount > 0 && !active && (
                 <span className="h-4 min-w-4 px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
-                  {openReports}
+                  {badgeCount > 99 ? '99+' : badgeCount}
                 </span>
               )}
             </Link>

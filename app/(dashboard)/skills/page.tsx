@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Pencil } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -120,53 +121,53 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
           const successRate = totalRuns > 0 ? Math.round(health.ok / totalRuns * 100) : null
 
           return (
-            <div key={s.id} className="relative group">
-              <Link
-                href={`/skills/${s.id}`}
-                className="flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/40 hover:shadow-sm transition-all pr-12"
+            <div
+              key={s.id}
+              className="flex items-center gap-4 p-4 rounded-xl border bg-card hover:border-primary/40 hover:shadow-sm transition-all"
+            >
+              <div
+                className="h-9 w-9 rounded-lg shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                style={{ backgroundColor: g?.color ?? '#6366f1' }}
               >
-                <div
-                  className="h-9 w-9 rounded-lg shrink-0 flex items-center justify-center text-white text-xs font-bold"
-                  style={{ backgroundColor: g?.color ?? '#6366f1' }}
+                {s.name[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{s.name}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {g ? g.name : 'No group'}
+                  {s.schedule ? ` · ${s.autonomy === 'autonomous' ? 'polls' : 'runs'} ${scheduleLabel(s.schedule)}` : ''}
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0 items-center">
+                {successRate !== null && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    successRate >= 90 ? 'bg-emerald-500/10 text-emerald-500' :
+                    successRate >= 70 ? 'bg-amber-500/10 text-amber-500' :
+                    'bg-red-500/10 text-red-500'
+                  }`}>
+                    {successRate}% · {totalRuns}r
+                  </span>
+                )}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                  s.autonomy === 'autonomous' ? 'bg-primary/10 text-primary' :
+                  s.autonomy === 'manual' ? 'bg-amber-500/10 text-amber-500' :
+                  'bg-muted text-muted-foreground'
+                }`}>
+                  {s.autonomy}
+                </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                  s.enabled ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {s.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+                <Link
+                  href={`/skills/${s.id}`}
+                  className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
                 >
-                  {s.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{s.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {g ? g.name : 'No group'}
-                    {s.schedule ? ` · ${s.autonomy === 'autonomous' ? 'polls' : 'runs'} ${scheduleLabel(s.schedule)}` : ''}
-                  </p>
-                </div>
-                <div className="flex gap-2 shrink-0 items-center">
-                  {successRate !== null && (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      successRate >= 90 ? 'bg-emerald-500/10 text-emerald-500' :
-                      successRate >= 70 ? 'bg-amber-500/10 text-amber-500' :
-                      'bg-red-500/10 text-red-500'
-                    }`}>
-                      {successRate}% · {totalRuns}r
-                    </span>
-                  )}
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                    s.autonomy === 'autonomous' ? 'bg-primary/10 text-primary' :
-                    s.autonomy === 'manual' ? 'bg-amber-500/10 text-amber-500' :
-                    'bg-muted text-muted-foreground'
-                  }`}>
-                    {s.autonomy}
-                  </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                    s.enabled ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {s.enabled ? 'on' : 'off'}
-                  </span>
-                </div>
-              </Link>
-              {isAdmin && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <SkillDeleteButton skillId={s.id} skillName={s.name} />
-                </div>
-              )}
+                  <Pencil className="h-3 w-3" /> Edit
+                </Link>
+                {isAdmin && <SkillDeleteButton skillId={s.id} skillName={s.name} />}
+              </div>
             </div>
           )
         })}

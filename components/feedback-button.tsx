@@ -6,13 +6,64 @@ import { toast } from 'sonner'
 import { MessageSquarePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+interface CapturedError { message: string; source?: string; at: string }
+
+// Install global JS-error listeners once per session into a capped ring buffer
+// on window, so a feedback note can include whatever broke just before it.
+function installErrorCapture() {
+  if (typeof window === 'undefined') return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any
+  if (w.__orbitErrorsInit) return
+  w.__orbitErrorsInit = true
+  w.__orbitErrors = (w.__orbitErrors as CapturedError[]) ?? []
+  const push = (message: string, source?: string) => {
+    w.__orbitErrors.push({ message: String(message).slice(0, 500), source, at: new Date().toISOString() })
+    if (w.__orbitErrors.length > 10) w.__orbitErrors.shift()
+  }
+  window.addEventListener('error', (e: ErrorEvent) =>
+    push(e.message, e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : undefined))
+  window.addEventListener('unhandledrejection', (e: PromiseRejectionEvent) =>
+    push(e.reason?.message ?? String(e.reason), 'unhandledrejection'))
+
+  // Also capture console.error output (React warnings, caught-but-logged errors)
+  // — often the only trace of a problem the user can see. Safe: wrapped so a
+  // logging failure never recurses, and the original console.error still runs.
+  const origError = console.error.bind(console)
+  console.error = (...args: unknown[]) => {
+    try {
+      const text = args.map(a => {
+        try { return typeof a === 'string' ? a : (a as { message?: string })?.message ?? String(a) } catch { return '' }
+      }).join(' ').trim()
+      if (text) push(text, 'console.error')
+    } catch { /* ignore */ }
+    origError(...args)
+  }
+}
+
+function collectDiagnostics() {
+  if (typeof window === 'undefined') return undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any
+  return {
+    path: window.location.pathname + window.location.search,
+    errors: ((w.__orbitErrors as CapturedError[]) ?? []).slice(-5),
+    userAgent: navigator.userAgent,
+    viewport: `${window.innerWidth}x${window.innerHeight}`,
+    capturedAt: new Date().toISOString(),
+  }
+}
+
 // Lightweight global "Send feedback" affordance for the beta. Lives in the TopBar.
 export function FeedbackButton() {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  useEffect(() => { setMounted(true); installErrorCapture() }, [])
+
+  // Surface what we'll attach, so users know the report includes context.
+  const diag = open && mounted ? collectDiagnostics() : undefined
 
   async function send() {
     if (!message.trim()) return
@@ -24,6 +75,7 @@ export function FeedbackButton() {
         body: JSON.stringify({
           message,
           pageUrl: typeof window !== 'undefined' ? window.location.pathname : undefined,
+          diagnostics: collectDiagnostics(),
         }),
       })
       if (!res.ok) { toast.error('Could not send feedback.'); return }
@@ -76,6 +128,12 @@ export function FeedbackButton() {
               placeholder="What's on your mind?"
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
             />
+            {diag && (
+              <p className="text-[11px] text-muted-foreground -mt-1">
+                Attaching context to help us fix things: <code className="text-[10px]">{diag.path}</code>
+                {diag.errors.length > 0 && <> · <span className="text-amber-500">{diag.errors.length} recent error{diag.errors.length !== 1 ? 's' : ''}</span></>}
+              </p>
+            )}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
               <Button size="sm" onClick={send} disabled={sending || !message.trim()}>
