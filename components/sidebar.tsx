@@ -234,6 +234,19 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
           </div>
         )}
       </nav>
+
+      {/* Keyboard shortcuts discoverability — testers kept asking if hotkeys exist */}
+      <div className="px-3 py-2.5 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+        <button
+          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }))}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-sidebar-foreground/45 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors"
+          title="Press ? anytime to see keyboard shortcuts"
+        >
+          <kbd className="px-1.5 py-0.5 rounded bg-sidebar-accent/70 font-mono text-[10px]">?</kbd>
+          <span>Keyboard shortcuts</span>
+          <kbd className="ml-auto px-1.5 py-0.5 rounded bg-sidebar-accent/70 font-mono text-[10px]">⌘K</kbd>
+        </button>
+      </div>
     </>
   )
 

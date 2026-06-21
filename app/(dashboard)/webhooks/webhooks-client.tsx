@@ -110,6 +110,7 @@ function EndpointRow({ ep, baseUrl, expanded, onToggle, onCopy, onDelete, onRefr
   const [deliveries, setDeliveries] = useState<any[]>([])
   const [secret, setSecret] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
+  const [lang, setLang] = useState<'curl' | 'powershell' | 'python'>('curl')
   const url = `${baseUrl}/api/hooks/${ep.token}`
 
   async function loadDetail() {
@@ -167,6 +168,41 @@ function EndpointRow({ ep, baseUrl, expanded, onToggle, onCopy, onDelete, onRefr
               <p className="text-[11px] text-muted-foreground">Sign the raw body: <code>sha256=HMAC_SHA256(secret, body)</code></p>
             </div>
           )}
+
+          {(() => {
+            const signed = ep.require_signature
+            const ex = {
+              curl: signed
+                ? `SECRET='<paste signing secret>'\nBODY='{"event":"ping"}'\nSIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | sed 's/.* //')"\ncurl -X POST "${url}" \\\n  -H "Content-Type: application/json" \\\n  -H "X-Orbit-Signature: $SIG" \\\n  -d "$BODY"`
+                : `curl -X POST "${url}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"event":"ping"}'`,
+              powershell: signed
+                ? `$secret = '<paste signing secret>'\n$body = '{"event":"ping"}'\n$h = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($secret))\n$hash = (($h.ComputeHash([Text.Encoding]::UTF8.GetBytes($body)) | ForEach-Object { $_.ToString('x2') }) -join '')\nInvoke-RestMethod -Method Post -Uri '${url}' -ContentType 'application/json' -Headers @{ 'X-Orbit-Signature' = "sha256=$hash" } -Body $body`
+                : `Invoke-RestMethod -Method Post -Uri '${url}' -ContentType 'application/json' -Body '{"event":"ping"}'`,
+              python: signed
+                ? `import hmac, hashlib, requests\nsecret = "<paste signing secret>"\nbody = '{"event":"ping"}'\nsig = "sha256=" + hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()\nrequests.post("${url}", data=body,\n              headers={"Content-Type": "application/json", "X-Orbit-Signature": sig})`
+                : `import requests\nrequests.post("${url}", json={"event": "ping"})`,
+            }[lang]
+            return (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>Usage examples</Label>
+                  <div className="flex gap-1">
+                    {(['curl', 'powershell', 'python'] as const).map(l => (
+                      <button key={l} onClick={() => setLang(l)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${lang === l ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                        {l === 'curl' ? 'cURL' : l === 'powershell' ? 'PowerShell' : 'Python'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="relative">
+                  <pre className="text-[11px] bg-muted rounded p-3 pr-10 overflow-x-auto font-mono whitespace-pre">{ex}</pre>
+                  <Button size="sm" variant="outline" className="absolute top-1.5 right-1.5 h-7 px-2" onClick={() => onCopy(ex)}><Copy className="h-3 w-3" /></Button>
+                </div>
+                {signed && <p className="text-[11px] text-muted-foreground">Use the signing secret shown above. The signature is <code>sha256=</code> + HMAC-SHA256 of the exact raw body.</p>}
+              </div>
+            )
+          })()}
 
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={test} disabled={testing}><Play className="h-3.5 w-3.5" /> {testing ? 'Testing…' : 'Send test payload'}</Button>
