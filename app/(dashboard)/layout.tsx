@@ -94,7 +94,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         pendingApprovals={pendingApprovals ?? 0}
         unreadConnectorMessages={unreadConnectorMessages ?? 0}
       />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="app-ambiance flex-1 flex flex-col overflow-hidden min-w-0">
         <TopBar
           user={user}
           role={membershipResult.data.role}

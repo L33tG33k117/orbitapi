@@ -180,7 +180,7 @@ export default async function DashboardPage() {
         {stats.map(s => {
           const Icon = s.icon
           return (
-            <div key={s.label} className="rounded-xl border bg-card overflow-hidden group hover:shadow-md transition-all duration-200">
+            <div key={s.label} className="rounded-xl border bg-card overflow-hidden group hover:shadow-md transition-all duration-200 card-lift">
               <div className={`h-0.5 w-full bg-gradient-to-r ${s.accent}`} />
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">

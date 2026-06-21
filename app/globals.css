@@ -212,6 +212,16 @@
   }
   .reveal.is-visible { opacity: 1; transform: none; }
 
+  /* Subtle cosmic ambiance behind the whole app shell — faint nebula glows over
+     the base background so the dashboard feels connected to the landing page.
+     Alphas are intentionally low to keep text fully readable in both themes. */
+  .app-ambiance {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(1000px circle at 0% -5%, oklch(0.55 0.18 286 / 7%), transparent 45%),
+      radial-gradient(900px circle at 100% 0%, oklch(0.5 0.16 240 / 5%), transparent 45%);
+  }
+
   /* Lift + cosmic glow on hover — for interactive cards */
   .card-lift {
     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
