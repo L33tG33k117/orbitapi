@@ -168,6 +168,18 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
                 </div>
               )}
             </div>
+            {(triggerType === 'webhook' || triggerType === 'event') && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <p className="text-sm font-medium">Where do I get the webhook URL &amp; signing key?</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {triggerType === 'webhook' ? 'Webhook' : 'Event'} triggers are set up on the <span className="font-medium text-foreground">Webhooks</span> page.
+                  Create an endpoint there that targets this playbook — it gives you the URL and the signing secret (sent as the <code className="text-[11px]">X-Orbit-Signature</code> header).
+                </p>
+                <a href="/webhooks" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline mt-2">
+                  Open Webhooks →
+                </a>
+              </div>
+            )}
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
               Enabled (scheduled/webhook triggers only fire when on)

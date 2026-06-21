@@ -70,6 +70,11 @@ export function DataMappingClient({ connections }: { connections: Conn[] }) {
 
       {result && (
         <div className="space-y-4">
+          <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">How to use this:</span> Data Mapping <span className="font-medium text-foreground">proposes</span> how
+            fields from one app translate to another and previews the result against a live record. To put it to work, copy a mapping into a
+            Playbook <span className="font-medium text-foreground">Action</span> step. (Saving reusable mapping rules here is on the roadmap.)
+          </div>
           {result.unmapped && result.unmapped.length > 0 && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-500">
               Unmapped required fields: {result.unmapped.join(', ')}
