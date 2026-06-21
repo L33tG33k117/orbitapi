@@ -86,6 +86,20 @@ export default async function ConnectorsPage() {
 
       <SectionIntro id="connectors" />
 
+      {(connections ?? []).length === 0 && (
+        <section className="rounded-xl border border-dashed bg-muted/20 p-8 text-center space-y-2">
+          <div className="mx-auto h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-xl">🔌</div>
+          <p className="font-semibold text-foreground">No apps connected yet</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Connect your first app below to let Orbit pull live data and run actions.
+            No API keys handy? Try a <span className="font-medium text-foreground">Simulated</span> connector to see it work instantly.
+          </p>
+          <a href="#connector-catalog" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            Browse the catalog ↓
+          </a>
+        </section>
+      )}
+
       {(connections ?? []).length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -101,7 +115,7 @@ export default async function ConnectorsPage() {
         </section>
       )}
 
-      <section data-tour="connector-catalog" className="space-y-4">
+      <section id="connector-catalog" data-tour="connector-catalog" className="space-y-4 scroll-mt-6">
         <h2 className="text-lg font-semibold">API connector catalog</h2>
         <CatalogGrid
           catalog={sortedCatalog}

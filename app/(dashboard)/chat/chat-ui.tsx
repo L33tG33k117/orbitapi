@@ -445,7 +445,7 @@ const ONBOARDING_SUGGESTIONS = [
   'Can I try a connector without API keys?',
 ]
 
-export function ChatUI({ skills = [], hasConnections = true }: { skills?: Skill[]; hasConnections?: boolean }) {
+export function ChatUI({ skills = [], hasConnections = true, connectorSuggestions = [] }: { skills?: Skill[]; hasConnections?: boolean; connectorSuggestions?: string[] }) {
   const [activeSkillId, setActiveSkillId] = useState<string>('')
   const [skillRunStatus, setSkillRunStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [skillRunMsg, setSkillRunMsg] = useState('')
@@ -465,7 +465,9 @@ export function ChatUI({ skills = [], hasConnections = true }: { skills?: Skill[
   const activeSkill = skills.find(s => s.id === activeSkillId) ?? null
   const suggestions = activeSkill
     ? [`Run your standard workflow`, `What does ${activeSkill.name} see right now?`]
-    : hasConnections ? DEFAULT_SUGGESTIONS : ONBOARDING_SUGGESTIONS
+    : hasConnections
+      ? (connectorSuggestions.length > 0 ? connectorSuggestions : DEFAULT_SUGGESTIONS)
+      : ONBOARDING_SUGGESTIONS
 
   // Load conversation list on mount
   const loadConversations = useCallback(async () => {

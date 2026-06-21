@@ -73,6 +73,34 @@ export async function PUT(req: Request, { params }: Params) {
   return new Response(null, { status: 204 })
 }
 
+export async function PATCH(req: Request, { params }: Params) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: membership } = await supabase
+    .from('memberships').select('workspace_id, role').eq('user_id', user.id).single()
+  if (!membership || membership.role === 'member') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const admin = createAdminClient()
+  const { data: existing } = await admin.from('skills').select('workspace_id').eq('id', id).single()
+  if (!existing || existing.workspace_id !== membership.workspace_id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const body = await req.json()
+  if (typeof body.enabled !== 'boolean') {
+    return NextResponse.json({ error: 'enabled (boolean) is required' }, { status: 400 })
+  }
+
+  const { error } = await admin.from('skills').update({ enabled: body.enabled }).eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  return new Response(null, { status: 204 })
+}
+
 export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()

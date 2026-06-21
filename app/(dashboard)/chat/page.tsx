@@ -3,7 +3,24 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getWorkspaceFeatures } from '@/lib/workspace-features'
 import { hasCapability, requiredTierFor } from '@/lib/entitlements'
 import { FeatureGate } from '@/components/feature-gate'
+import { CONNECTOR_EXAMPLES } from '@/lib/connector-examples'
 import { ChatUI } from './chat-ui'
+
+// Build up to 6 starter prompts from the connectors the workspace actually has,
+// so an empty chat suggests things the assistant can really do. One phrase per
+// connector first (for variety), then a second pass if we still have room.
+function buildConnectorSuggestions(slugs: string[]): string[] {
+  const known = slugs.filter(s => CONNECTOR_EXAMPLES[s]?.chatPhrases?.length)
+  const out: string[] = []
+  for (let round = 0; round < 2 && out.length < 6; round++) {
+    for (const slug of known) {
+      const phrase = CONNECTOR_EXAMPLES[slug].chatPhrases[round]
+      if (phrase && !out.includes(phrase)) out.push(phrase)
+      if (out.length >= 6) break
+    }
+  }
+  return out.slice(0, 6)
+}
 
 export default async function ChatPage() {
   const [supabase, features] = await Promise.all([
@@ -31,7 +48,7 @@ export default async function ChatPage() {
   }
 
   const admin = createAdminClient()
-  const [{ data: skills }, { count: connectionCount }] = membership
+  const [{ data: skills }, { data: connections }] = membership
     ? await Promise.all([
         admin
           .from('skills')
@@ -40,11 +57,15 @@ export default async function ChatPage() {
           .order('name'),
         admin
           .from('connections')
-          .select('*', { count: 'exact', head: true })
+          .select('connector:connectors(slug)')
           .eq('workspace_id', membership.workspace_id)
           .neq('status', 'trashed'),
       ])
-    : [{ data: [] }, { count: 0 }]
+    : [{ data: [] }, { data: [] }]
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const connectedSlugs = Array.from(new Set((connections ?? []).map((c: any) => c.connector?.slug).filter(Boolean)))
+  const connectorSuggestions = buildConnectorSuggestions(connectedSlugs as string[])
 
   return (
     <div className="flex flex-col h-full">
@@ -61,7 +82,8 @@ export default async function ChatPage() {
             autonomy: string;
             group: { name: string; color: string } | null
           }[]}
-          hasConnections={(connectionCount ?? 0) > 0}
+          hasConnections={connectedSlugs.length > 0}
+          connectorSuggestions={connectorSuggestions}
         />
       </div>
     </div>
