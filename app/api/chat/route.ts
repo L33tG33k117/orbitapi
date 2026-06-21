@@ -263,9 +263,10 @@ export async function POST(req: Request) {
       } else if (!existing.title && autoTitle) {
         await admin.from('conversations').update({ title: autoTitle.slice(0, 100) }).eq('id', conversationId)
       }
-      await admin.from('conversation_messages').insert({ conversation_id: conversationId, role, content })
+      const { error: msgErr } = await admin.from('conversation_messages').insert({ conversation_id: conversationId, role, content })
+      if (msgErr) console.error('[persistMessage] message insert failed:', msgErr.message)
       await admin.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId)
-    } catch { /* best-effort; never block the chat */ }
+    } catch (e) { console.error('[persistMessage] error:', e) /* never block the chat */ }
   }
 
   // Save the user's message up front so it's in history even if the model errors.
