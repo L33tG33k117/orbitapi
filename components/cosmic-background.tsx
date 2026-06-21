@@ -29,7 +29,7 @@ const STAR_TINTS = [
   '255,236,214', // warm
 ]
 
-export function CosmicBackground() {
+export function CosmicBackground({ autoSpin = false }: { autoSpin?: boolean } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -118,10 +118,17 @@ export function CosmicBackground() {
     }
 
     function render(t: number) {
-      const target = targetRotation()
-      // Lerp toward the scroll-driven target + a slow idle drift so it breathes.
-      smoothRot += (target - smoothRot) * 0.06
-      const rot = smoothRot + t * 0.00002
+      let rot: number
+      if (autoSpin) {
+        // Continuous self-rotation (used by the explainer reel, which doesn't scroll).
+        smoothRot = t * 0.00006
+        rot = smoothRot
+      } else {
+        // Lerp toward the scroll-driven target + a slow idle drift so it breathes.
+        const target = targetRotation()
+        smoothRot += (target - smoothRot) * 0.06
+        rot = smoothRot + t * 0.00002
+      }
 
       const cx = width * 0.5
       const cy = height * 0.42
@@ -161,7 +168,7 @@ export function CosmicBackground() {
       cancelAnimationFrame(rafId)
       window.removeEventListener('resize', resize)
     }
-  }, [])
+  }, [autoSpin])
 
   return (
     <canvas

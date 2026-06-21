@@ -29,6 +29,7 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/privacy')
     || url.pathname.startsWith('/terms')
     || url.pathname.startsWith('/contact')
+    || url.pathname.startsWith('/demo')
 
   if (!user && !isPublic) {
     url.pathname = '/login'
