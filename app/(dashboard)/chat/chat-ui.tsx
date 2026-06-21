@@ -590,7 +590,12 @@ export function ChatUI({ skills = [], hasConnections = true, connectorSuggestion
         {/* Skill context picker */}
         {skills.length > 0 && (
           <div className="px-4 py-2 border-b bg-muted/30 flex items-center gap-3 shrink-0 flex-wrap">
-            <span className="text-xs text-muted-foreground font-medium">Context:</span>
+            <span
+              className="text-xs text-muted-foreground font-medium cursor-help"
+              title="Context scopes the assistant to one of your Skills — it uses that skill's instructions and its connected apps. Pick 'General' to chat across everything you've connected."
+            >
+              Context:
+            </span>
             <div className="flex gap-1.5 flex-wrap">
               <button
                 type="button"

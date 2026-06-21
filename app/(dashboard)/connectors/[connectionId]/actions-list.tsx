@@ -15,6 +15,7 @@ const FILTERS: { key: 'all' | Risk; label: string }[] = [
 
 export function ActionsList({ actions }: { actions: ActionItem[] }) {
   const [filter, setFilter] = useState<'all' | Risk>('all')
+  const [query, setQuery] = useState('')
 
   const counts = useMemo(() => ({
     all: actions.length,
@@ -23,10 +24,21 @@ export function ActionsList({ actions }: { actions: ActionItem[] }) {
     destructive: actions.filter(a => a.risk === 'destructive').length,
   }), [actions])
 
-  const visible = filter === 'all' ? actions : actions.filter(a => a.risk === filter)
+  const q = query.trim().toLowerCase()
+  const visible = actions.filter(a =>
+    (filter === 'all' || a.risk === filter) &&
+    (!q || a.name.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q)),
+  )
 
   return (
     <div className="space-y-3">
+      <input
+        type="search"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search actions by name or slug…"
+        className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      />
       <div className="flex items-center gap-1.5 flex-wrap">
         {FILTERS.map(f => (
           <button
@@ -56,7 +68,9 @@ export function ActionsList({ actions }: { actions: ActionItem[] }) {
           </div>
         ))}
         {visible.length === 0 && (
-          <p className="px-4 py-3 text-sm text-muted-foreground">No {filter} actions.</p>
+          <p className="px-4 py-3 text-sm text-muted-foreground">
+            {q ? `No actions match “${query.trim()}”.` : `No ${filter} actions.`}
+          </p>
         )}
       </div>
     </div>

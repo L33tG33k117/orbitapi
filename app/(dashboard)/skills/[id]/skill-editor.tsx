@@ -50,17 +50,17 @@ const AUTONOMY_OPTIONS: { value: Autonomy; label: string; description: string }[
   {
     value: 'supervised',
     label: 'Supervised',
-    description: 'Runs on a schedule and logs what it would do — writes are never executed. Safe for reviewing your workflow.',
+    description: 'Auto-runs on a schedule — but PREVIEW ONLY. It shows what it would do and never makes real changes. Use it to watch a workflow before trusting it.',
   },
   {
     value: 'manual',
     label: 'Manual',
-    description: 'You trigger it yourself. Reads and writes execute for real. Good for workflows you want full control over.',
+    description: 'Only runs when YOU click Run. Reads and writes execute for real. Full hands-on control.',
   },
   {
     value: 'autonomous',
     label: 'Autonomous',
-    description: 'Triggered by events and criteria — the AI acts when conditions are met, like a new booking or a sensor alert.',
+    description: 'Auto-runs on a schedule or events AND executes for real — fully hands-off once you trust it. (Supervised previews; Autonomous acts.)',
   },
 ]
 
@@ -558,6 +558,12 @@ export function SkillEditor({
             </div>
           )}
         </div>
+
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          <span className="font-medium text-foreground">What does Verify do?</span> It runs a quick safety check before you save —
+          confirming the instructions are clear, the connectors are reachable, and which actions the skill can take. Saving is
+          unlocked once it passes, so you never ship a skill that can&apos;t actually run.
+        </p>
 
         <button
           type="button"
