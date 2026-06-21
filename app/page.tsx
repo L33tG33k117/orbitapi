@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { CosmicBackground } from '@/components/cosmic-background'
+import { Reveal } from '@/components/reveal'
 import {
   Orbit, Zap, Shield, ArrowRight, CheckCircle,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
@@ -59,7 +60,7 @@ export default async function RootPage() {
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight">
             Every API in{' '}
-            <span className="bg-gradient-to-r from-[oklch(0.72_0.18_264)] via-[oklch(0.76_0.16_240)] to-[oklch(0.78_0.12_200)] bg-clip-text text-transparent">
+            <span className="text-gradient-animated">
               your orbit
             </span>
           </h1>
@@ -71,7 +72,7 @@ export default async function RootPage() {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/signup"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[oklch(0.46_0.19_264)] hover:bg-[oklch(0.52_0.2_264)] text-white font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[oklch(0.46_0.19_264)] hover:bg-[oklch(0.52_0.2_264)] text-white font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.98] animate-glow-pulse"
             >
               Begin your mission <ArrowRight className="h-4 w-4" />
             </Link>
@@ -85,7 +86,7 @@ export default async function RootPage() {
         </div>
 
         {/* Hero terminal mockup */}
-        <div className="max-w-3xl mx-auto mt-20 rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-2xl shadow-black/60">
+        <div className="max-w-3xl mx-auto mt-20 rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-2xl shadow-black/60 animate-float">
           <div className="flex items-center gap-1.5 px-5 py-3.5 border-b border-white/8 bg-[oklch(0.11_0.02_268)]">
             <span className="h-3 w-3 rounded-full bg-red-500/60" />
             <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
@@ -140,7 +141,7 @@ export default async function RootPage() {
       {/* ── How it works ────────────────────────────────────────────────── */}
       <section id="how-it-works" className="py-28 px-6 border-t border-white/6 relative">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
               <Radio className="h-3 w-3" /> Mission briefing
             </div>
@@ -148,7 +149,7 @@ export default async function RootPage() {
             <p className="mt-3 text-white/50 text-base max-w-xl mx-auto">
               From zero to full API automation in minutes — no code required.
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid md:grid-cols-3 gap-6 mb-16">
             {[
@@ -185,7 +186,7 @@ export default async function RootPage() {
                       <ArrowRight className="h-5 w-5 text-white/15" />
                     </div>
                   )}
-                  <div className="rounded-2xl border border-white/8 bg-[oklch(0.10_0.018_268)] p-7 h-full space-y-4">
+                  <div className="rounded-2xl border border-white/8 bg-[oklch(0.10_0.018_268)] p-7 h-full space-y-4 card-lift">
                     <div className="flex items-center justify-between">
                       <div className={`h-11 w-11 rounded-xl border flex items-center justify-center ${item.bg}`}>
                         <Icon className={`h-5 w-5 ${item.color}`} />
@@ -261,7 +262,7 @@ export default async function RootPage() {
       {/* ── Features ────────────────────────────────────────────────────── */}
       <section id="features" className="py-24 px-6 border-t border-white/6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
               <Globe2 className="h-3 w-3" /> Systems overview
             </div>
@@ -269,7 +270,7 @@ export default async function RootPage() {
             <p className="mt-3 text-white/50 text-base max-w-xl mx-auto">
               Everything you need to operate your entire tech stack from a single control center.
             </p>
-          </div>
+          </Reveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               {
@@ -311,7 +312,7 @@ export default async function RootPage() {
             ].map(f => {
               const Icon = f.icon
               return (
-                <div key={f.title} className="rounded-xl border border-white/8 bg-[oklch(0.10_0.018_268)] p-6 space-y-3 hover:border-[oklch(0.46_0.19_264)]/40 hover:bg-[oklch(0.11_0.02_268)] transition-all">
+                <div key={f.title} className="rounded-xl border border-white/8 bg-[oklch(0.10_0.018_268)] p-6 space-y-3 hover:border-[oklch(0.46_0.19_264)]/40 hover:bg-[oklch(0.11_0.02_268)] transition-all card-lift">
                   <div className="flex items-center justify-between">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/15">
                       <Icon className="h-5 w-5 text-[oklch(0.7_0.2_264)]" />
@@ -334,7 +335,7 @@ export default async function RootPage() {
       {/* ── Harmony infographic ─────────────────────────────────────────── */}
       <section id="harmony" className="py-24 px-6 border-t border-white/6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
+          <Reveal className="text-center mb-14">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
               <Satellite className="h-3 w-3" /> Mission architecture
             </div>
@@ -343,7 +344,7 @@ export default async function RootPage() {
               Whether you ask in chat or let it run on its own, every automation follows the same path —
               and every step is governed.
             </p>
-          </div>
+          </Reveal>
 
           <div className="rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)] p-5 sm:p-8">
             <div className="flex flex-col md:flex-row md:items-stretch gap-3">
@@ -457,13 +458,13 @@ export default async function RootPage() {
       {/* ── Pricing ─────────────────────────────────────────────────────── */}
       <section id="pricing" className="py-24 px-6 border-t border-white/6">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
               <Rocket className="h-3 w-3" /> Launch plans
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold">Pick your orbit</h2>
             <p className="mt-3 text-white/50 text-base">Start free. Upgrade to full autonomy when you&apos;re ready.</p>
-          </div>
+          </Reveal>
           <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5">
             {[
               {
@@ -517,7 +518,7 @@ export default async function RootPage() {
             ].map(plan => (
               <div
                 key={plan.name}
-                className={`rounded-2xl border p-6 space-y-5 flex flex-col ${
+                className={`rounded-2xl border p-6 space-y-5 flex flex-col card-lift ${
                   plan.highlight
                     ? 'border-[oklch(0.46_0.19_264)] bg-[oklch(0.12_0.022_264)]'
                     : plan.enterprise
@@ -571,8 +572,8 @@ export default async function RootPage() {
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full opacity-15"
             style={{ background: 'radial-gradient(ellipse at center, oklch(0.46 0.19 264) 0%, transparent 70%)' }} />
         </div>
-        <div className="max-w-2xl mx-auto text-center space-y-6 relative">
-          <Orbit className="h-10 w-10 text-[oklch(0.7_0.2_264)] mx-auto opacity-60" />
+        <Reveal className="max-w-2xl mx-auto text-center space-y-6 relative">
+          <Orbit className="h-10 w-10 text-[oklch(0.7_0.2_264)] mx-auto opacity-60 animate-float" />
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
             Ready to enter orbit?
           </h2>
@@ -582,12 +583,12 @@ export default async function RootPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[oklch(0.46_0.19_264)] hover:bg-[oklch(0.52_0.2_264)] text-white font-semibold text-base transition-all hover:scale-[1.02]"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[oklch(0.46_0.19_264)] hover:bg-[oklch(0.52_0.2_264)] text-white font-semibold text-base transition-all hover:scale-[1.02] animate-glow-pulse"
           >
             Launch your free workspace <Rocket className="h-4 w-4" />
           </Link>
           <p className="text-xs text-white/25">No credit card required · Free forever plan · Cancel anytime</p>
-        </div>
+        </Reveal>
       </section>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
