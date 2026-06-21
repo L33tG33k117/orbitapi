@@ -15,7 +15,7 @@ Compiled after completing Phases 5–7. Grouped by theme; items marked **[Quick]
 
 ## 1. Onboarding & First-Run Experience
 
-- 🟡 **[High impact] Guided setup wizard** — New workspaces currently land on a blank dashboard. A 3-step flow (connect your first tool → create your first skill → run it once) would cut time-to-value dramatically. *(Partial: PR #2 added a one-click "see it work" bundle path; the full 3-step wizard is still open.)*
+- ✅ **[High impact] Guided setup wizard** — New workspaces currently land on a blank dashboard. A 3-step flow (connect your first tool → create your first skill → run it once) would cut time-to-value dramatically. *(Shipped: `/welcome` 3-step wizard — simulate a connector, create a starter skill, run it once on demo data. New workspaces are routed here from onboarding, with a dashboard banner for empty workspaces.)*
 - **[Quick] Empty-state illustrations** — The Skills, Connectors, and Chat pages show plain text when empty. Replace with contextual empty states that include a single CTA (e.g. "Create your first skill →").
 - 🟡 **[Quick] Sample skills library** — Ship 5–10 pre-built skill templates (nightly Airbnb check-in review, Slack digest, CRM sync audit) that users can clone into their workspace with one click. *(Partial: bundles now cover several pre-built templates installable in one click.)*
 - **Workspace invite flow** — Currently members must be added manually. Add an invite-by-email flow that sends a Supabase magic-link with the workspace pre-attached.

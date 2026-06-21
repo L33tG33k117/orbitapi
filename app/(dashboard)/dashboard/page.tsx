@@ -158,6 +158,23 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      {/* Brand-new workspace → offer the guided 3-step setup */}
+      {isEmpty && (
+        <Link
+          href="/welcome"
+          className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/[0.08] to-primary/[0.02] p-4 hover:from-primary/[0.12] transition-colors"
+        >
+          <div className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+            <Sparkles className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">New here? Take the 1-minute guided setup</p>
+            <p className="text-xs text-muted-foreground">Connect a demo tool, create a skill, and run it — no API keys needed.</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-primary shrink-0" />
+        </Link>
+      )}
+
       {/* Stat cards */}
       <div data-tour="dash-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map(s => {
