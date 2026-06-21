@@ -3,7 +3,7 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
-import { createNotification } from '@/lib/notify'
+import { createNotification, emailSkillRunOutcome } from '@/lib/notify'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
 import { SAFETY_SYSTEM_RULES } from '@/lib/prompt-safety'
@@ -273,6 +273,13 @@ Guidelines:
       body,
       link: `/skills/${skillId}`,
     })
+    await emailSkillRunOutcome({
+      workspaceId,
+      skillName: skill.name,
+      outcome: 'completed',
+      summary: body,
+      link: `/skills/${skillId}`,
+    })
   } catch (err) {
     await admin.from('skill_runs').update({
       status: 'failed',
@@ -285,6 +292,13 @@ Guidelines:
       type: 'skill_failed',
       title: `${skill.name} run failed`,
       body: String(err).slice(0, 200),
+      link: `/skills/${skillId}`,
+    })
+    await emailSkillRunOutcome({
+      workspaceId,
+      skillName: skill.name,
+      outcome: 'failed',
+      summary: String(err).slice(0, 200),
       link: `/skills/${skillId}`,
     })
 

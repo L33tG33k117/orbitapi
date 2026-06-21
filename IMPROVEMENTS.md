@@ -2,13 +2,22 @@
 
 Compiled after completing Phases 5–7. Grouped by theme; items marked **[Quick]** are low-effort, **[High impact]** are strategic.
 
+**Status legend:** ✅ shipped · 🟡 partially shipped · (unmarked) not started.
+
+> **Recently shipped (PR #2 — `platform-improvements`, merged 2026-06-20):**
+> OAuth2 connector framework + Google Drive OAuth, connection health states,
+> per-IP API rate limiting, CI typecheck/integrity gates, SSO sign-in entry point,
+> bundle builder + marketplace install/uninstall, one-click "see it work" onboarding
+> bundle path, diagnostics capture (page/client errors/viewport/console.error),
+> connector-action type filtering, g-then-letter keyboard nav, and beta-feedback fixes.
+
 ---
 
 ## 1. Onboarding & First-Run Experience
 
-- **[High impact] Guided setup wizard** — New workspaces currently land on a blank dashboard. A 3-step flow (connect your first tool → create your first skill → run it once) would cut time-to-value dramatically.
+- ✅ **[High impact] Guided setup wizard** — New workspaces currently land on a blank dashboard. A 3-step flow (connect your first tool → create your first skill → run it once) would cut time-to-value dramatically. *(Shipped: `/welcome` 3-step wizard — simulate a connector, create a starter skill, run it once on demo data. New workspaces are routed here from onboarding, with a dashboard banner for empty workspaces.)*
 - **[Quick] Empty-state illustrations** — The Skills, Connectors, and Chat pages show plain text when empty. Replace with contextual empty states that include a single CTA (e.g. "Create your first skill →").
-- **[Quick] Sample skills library** — Ship 5–10 pre-built skill templates (nightly Airbnb check-in review, Slack digest, CRM sync audit) that users can clone into their workspace with one click.
+- 🟡 **[Quick] Sample skills library** — Ship 5–10 pre-built skill templates (nightly Airbnb check-in review, Slack digest, CRM sync audit) that users can clone into their workspace with one click. *(Partial: bundles now cover several pre-built templates installable in one click.)*
 - **Workspace invite flow** — Currently members must be added manually. Add an invite-by-email flow that sends a Supabase magic-link with the workspace pre-attached.
 
 ---
@@ -27,8 +36,8 @@ Compiled after completing Phases 5–7. Grouped by theme; items marked **[Quick]
 
 ## 3. Connector Catalog & Connections
 
-- **[High impact] OAuth connectors** — All current real connectors use API keys. Adding OAuth (Google, Slack, Salesforce) would remove the friction of users finding and copy-pasting credentials.
-- **[Quick] Connection health badges** — Show a green / red dot on each connection card indicating last successful ping. Right now a broken connection is invisible until a skill fails.
+- ✅ **[High impact] OAuth connectors** — All current real connectors use API keys. Adding OAuth (Google, Slack, Salesforce) would remove the friction of users finding and copy-pasting credentials. *(Shipped: OAuth2 authorization-code framework + Google Drive read-only connector. Slack/Salesforce can now be added on the same framework.)*
+- ✅ **[Quick] Connection health badges** — Show a green / red dot on each connection card indicating last successful ping. Right now a broken connection is invisible until a skill fails. *(Shipped: Active / Needs setup / Error / Disconnected states.)*
 - **Credential rotation reminders** — Detect when an API key hasn't been rotated in 90 days and surface a warning in the UI.
 - **Multi-account per connector** — Some users need two Slack workspaces or two AWS accounts. Currently one connector type = one connection. Allow multiple connections of the same type in a group.
 - **[Quick] Connector request status emails** — When an admin approves or rejects a connector request, send an automated email to the requester. Currently there is no notification.
@@ -62,7 +71,7 @@ Compiled after completing Phases 5–7. Grouped by theme; items marked **[Quick]
 - **Session management** — Show active sessions in Settings and let users revoke individual sessions (useful for shared computers).
 - **[Quick] 2FA enforcement per workspace** — Let workspace admins require two-factor authentication for all members.
 - **Webhook signature verification** — Inbound webhooks to `/api/webhooks/skills/:id` verify the secret in the URL. Move the secret to a header (`X-Orbit-Signature: HMAC-SHA256`) to avoid leaking it in server logs.
-- **Rate limiting** — The API routes have no rate limiting. A single misbehaving client (or an automated attack) can exhaust Supabase connection pool. Add rate limiting at the edge (Next.js middleware or Vercel WAF).
+- ✅ **Rate limiting** — The API routes have no rate limiting. A single misbehaving client (or an automated attack) can exhaust Supabase connection pool. Add rate limiting at the edge (Next.js middleware or Vercel WAF). *(Shipped: per-IP API rate limiting at the proxy boundary.)*
 - **Principle of least privilege on admin client** — `createAdminClient()` (service role key) is used broadly. Scope it only to the routes that truly need it; use the user's session token elsewhere.
 
 ---
@@ -72,14 +81,14 @@ Compiled after completing Phases 5–7. Grouped by theme; items marked **[Quick]
 - **[Quick] Type-safe Supabase queries** — The codebase uses `as unknown as X` casts in several places. Run `supabase gen types typescript` as a CI step and replace manual types with generated ones.
 - **API documentation** — Document the internal REST API (`/api/skills`, `/api/connections`, etc.) so team members can build integrations without reading source.
 - **End-to-end tests** — There are no automated tests. Even a small Playwright suite covering sign-in → connect a demo connector → create a skill → run it would catch regressions before they reach prod.
-- **Error tracking** — Integrate Sentry (or similar) so uncaught exceptions in API routes and client components surface with stack traces, rather than silent failures.
+- 🟡 **Error tracking** — Integrate Sentry (or similar) so uncaught exceptions in API routes and client components surface with stack traces, rather than silent failures. *(Partial: diagnostics now capture page, recent client errors, console.error, and browser/viewport context; a dedicated error-tracking service is still open.)*
 - **Preview deployments** — Set up Vercel preview URLs per PR so changes can be reviewed in a running environment before merge.
 
 ---
 
 ## 8. UX Polish
 
-- **[Quick] Global keyboard shortcuts** — `Cmd+K` command palette for navigating to any page, skill, or connection. High value for power users.
+- 🟡 **[Quick] Global keyboard shortcuts** — `Cmd+K` command palette for navigating to any page, skill, or connection. High value for power users. *(Partial: g-then-letter nav hotkeys shipped; Cmd+K command palette still open.)*
 - **[Quick] Breadcrumbs on deep pages** — Skill detail and workspace detail pages have no breadcrumb. Users must use the back button.
 - **Mobile-responsive layout** — The sidebar and data tables are not usable on mobile screens. A bottom-nav layout for mobile would unlock mobile monitoring use cases.
 - **Toast notifications** — Save/delete actions currently show inline success text. Consistent toast notifications (top-right) across all pages would feel more polished.
@@ -92,7 +101,7 @@ Compiled after completing Phases 5–7. Grouped by theme; items marked **[Quick]
 - **[High impact] Public connector marketplace** — Let third-party developers submit connectors via a JSON manifest. This is how Zapier scaled its integration library without building everything in-house.
 - **Usage-based pricing add-on** — Consider a "pay per skill run" add-on above the Pro tier for high-volume users rather than hard limits.
 - **Workspace analytics for users** — A simple dashboard showing "your skills ran X times this week, saved ~Y hours" gives users a concrete ROI number they can share with their team or manager.
-- **SSO / SAML** — Enterprise buyers expect SSO. This would be the primary unlock for moving upmarket beyond the Pro tier.
+- 🟡 **SSO / SAML** — Enterprise buyers expect SSO. This would be the primary unlock for moving upmarket beyond the Pro tier. *(Partial: SSO sign-in entry point by email domain shipped; full SAML/IdP provisioning still open.)*
 - **White-label option** — Some agency customers would pay to remove OrbitAPI branding. A white-label tier could be a significant revenue stream.
 
 ---

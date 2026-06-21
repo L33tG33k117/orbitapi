@@ -15,6 +15,7 @@ interface Props {
   fullName: string
   userId: string
   connectionDeletePreference: 'trash' | 'permanent'
+  emailSkillNotifications: 'off' | 'failures' | 'all'
 }
 
 const THEME_OPTIONS = [
@@ -23,7 +24,7 @@ const THEME_OPTIONS = [
   { value: 'system', label: 'System', icon: Monitor },
 ] as const
 
-export function ProfileForm({ email, fullName, userId, connectionDeletePreference }: Props) {
+export function ProfileForm({ email, fullName, userId, connectionDeletePreference, emailSkillNotifications }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const { theme, setTheme } = useTheme()
@@ -45,6 +46,11 @@ export function ProfileForm({ email, fullName, userId, connectionDeletePreferenc
   const [deletePref, setDeletePref] = useState<'trash' | 'permanent'>(connectionDeletePreference)
   const [savingPref, setSavingPref] = useState(false)
   const [prefMsg, setPrefMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  // Email skill-run notification preference
+  const [emailPref, setEmailPref] = useState<'off' | 'failures' | 'all'>(emailSkillNotifications)
+  const [savingEmailPref, setSavingEmailPref] = useState(false)
+  const [emailPrefMsg, setEmailPrefMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
   // Account deletion
   const [showDeleteStep1, setShowDeleteStep1] = useState(false)
@@ -98,6 +104,25 @@ export function ProfileForm({ email, fullName, userId, connectionDeletePreferenc
     } else {
       const d = await res.json()
       setPrefMsg({ type: 'err', text: d.error ?? 'Failed to save.' })
+    }
+  }
+
+  async function saveEmailPref(pref: 'off' | 'failures' | 'all') {
+    setSavingEmailPref(true); setEmailPrefMsg(null)
+    const prev = emailPref
+    setEmailPref(pref)
+    const res = await fetch('/api/account/preferences', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email_skill_notifications: pref }),
+    })
+    setSavingEmailPref(false)
+    if (res.ok) {
+      setEmailPrefMsg({ type: 'ok', text: 'Preference saved.' })
+    } else {
+      setEmailPref(prev)
+      const d = await res.json().catch(() => ({}))
+      setEmailPrefMsg({ type: 'err', text: d.error ?? 'Failed to save.' })
     }
   }
 
@@ -242,6 +267,40 @@ export function ProfileForm({ email, fullName, userId, connectionDeletePreferenc
             {savingPw ? 'Changing…' : 'Change password'}
           </Button>
         </form>
+      </section>
+
+      {/* Email notifications for skill runs */}
+      <section className="space-y-4 rounded-xl border p-6 bg-card">
+        <div>
+          <h2 className="font-semibold">Skill run emails</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Get an email summary when your skills run. In-app notifications (the bell) are always on.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          {([
+            { value: 'failures', label: 'Failures only', desc: 'Email me when a skill run fails. Best for catching problems without noise.' },
+            { value: 'all', label: 'Every run', desc: 'Email me a summary after every completed or failed run.' },
+            { value: 'off', label: 'Off', desc: 'No emails. I\'ll check the notification bell myself.' },
+          ] as const).map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => saveEmailPref(opt.value)}
+              disabled={savingEmailPref}
+              className={`flex-1 text-left p-4 rounded-xl border text-sm transition-all
+                ${emailPref === opt.value
+                  ? 'border-primary bg-primary/8 text-primary'
+                  : 'border-border text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
+                }`}
+            >
+              <p className="font-medium">{opt.label}</p>
+              <p className="text-xs mt-1 leading-relaxed opacity-80">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+        {emailPrefMsg && (
+          <p className={`text-sm ${emailPrefMsg.type === 'ok' ? 'text-emerald-500' : 'text-destructive'}`}>{emailPrefMsg.text}</p>
+        )}
       </section>
 
       {/* Connection delete preference */}

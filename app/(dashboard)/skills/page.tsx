@@ -11,6 +11,7 @@ import { SKILL_TEMPLATES } from '@/lib/skill-templates'
 import { CreateSkillForm } from './create-skill-form'
 import { SkillTemplates } from './skill-templates'
 import { SkillDeleteButton } from './skill-delete-button'
+import { SkillToggle } from './skill-toggle'
 import { SectionIntro } from '@/components/section-intro'
 
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ groupId?: string }> }) {
@@ -155,11 +156,15 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
                 }`}>
                   {s.autonomy}
                 </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-                  s.enabled ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'
-                }`}>
-                  {s.enabled ? 'Enabled' : 'Disabled'}
-                </span>
+                {isAdmin ? (
+                  <SkillToggle skillId={s.id} enabled={!!s.enabled} />
+                ) : (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                    s.enabled ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {s.enabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                )}
                 <Link
                   href={`/skills/${s.id}`}
                   className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
