@@ -291,7 +291,7 @@ export function RequestConnectorForm() {
           <CheckCircle className="h-6 w-6 text-emerald-400 mx-auto" />
           <p className="text-sm font-semibold">Request submitted!</p>
           <p className="text-xs text-muted-foreground">
-            <strong>{result.connectorName}</strong> has been added to the request queue. We&apos;ll reach out here if we need more info.
+            <strong>{result.connectorName}</strong>{' '}has been added to the request queue. We&apos;ll reach out here if we need more info.
           </p>
           <button onClick={() => { setResult({ type: null }); setName(''); setWebsiteUrl(''); setUseCase(''); setOpen(false) }}
             className="text-xs underline text-muted-foreground hover:text-foreground">

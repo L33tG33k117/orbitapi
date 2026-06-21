@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { NotificationBell } from '@/components/notification-bell'
 import { AdminNotificationBell } from '@/components/admin-notification-bell'
+import { NavHotkeys } from '@/components/nav-hotkeys'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FeedbackButton } from '@/components/feedback-button'
 import { PageTour } from '@/components/page-tour'
@@ -74,6 +75,7 @@ export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: T
         </div>
       )}
 
+      <NavHotkeys />
       <PageTour />
       <FeedbackButton />
       <ThemeToggle />

@@ -14,12 +14,12 @@ interface Group { id: string; name: string; color: string }
 // immediately rather than starting blank.
 const STARTERS: Record<string, { label: string; persona: string; steps: unknown[] }> = {
   triage: {
-    label: 'Assess → act by severity',
+    label: 'Assess → act by confidence',
     persona: 'You are a security operations analyst triaging incoming signals.',
     steps: [
-      { id: 'assess', name: 'Assess the situation', type: 'assess', prompt: 'Review current alerts/detections and score the severity.', next: 'act' },
+      { id: 'assess', name: 'Assess the situation', type: 'assess', prompt: 'Review current alerts/detections and score your confidence 0–10.', next: 'act' },
       { id: 'act', name: 'Take remediation action', type: 'action', next: 'notify' },
-      { id: 'notify', name: 'Notify the team', type: 'notify', message: 'Playbook handled severity {{state.severity}}: {{state.assessment}}' },
+      { id: 'notify', name: 'Notify the team', type: 'notify', message: 'Playbook handled at confidence {{state.severity}}: {{state.assessment}}' },
     ],
   },
   blank: { label: 'Blank (add steps later)', persona: '', steps: [] },

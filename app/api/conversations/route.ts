@@ -12,7 +12,7 @@ export async function GET() {
   if (!membership) return new Response('No workspace', { status: 403 })
 
   const admin = createAdminClient()
-  const { data, error } = await admin
+  const primary = await admin
     .from('conversations')
     .select('id, title, created_at, updated_at')
     .eq('workspace_id', membership.workspace_id)
@@ -20,8 +20,25 @@ export async function GET() {
     .order('updated_at', { ascending: false })
     .limit(50)
 
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json(data ?? [])
+  let rows: { id: string; title: string | null; created_at: string; updated_at: string }[] | null = primary.data
+  let err = primary.error
+
+  // Resilient to pre-migration-040 schemas that lack updated_at — fall back to
+  // created_at so history loads instead of 500-ing.
+  if (err && /updated_at/i.test(err.message)) {
+    const fb = await admin
+      .from('conversations')
+      .select('id, title, created_at')
+      .eq('workspace_id', membership.workspace_id)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    err = fb.error
+    rows = (fb.data ?? []).map(c => ({ ...c, updated_at: c.created_at }))
+  }
+
+  if (err) return Response.json({ error: err.message }, { status: 500 })
+  return Response.json(rows ?? [])
 }
 
 // POST /api/conversations — create a new conversation

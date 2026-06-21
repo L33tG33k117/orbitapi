@@ -41,7 +41,7 @@ export default async function PlaybooksPage() {
       <div>
         <h1 className="text-2xl font-bold">Playbooks</h1>
         <p className="text-muted-foreground mt-1">
-          Multi-step automations with conditional branching and severity-driven autonomy. A playbook can
+          Multi-step automations with conditional branching and confidence-driven autonomy. A playbook can
           auto-act on critical events, pause for human approval on uncertain ones, and just notify on the rest.
         </p>
       </div>
