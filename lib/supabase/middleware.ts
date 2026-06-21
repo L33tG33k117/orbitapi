@@ -30,6 +30,7 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/terms')
     || url.pathname.startsWith('/contact')
     || url.pathname.startsWith('/demo')
+    || url.pathname.startsWith('/how-it-works')
 
   if (!user && !isPublic) {
     url.pathname = '/login'
