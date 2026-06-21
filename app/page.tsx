@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { CosmicBackground } from '@/components/cosmic-background'
 import {
   Orbit, Zap, Shield, ArrowRight, CheckCircle,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
@@ -15,26 +16,11 @@ export default async function RootPage() {
   return (
     <div className="min-h-screen bg-[oklch(0.07_0.02_268)] text-white overflow-x-hidden">
 
-      {/* ── Stars background ────────────────────────────────────────────── */}
-      <div className="fixed inset-0 pointer-events-none" aria-hidden>
-        <div className="absolute inset-0"
-          style={{
-            backgroundImage: `radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.35) 0%, transparent 100%),
-              radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.25) 0%, transparent 100%),
-              radial-gradient(1px 1px at 50% 60%, rgba(255,255,255,0.2) 0%, transparent 100%),
-              radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
-              radial-gradient(1px 1px at 90% 70%, rgba(255,255,255,0.2) 0%, transparent 100%),
-              radial-gradient(1.5px 1.5px at 35% 15%, rgba(255,255,255,0.4) 0%, transparent 100%),
-              radial-gradient(1px 1px at 65% 85%, rgba(255,255,255,0.25) 0%, transparent 100%),
-              radial-gradient(1px 1px at 75% 45%, rgba(255,255,255,0.3) 0%, transparent 100%),
-              radial-gradient(1px 1px at 15% 55%, rgba(255,255,255,0.2) 0%, transparent 100%),
-              radial-gradient(1.5px 1.5px at 55% 25%, rgba(255,255,255,0.35) 0%, transparent 100%)`,
-          }}
-        />
-        {/* Nebula glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full opacity-20"
-          style={{ background: 'radial-gradient(ellipse at center, oklch(0.46 0.19 264) 0%, transparent 70%)' }} />
-      </div>
+      {/* ── Living cosmos background — orbits as you scroll ──────────────── */}
+      <CosmicBackground />
+
+      {/* All content sits above the cosmos canvas (z-0) */}
+      <div className="relative z-10">
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/8 backdrop-blur-md bg-[oklch(0.07_0.02_268)]/80">
@@ -651,6 +637,8 @@ export default async function RootPage() {
           </div>
         </div>
       </footer>
+
+      </div>{/* /content layer */}
     </div>
   )
 }
