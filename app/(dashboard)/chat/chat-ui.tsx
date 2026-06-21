@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { MessageSquarePlus, Trash2, Clock, ChevronLeft, Save, Plug, ArrowRight } from 'lucide-react'
 import { Markdown } from '@/components/markdown'
+import { AiPowerMeter, type AiPowerState } from '@/components/ai-power-meter'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -207,6 +208,16 @@ function ChatCore({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // When a response finishes streaming, the server has consumed AI Power — tell
+  // the meter to refresh so it reflects what this message cost.
+  const prevStatus = useRef(status)
+  useEffect(() => {
+    if (prevStatus.current === 'streaming' && status !== 'streaming') {
+      window.dispatchEvent(new Event('orbit:power-changed'))
+    }
+    prevStatus.current = status
+  }, [status])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -445,7 +456,7 @@ const ONBOARDING_SUGGESTIONS = [
   'Can I try a connector without API keys?',
 ]
 
-export function ChatUI({ skills = [], hasConnections = true, connectorSuggestions = [] }: { skills?: Skill[]; hasConnections?: boolean; connectorSuggestions?: string[] }) {
+export function ChatUI({ skills = [], hasConnections = true, connectorSuggestions = [], aiPower }: { skills?: Skill[]; hasConnections?: boolean; connectorSuggestions?: string[]; aiPower?: AiPowerState }) {
   const [activeSkillId, setActiveSkillId] = useState<string>('')
   const [skillRunStatus, setSkillRunStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [skillRunMsg, setSkillRunMsg] = useState('')
@@ -552,6 +563,13 @@ export function ChatUI({ skills = [], hasConnections = true, connectorSuggestion
 
       {/* Main chat area */}
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* AI Power meter — shows remaining power and how much each chat uses */}
+        {aiPower && (
+          <div className="px-4 py-2 border-b flex items-center justify-end shrink-0 bg-background/60">
+            <AiPowerMeter initial={aiPower} />
+          </div>
+        )}
+
         {/* No-connections banner — the assistant can't fetch real data yet */}
         {!hasConnections && (
           <a

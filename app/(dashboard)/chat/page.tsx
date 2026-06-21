@@ -4,6 +4,7 @@ import { getWorkspaceFeatures } from '@/lib/workspace-features'
 import { hasCapability, requiredTierFor } from '@/lib/entitlements'
 import { FeatureGate } from '@/components/feature-gate'
 import { CONNECTOR_EXAMPLES } from '@/lib/connector-examples'
+import { getAiPower } from '@/lib/ai-power'
 import { ChatUI } from './chat-ui'
 
 // Build up to 6 starter prompts from the connectors the workspace actually has,
@@ -67,6 +68,16 @@ export default async function ChatPage() {
   const connectedSlugs = Array.from(new Set((connections ?? []).map((c: any) => c.connector?.slug).filter(Boolean)))
   const connectorSuggestions = buildConnectorSuggestions(connectedSlugs as string[])
 
+  const power = membership ? await getAiPower(membership.workspace_id) : null
+  const aiPower = {
+    remaining: power?.remaining ?? 0,
+    allowance: power?.allowance ?? 0,
+    pctUsed: power?.pctUsed ?? 0,
+    resetInDays: power?.resetInDays ?? 0,
+    isTrial: power?.isTrial ?? true,
+    tier: power?.tier ?? 'free',
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="px-8 py-5 border-b shrink-0">
@@ -84,6 +95,7 @@ export default async function ChatPage() {
           }[]}
           hasConnections={connectedSlugs.length > 0}
           connectorSuggestions={connectorSuggestions}
+          aiPower={aiPower}
         />
       </div>
     </div>
