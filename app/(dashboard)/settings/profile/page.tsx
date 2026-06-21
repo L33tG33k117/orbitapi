@@ -9,7 +9,7 @@ export default async function ProfilePage() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('connection_delete_preference')
+    .select('connection_delete_preference, email_skill_notifications')
     .eq('id', user!.id)
     .single()
 
@@ -25,6 +25,7 @@ export default async function ProfilePage() {
         fullName={(user?.user_metadata?.full_name as string | undefined) ?? ''}
         userId={user?.id ?? ''}
         connectionDeletePreference={(profile?.connection_delete_preference as 'trash' | 'permanent') ?? 'trash'}
+        emailSkillNotifications={(profile?.email_skill_notifications as 'off' | 'failures' | 'all') ?? 'failures'}
       />
     </div>
   )
