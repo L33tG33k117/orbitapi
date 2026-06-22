@@ -53,13 +53,24 @@ Help/Guide page (or a small panel in the feedback widget). Optional `released_at
 column for the "Implemented on" date.
 **Effort:** Small–Medium. **Most shovel-ready of these — good next build.**
 
-### 3. Drag-and-drop Playbook builder
+### 3. Drag-and-drop Playbook builder — *assessed 2026-06-21; recommend a dedicated build*
 **Ask:** A visual node/arrow editor for playbooks (drag steps, connect them).
-**Current state:** Playbooks are edited as an ordered list of step nodes.
-**Recommended approach:** A canvas builder (e.g. React Flow) over the existing
-`definition.steps` JSON — nodes = assess/action/condition/approval/notify/wait,
-edges = `next`. Keep the JSON model; this is a new view on top of it.
-**Effort:** Large (new editor UX). High wow-factor; schedule deliberately.
+**Current state (verified):** `playbook-detail.tsx` edits an **ordered list** of
+step nodes (add, move up/down, remove); condition nodes branch by referencing
+other step IDs for true/false. **No flow/graph library is installed.**
+**Recommended approach (phased):**
+1. Add **`@xyflow/react`** (React Flow) — needs sign-off since it's a sizeable UI dep.
+2. Model: keep `definition.steps` as the source of truth. Map each step → a node;
+   derive edges from `next` (and condition true/false targets). Add an optional
+   `position {x,y}` per node so layout persists (auto-layout with dagre on first open).
+3. Canvas: custom node types per step kind (assess/action/condition/approval/notify/wait),
+   draggable, with a side panel for the selected node's config (reuse today's fields).
+   Edges = connections; deleting/redrawing an edge rewrites `next`.
+4. Keep the current list editor as a fallback/toggle until the canvas is solid.
+**Effort:** Large (new dep + canvas UX + serialization + testing). **Best as a
+dedicated, supervised build** — not a rushed unsupervised push. High wow-factor.
+**Why not built in this pass:** it needs a dependency decision and design choices
+worth doing with you in the loop; everything else in this list shipped.
 
 ### 4. Connection-deletion behavior: per-user vs workspace setting
 **Ask:** A tester felt "delete vs trash" is a platform/admin policy, not a personal
