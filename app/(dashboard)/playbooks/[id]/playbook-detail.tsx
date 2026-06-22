@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import {
   Play, Trash2, Plus, ChevronDown, ChevronUp, ArrowLeft, Gauge, GitBranch,
-  Bot, Bell, Clock, ShieldCheck, Wrench, X,
+  Bot, Bell, Clock, ShieldCheck, Wrench, X, List, Network,
 } from 'lucide-react'
+import { PlaybookCanvas } from './playbook-canvas'
 
 type NodeType = 'assess' | 'action' | 'condition' | 'approval' | 'notify' | 'wait'
 interface PlaybookNode {
@@ -26,6 +27,8 @@ interface PlaybookNode {
   message?: string
   wait_seconds?: number
   wait_event?: string
+  next?: string
+  position?: { x: number; y: number }
 }
 interface Threshold { min: number; max: number; mode: 'auto' | 'approval' | 'notify' }
 
@@ -64,6 +67,7 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
   )
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState(false)
+  const [view, setView] = useState<'list' | 'canvas'>('list')
 
   function patchStep(i: number, patch: Partial<PlaybookNode>) {
     setSteps(s => s.map((n, idx) => idx === i ? { ...n, ...patch } : n))
@@ -217,7 +221,26 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
 
           {/* Step editor */}
           <section className="border rounded-xl p-4 bg-card space-y-3">
-            <h2 className="font-medium text-sm">Steps</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-sm">Steps</h2>
+              <div className="flex items-center gap-1 rounded-lg border p-0.5">
+                <button onClick={() => setView('list')} className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                  <List className="h-3.5 w-3.5" /> List
+                </button>
+                <button onClick={() => setView('canvas')} className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${view === 'canvas' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                  <Network className="h-3.5 w-3.5" /> Canvas
+                </button>
+              </div>
+            </div>
+
+            {view === 'canvas' ? (
+              <PlaybookCanvas
+                steps={steps}
+                onChange={s => setSteps(s as PlaybookNode[])}
+                availableActions={availableActions}
+              />
+            ) : (
+            <>
             {availableActions.length === 0 && (
               <p className="text-xs text-amber-600 dark:text-amber-500">
                 This playbook&apos;s group has no active connections — action steps won&apos;t have anything to call.
@@ -307,6 +330,8 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
                 )
               })}
             </div>
+            </>
+            )}
           </section>
 
           <div className="flex gap-2">
