@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
+import { normalizeRiskLevels } from '@/lib/connector-access'
 
 type Params = { params: Promise<{ connectionId: string }> }
 
@@ -30,14 +31,16 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   const body = await req.json()
-  const { label, credentials, testFirst } = body as {
+  const { label, credentials, testFirst, allowedRiskLevels } = body as {
     label?: string
     credentials?: Record<string, string>
     testFirst?: boolean
+    allowedRiskLevels?: string[]
   }
 
   const updates: Record<string, unknown> = {}
   if (label) updates.label = label
+  if (allowedRiskLevels !== undefined) updates.allowed_risk_levels = normalizeRiskLevels(allowedRiskLevels)
 
   // If new credentials provided, store them
   if (credentials && Object.keys(credentials).length > 0) {

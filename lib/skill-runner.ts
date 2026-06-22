@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification, emailSkillRunOutcome } from '@/lib/notify'
+import { riskAllowed } from '@/lib/connector-access'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
 import { SAFETY_SYSTEM_RULES } from '@/lib/prompt-safety'
@@ -62,11 +63,11 @@ export async function runSkill({
     : null
 
   // Load connections (scoped to the group, or all active workspace connections).
-  let connections: { id: string; label: string; vault_secret_id: string | null; connector: { slug: string; name: string } }[] = []
+  let connections: { id: string; label: string; vault_secret_id: string | null; allowed_risk_levels: string[] | null; connector: { slug: string; name: string } }[] = []
   {
     let q = admin
       .from('connections')
-      .select('id, label, vault_secret_id, connector:connectors(slug, name)')
+      .select('id, label, vault_secret_id, allowed_risk_levels, connector:connectors(slug, name)')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active')
     if (groupConnIds) q = q.in('id', groupConnIds.length ? groupConnIds : ['00000000-0000-0000-0000-000000000000'])
@@ -112,6 +113,8 @@ export async function runSkill({
       credCache[conn.id] = await resolveCredentials(conn)
 
       for (const action of manifest.actions) {
+        // Per-connector access controls: skip classes this connection has disabled
+        if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
         if (blockedSlugs.includes(action.slug)) continue
 
         const toolName = `${conn.id.replaceAll('-', '_')}__${action.slug}`

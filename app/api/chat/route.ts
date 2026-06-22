@@ -9,6 +9,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
+import { riskAllowed } from '@/lib/connector-access'
 import { simulateAction } from '@/lib/simulate-action'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
@@ -99,7 +100,8 @@ export async function POST(req: Request) {
 
   type ConnRow = {
     id: string; label: string; status: string; vault_secret_id: string | null;
-    workspace_id: string; is_simulated: boolean; connector: { slug: string; name: string }
+    workspace_id: string; is_simulated: boolean; allowed_risk_levels: string[] | null;
+    connector: { slug: string; name: string }
   }
 
   let connRows: ConnRow[]
@@ -148,6 +150,9 @@ export async function POST(req: Request) {
         if (!grantLevel) continue
         if (action.risk !== 'read' && grantLevel !== 'read_write') continue
       }
+
+      // Per-connector access controls: skip classes this connection has disabled
+      if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
 
       // Skill blocked actions are never exposed
       if (blockedSlugs.includes(action.slug)) continue

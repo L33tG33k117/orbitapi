@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { simulateAction } from '@/lib/simulate-action'
+import { riskAllowed } from '@/lib/connector-access'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -39,6 +40,12 @@ export async function POST(req: Request) {
 
   const action = manifest.actions.find(a => a.slug === actionSlug)
   if (!action) return NextResponse.json({ error: 'Action not found' }, { status: 404 })
+
+  // Per-connector access controls: this connection may have a class disabled.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!riskAllowed((conn as any).allowed_risk_levels, action.risk)) {
+    return NextResponse.json({ error: `${action.risk} actions are disabled for this connection.` }, { status: 403 })
+  }
 
   // Members: check grants
   if (membership.role === 'member') {

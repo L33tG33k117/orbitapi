@@ -8,6 +8,7 @@ import { createNotification } from '@/lib/notify'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
+import { riskAllowed } from '@/lib/connector-access'
 
 // ============================================================
 // Foundation A — Playbook execution engine
@@ -72,6 +73,7 @@ type Connection = {
   id: string
   label: string
   vault_secret_id: string | null
+  allowed_risk_levels: string[] | null
   connector: { slug: string; name: string }
 }
 
@@ -703,7 +705,7 @@ async function loadConnections(playbook: LoadedPlaybook): Promise<Connection[]> 
   const admin = createAdminClient()
   const { data } = await admin
     .from('connections')
-    .select('id, label, vault_secret_id, connector:connectors(slug, name)')
+    .select('id, label, vault_secret_id, allowed_risk_levels, connector:connectors(slug, name)')
     .in('id', ids)
     .eq('status', 'active')
   return (data ?? []) as unknown as Connection[]
@@ -718,6 +720,8 @@ async function buildActionIndex(
     if (!manifest) continue
     credCache[conn.id] = await resolveCredentials(conn)
     for (const action of manifest.actions) {
+      // Per-connector access controls: don't expose disabled action classes
+      if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
       index[`${conn.id}__${action.slug}`] = { action, connection: conn }
     }
   }

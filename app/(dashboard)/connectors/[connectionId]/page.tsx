@@ -9,6 +9,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ActionDebugPanel } from './action-debug-panel'
 import { ActionsList } from './actions-list'
+import { AccessControls } from './access-controls'
 import { SimulatedLightsPanel } from './simulated-lights-panel'
 import { GrantsPanel } from './grants-panel'
 import { EditCredentialsPanel } from './edit-credentials-panel'
@@ -175,6 +176,12 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         </p>
         <ActionDebugPanel data={debugData} />
       </section>
+
+      <AccessControls
+        connectionId={connectionId}
+        initial={(connection as { allowed_risk_levels?: string[] | null }).allowed_risk_levels ?? null}
+        canManage={isAdmin}
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Available actions</h2>
