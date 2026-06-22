@@ -67,7 +67,7 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
   )
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState(false)
-  const [view, setView] = useState<'list' | 'canvas'>('list')
+  const [view, setView] = useState<'list' | 'canvas'>('canvas')
 
   function patchStep(i: number, patch: Partial<PlaybookNode>) {
     setSteps(s => s.map((n, idx) => idx === i ? { ...n, ...patch } : n))
