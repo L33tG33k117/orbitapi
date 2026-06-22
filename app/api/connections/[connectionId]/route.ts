@@ -98,9 +98,20 @@ export async function DELETE(req: Request, { params }: Params) {
 
   // mode: 'trash' (default) | 'permanent'
   const url = new URL(req.url)
-  const mode = url.searchParams.get('mode') ?? 'trash'
+  let mode = url.searchParams.get('mode') ?? 'trash'
 
   const admin = createAdminClient()
+
+  // Workspace deletion policy: when locked, the workspace default wins and the
+  // requested mode is ignored (admins can enforce trash-only, etc.).
+  const { data: ws } = await admin
+    .from('workspaces')
+    .select('connection_delete_default, connection_delete_locked')
+    .eq('id', membership.workspace_id)
+    .single()
+  if (ws?.connection_delete_locked && ws.connection_delete_default) {
+    mode = ws.connection_delete_default
+  }
 
   // Verify the connection belongs to this workspace
   const { data: connection } = await admin

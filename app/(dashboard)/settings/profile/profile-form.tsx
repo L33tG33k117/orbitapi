@@ -16,6 +16,7 @@ interface Props {
   userId: string
   connectionDeletePreference: 'trash' | 'permanent'
   emailSkillNotifications: 'off' | 'failures' | 'all'
+  connectionDeleteLocked: boolean
 }
 
 const THEME_OPTIONS = [
@@ -24,7 +25,7 @@ const THEME_OPTIONS = [
   { value: 'system', label: 'System', icon: Monitor },
 ] as const
 
-export function ProfileForm({ email, fullName, userId, connectionDeletePreference, emailSkillNotifications }: Props) {
+export function ProfileForm({ email, fullName, userId, connectionDeletePreference, emailSkillNotifications, connectionDeleteLocked }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const { theme, setTheme } = useTheme()
@@ -311,6 +312,11 @@ export function ProfileForm({ email, fullName, userId, connectionDeletePreferenc
             Choose what happens when you click &ldquo;Remove&rdquo; on a connection.
           </p>
         </div>
+        {connectionDeleteLocked && (
+          <p className="text-xs rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-amber-600 dark:text-amber-500">
+            Your workspace admin has set the deletion policy for everyone, so this preference is currently locked.
+          </p>
+        )}
         <div className="flex gap-3">
           {([
             { value: 'trash', label: 'Move to Trash', desc: 'Kept for 7 days, then permanently deleted. You can restore during that time.' },
@@ -319,8 +325,8 @@ export function ProfileForm({ email, fullName, userId, connectionDeletePreferenc
             <button
               key={opt.value}
               onClick={() => saveDeletePref(opt.value)}
-              disabled={savingPref}
-              className={`flex-1 text-left p-4 rounded-xl border text-sm transition-all
+              disabled={savingPref || connectionDeleteLocked}
+              className={`flex-1 text-left p-4 rounded-xl border text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed
                 ${deletePref === opt.value
                   ? 'border-primary bg-primary/8 text-primary'
                   : 'border-border text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
@@ -331,10 +337,12 @@ export function ProfileForm({ email, fullName, userId, connectionDeletePreferenc
             </button>
           ))}
         </div>
-        {prefMsg && (
+        {prefMsg && !connectionDeleteLocked && (
           <p className={`text-sm ${prefMsg.type === 'ok' ? 'text-emerald-500' : 'text-destructive'}`}>{prefMsg.text}</p>
         )}
-        <p className="text-xs text-muted-foreground">Default is <strong>Move to Trash</strong>. You can always choose the other option at delete time.</p>
+        {!connectionDeleteLocked && (
+          <p className="text-xs text-muted-foreground">Default is <strong>Move to Trash</strong>. You can always choose the other option at delete time.</p>
+        )}
       </section>
 
       {/* Danger zone — account deletion */}

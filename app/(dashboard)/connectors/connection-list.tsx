@@ -31,12 +31,13 @@ function health(c: Connection): { label: string; dot: string; text: string } {
 interface DeleteModalProps {
   connection: Connection
   defaultMode: 'trash' | 'permanent'
+  locked?: boolean
   onCancel: () => void
   onConfirm: (mode: 'trash' | 'permanent') => void
   loading: boolean
 }
 
-function DeleteModal({ connection, defaultMode, onCancel, onConfirm, loading }: DeleteModalProps) {
+function DeleteModal({ connection, defaultMode, locked, onCancel, onConfirm, loading }: DeleteModalProps) {
   const [mode, setMode] = useState<'trash' | 'permanent'>(defaultMode)
 
   return (
@@ -52,6 +53,20 @@ function DeleteModal({ connection, defaultMode, onCancel, onConfirm, loading }: 
           </button>
         </div>
 
+        {locked ? (
+          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-1">
+            <div className="flex items-center gap-2">
+              {defaultMode === 'trash' ? <Clock className="h-4 w-4 text-primary shrink-0" /> : <Zap className="h-4 w-4 text-destructive shrink-0" />}
+              <p className="text-sm font-medium">{defaultMode === 'trash' ? 'Move to Trash' : 'Delete Forever'}</p>
+            </div>
+            <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+              {defaultMode === 'trash'
+                ? 'Connection is disabled and held for 7 days, then auto-purged. Restore from the Trash bin.'
+                : 'Immediately and permanently removes the connection and all its data. Cannot be undone.'}
+            </p>
+            <p className="text-[11px] text-muted-foreground pl-6 pt-1">Set by your workspace admin.</p>
+          </div>
+        ) : (
         <div className="space-y-2">
           <button
             onClick={() => setMode('trash')}
@@ -88,6 +103,7 @@ function DeleteModal({ connection, defaultMode, onCancel, onConfirm, loading }: 
             </p>
           </button>
         </div>
+        )}
 
         <div className="flex gap-2">
           <Button
@@ -111,10 +127,12 @@ export function ConnectionList({
   connections,
   canManage,
   deletePreference = 'trash',
+  deleteLocked = false,
 }: {
   connections: Connection[]
   canManage: boolean
   deletePreference?: 'trash' | 'permanent'
+  deleteLocked?: boolean
 }) {
   const router = useRouter()
   const [testing, setTesting] = useState<string | null>(null)
@@ -210,6 +228,7 @@ export function ConnectionList({
 
       {deleteTarget && (
         <DeleteModal
+          locked={deleteLocked}
           connection={deleteTarget}
           defaultMode={deletePreference}
           onCancel={() => setDeleteTarget(null)}

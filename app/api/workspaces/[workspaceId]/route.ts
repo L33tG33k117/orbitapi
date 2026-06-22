@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 type Params = { params: Promise<{ workspaceId: string }> }
 
-// PATCH — rename workspace (owner only)
+// PATCH — rename workspace (owner only) and/or update the connection-deletion
+// policy (owner or admin).
 export async function PATCH(req: Request, { params }: Params) {
   const { workspaceId } = await params
 
@@ -19,18 +20,37 @@ export async function PATCH(req: Request, { params }: Params) {
     .eq('user_id', user.id)
     .single()
 
-  if (!membership || membership.role !== 'owner') {
-    return NextResponse.json({ error: 'Only the workspace owner can rename it' }, { status: 403 })
+  if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const isAdmin = membership.role === 'owner' || membership.role === 'admin'
+
+  const body = await req.json()
+  const { name, connectionDeleteDefault, connectionDeleteLocked } = body as {
+    name?: string
+    connectionDeleteDefault?: 'trash' | 'permanent'
+    connectionDeleteLocked?: boolean
   }
 
-  const { name } = await req.json()
-  if (!name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+  const updates: Record<string, unknown> = {}
+
+  if (name !== undefined) {
+    if (membership.role !== 'owner') return NextResponse.json({ error: 'Only the workspace owner can rename it' }, { status: 403 })
+    if (!name.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    updates.name = name.trim()
+  }
+
+  if (connectionDeleteDefault !== undefined || connectionDeleteLocked !== undefined) {
+    if (!isAdmin) return NextResponse.json({ error: 'Only admins can change the deletion policy' }, { status: 403 })
+    if (connectionDeleteDefault !== undefined) {
+      if (!['trash', 'permanent'].includes(connectionDeleteDefault)) return NextResponse.json({ error: 'Invalid value' }, { status: 400 })
+      updates.connection_delete_default = connectionDeleteDefault
+    }
+    if (connectionDeleteLocked !== undefined) updates.connection_delete_locked = !!connectionDeleteLocked
+  }
+
+  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
   const admin = createAdminClient()
-  const { error } = await admin
-    .from('workspaces')
-    .update({ name: name.trim() })
-    .eq('id', workspaceId)
+  const { error } = await admin.from('workspaces').update(updates).eq('id', workspaceId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

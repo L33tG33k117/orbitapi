@@ -14,7 +14,11 @@ export default async function WorkspaceSettingsPage() {
 
   if (!membership || membership.role === 'member') redirect('/dashboard')
 
-  const workspace = membership.workspace as { id: string; name: string }
+  const workspace = membership.workspace as {
+    id: string; name: string
+    connection_delete_default?: 'trash' | 'permanent'
+    connection_delete_locked?: boolean
+  }
 
   return (
     <div className="p-8 space-y-6 max-w-2xl">
@@ -26,6 +30,8 @@ export default async function WorkspaceSettingsPage() {
         workspaceId={workspace.id}
         currentName={workspace.name}
         isOwner={membership.role === 'owner'}
+        connectionDeleteDefault={workspace.connection_delete_default ?? 'trash'}
+        connectionDeleteLocked={workspace.connection_delete_locked ?? false}
       />
     </div>
   )

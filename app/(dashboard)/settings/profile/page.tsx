@@ -13,6 +13,14 @@ export default async function ProfilePage() {
     .eq('id', user!.id)
     .single()
 
+  // If the workspace locks the deletion policy, the per-user preference is moot.
+  const { data: membership } = await supabase
+    .from('memberships').select('workspace_id').eq('user_id', user!.id).single()
+  const { data: ws } = membership
+    ? await admin.from('workspaces').select('connection_delete_locked').eq('id', membership.workspace_id).single()
+    : { data: null }
+  const connectionDeleteLocked = !!ws?.connection_delete_locked
+
   return (
     <div className="p-8 space-y-8 max-w-2xl">
       <div>
@@ -26,6 +34,7 @@ export default async function ProfilePage() {
         userId={user?.id ?? ''}
         connectionDeletePreference={(profile?.connection_delete_preference as 'trash' | 'permanent') ?? 'trash'}
         emailSkillNotifications={(profile?.email_skill_notifications as 'off' | 'failures' | 'all') ?? 'failures'}
+        connectionDeleteLocked={connectionDeleteLocked}
       />
     </div>
   )

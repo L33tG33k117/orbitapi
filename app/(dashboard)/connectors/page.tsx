@@ -55,7 +55,16 @@ export default async function ConnectorsPage() {
   ).length
   const limit = connectorLimit(features?.tier ?? 'free')
   const atConnectorLimit = realConnectionCount >= limit
-  const deletePreference = (profile?.connection_delete_preference as 'trash' | 'permanent') ?? 'trash'
+  // Workspace deletion policy: when locked, it overrides the user's preference.
+  const { data: wsPolicy } = await admin
+    .from('workspaces')
+    .select('connection_delete_default, connection_delete_locked')
+    .eq('id', membership?.workspace_id)
+    .single()
+  const wsDefault = (wsPolicy?.connection_delete_default as 'trash' | 'permanent') ?? 'trash'
+  const deleteLocked = !!wsPolicy?.connection_delete_locked
+  const userPref = (profile?.connection_delete_preference as 'trash' | 'permanent' | null) ?? null
+  const deletePreference: 'trash' | 'permanent' = deleteLocked ? wsDefault : (userPref ?? wsDefault)
   const disabledSlugs = new Set((disabledOverrides ?? []).map(o => o.slug))
 
   // Order built connectors by build recency (newest first) so the "New" row
@@ -111,7 +120,7 @@ export default async function ConnectorsPage() {
               </span>
             )}
           </div>
-          <ConnectionList connections={connections ?? []} canManage={canManage} deletePreference={deletePreference} />
+          <ConnectionList connections={connections ?? []} canManage={canManage} deletePreference={deletePreference} deleteLocked={deleteLocked} />
         </section>
       )}
 
