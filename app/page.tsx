@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { CosmicBackground } from '@/components/cosmic-background'
 import { Reveal } from '@/components/reveal'
+import { ExplainerDiagram } from './how-it-works/explainer-diagram'
 import {
   Orbit, Zap, Shield, ArrowRight, CheckCircle,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
@@ -201,61 +202,10 @@ export default async function RootPage() {
             })}
           </div>
 
-          {/* Demo walkthrough mockup */}
-          <div className="rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-xl">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/8 bg-[oklch(0.11_0.02_268)]">
-              <div className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-red-500/60" />
-                <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
-                <span className="h-3 w-3 rounded-full bg-green-500/60" />
-              </div>
-              <span className="text-xs text-white/25 font-mono">OrbitAPI — Security Operations Skill</span>
-              <div className="w-16" />
-            </div>
-            <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/8">
-              {/* Skill config panel */}
-              <div className="p-6 space-y-4">
-                <p className="text-xs text-white/30 uppercase tracking-widest font-semibold">Skill configuration</p>
-                <div className="space-y-3">
-                  <div className="rounded-lg bg-white/5 border border-white/8 px-3 py-2.5">
-                    <p className="text-xs text-white/30">Name</p>
-                    <p className="text-sm text-white font-medium mt-0.5">Security Incident Response</p>
-                  </div>
-                  <div className="rounded-lg bg-white/5 border border-white/8 px-3 py-2.5">
-                    <p className="text-xs text-white/30">Connections in scope</p>
-                    <div className="flex gap-2 mt-1.5 flex-wrap">
-                      {['CrowdStrike', 'ServiceNow', 'Teams'].map(c => (
-                        <span key={c} className="text-[11px] px-2 py-0.5 rounded-full bg-[oklch(0.46_0.19_264)]/15 text-[oklch(0.72_0.18_264)] border border-[oklch(0.46_0.19_264)]/20">
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-white/5 border border-white/8 px-3 py-2.5">
-                    <p className="text-xs text-white/30">Mode</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />
-                      <p className="text-sm text-white font-medium">Autonomous · polls every 5 min</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Live run output */}
-              <div className="p-6 space-y-3 font-mono text-xs">
-                <p className="text-white/30 uppercase tracking-widest font-sans font-semibold text-xs">Live run output</p>
-                <div className="space-y-2 text-white/60">
-                  <p><span className="text-white/30">09:14:02</span> <span className="text-[oklch(0.7_0.2_264)]">→</span> CrowdStrike: checking detections…</p>
-                  <p><span className="text-white/30">09:14:03</span> <span className="text-amber-400">!</span> Found HIGH severity detection on WIN-SALES-04</p>
-                  <p><span className="text-white/30">09:14:03</span> <span className="text-[oklch(0.7_0.2_264)]">→</span> ServiceNow: creating P1 incident…</p>
-                  <p><span className="text-white/30">09:14:04</span> <span className="text-green-400">✓</span> INC0042891 created · assigned to SecOps</p>
-                  <p><span className="text-white/30">09:14:04</span> <span className="text-[oklch(0.7_0.2_264)]">→</span> CrowdStrike: containing WIN-SALES-04…</p>
-                  <p><span className="text-white/30">09:14:05</span> <span className="text-green-400">✓</span> Host isolated from network</p>
-                  <p><span className="text-white/30">09:14:05</span> <span className="text-[oklch(0.7_0.2_264)]">→</span> Teams: posting alert to #security-ops…</p>
-                  <p><span className="text-white/30">09:14:05</span> <span className="text-green-400">✓</span> Team notified · 3 APIs · 3.1s · zero human input</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Live concept diagram — Connect → Skill → Playbook in motion */}
+          <Reveal>
+            <ExplainerDiagram embedded />
+          </Reveal>
         </div>
       </section>
 

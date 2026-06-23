@@ -15,7 +15,9 @@ import { CosmicBackground } from '@/components/cosmic-background'
 //      when unsure. (Per the real engine: nodes, not chained Skills.)
 // Loops; respects reduced-motion.
 
-const VB = { w: 960, h: 540 }
+// viewBox window — shifted left of origin so the orbital composition (hub +
+// app arc, which naturally sits left-of-centre) is centred in the frame.
+const VB = { x: -40, y: 0, w: 920, h: 540 }
 const HUB = { x: 400, y: 272, r: 54 }
 const TRIGGER = { x: 116, y: 272 }
 const APP_RADIUS = 250
@@ -42,10 +44,10 @@ const STEP_MS = 4200
 // right-hand arc, app to app, with the action captioned as it reaches each one.
 const PB_CHAIN = [0, 1, 2, 3] // indices into APPS: CrowdStrike → PagerDuty → Slack → Teams
 const PB_ACTIONS = [
-  'Detects a critical threat',
-  'Opens a P1 incident',
-  'Alerts the on-call team',
-  'Posts an incident summary',
+  'Detects a threat',
+  'Opens an incident',
+  'Alerts the team',
+  'Posts a summary',
 ]
 
 // One continuous "bounce" path through the playbook's app nodes — each segment
@@ -86,7 +88,7 @@ function PulsePath({ d, color, dur = '4.5s' }: { d: string; color: string; dur?:
   )
 }
 
-export function ExplainerDiagram() {
+export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
   const [scene, setScene] = useState(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -107,17 +109,21 @@ export function ExplainerDiagram() {
   const Badge = STAGES[scene].icon
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[oklch(0.07_0.02_268)] text-white">
+    <div className={`relative overflow-hidden bg-[oklch(0.07_0.02_268)] text-white ${
+      embedded ? 'w-full h-[460px] sm:h-[560px] rounded-2xl border border-white/10' : 'h-screen w-screen'
+    }`}>
       <CosmicBackground autoSpin />
 
       <div className="relative z-10 h-full w-full flex flex-col">
-        <div className="text-center pt-8 pb-1 shrink-0">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">How OrbitAPI works</h1>
-          <p className="text-white/45 text-sm mt-1">Connect → automate with Skills → orchestrate with Playbooks.</p>
-        </div>
+        {!embedded && (
+          <div className="text-center pt-8 pb-1 shrink-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">How OrbitAPI works</h1>
+            <p className="text-white/45 text-sm mt-1">Connect → automate with Skills → orchestrate with Playbooks.</p>
+          </div>
+        )}
 
         {/* Stage progression */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 mt-2 shrink-0">
+        <div className={`flex items-center justify-center gap-2 sm:gap-3 shrink-0 ${embedded ? 'pt-6' : 'mt-2'}`}>
           {STAGES.map((s, i) => {
             const I = s.icon
             const active = i === scene
@@ -139,7 +145,7 @@ export function ExplainerDiagram() {
 
         {/* Diagram */}
         <div className="flex-1 min-h-0 flex items-center justify-center px-4">
-          <svg viewBox={`0 0 ${VB.w} ${VB.h}`} className="w-full h-full max-w-5xl" style={{ maxHeight: '64vh' }}>
+          <svg viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} className="w-full h-full max-w-5xl" style={embedded ? undefined : { maxHeight: '64vh' }}>
             <defs>
               <radialGradient id="hubGlow" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="oklch(0.6 0.2 274)" stopOpacity="0.55" />
@@ -260,7 +266,7 @@ export function ExplainerDiagram() {
         </div>
 
         {/* Caption + progress dots */}
-        <div className="shrink-0 pb-10 px-6">
+        <div className={`shrink-0 px-6 ${embedded ? 'pb-6' : 'pb-10'}`}>
           <div className="max-w-2xl mx-auto text-center min-h-[3.5rem] flex items-center justify-center">
             <p key={scene} className="text-lg sm:text-xl text-white/85 animate-in fade-in slide-in-from-bottom-2 duration-500">
               {STAGES[scene].caption}
@@ -274,11 +280,13 @@ export function ExplainerDiagram() {
         </div>
       </div>
 
-      <div className="absolute left-5 bottom-5 z-20 hidden sm:flex flex-col gap-1.5 text-[11px] text-white/40">
-        {[{ i: MessageSquare, t: 'You ask in chat' }, { i: Clock, t: 'On a schedule' }, { i: Webhook, t: 'A webhook / event' }].map(({ i: I, t }) => (
-          <span key={t} className="flex items-center gap-1.5"><I className="h-3 w-3" /> {t}</span>
-        ))}
-      </div>
+      {!embedded && (
+        <div className="absolute left-5 bottom-5 z-20 hidden sm:flex flex-col gap-1.5 text-[11px] text-white/40">
+          {[{ i: MessageSquare, t: 'You ask in chat' }, { i: Clock, t: 'On a schedule' }, { i: Webhook, t: 'A webhook / event' }].map(({ i: I, t }) => (
+            <span key={t} className="flex items-center gap-1.5"><I className="h-3 w-3" /> {t}</span>
+          ))}
+        </div>
+      )}
 
       <button onClick={replay} className="absolute bottom-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium backdrop-blur transition-colors opacity-50 hover:opacity-100" title="Replay">
         <RotateCcw className="h-3.5 w-3.5" /> Replay
