@@ -251,7 +251,7 @@ export const CONNECTOR_EXAMPLES: Record<string, ConnectorExamples> = {
   netsuite: {
     chatPhrases: [
       'List all open invoices in NetSuite',
-      'Run SuiteQL: SELECT TOP 10 id, tranid, entity FROM transaction WHERE type = \'Invoice\'',
+      'Show me the 10 most recent invoices in NetSuite',
       'List all vendors in NetSuite',
       'Show me purchase orders pending billing',
       'List open sales orders for customer "Acme Corp"',

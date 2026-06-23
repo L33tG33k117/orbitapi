@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   MessageSquare, Clock, Webhook, Check, RotateCcw, Plug, Zap, Workflow,
-  Gauge, GitBranch, ShieldCheck, Wrench, Bell,
 } from 'lucide-react'
 import { CosmicBackground } from '@/components/cosmic-background'
 
@@ -39,16 +38,14 @@ const STAGES = [
 ]
 const STEP_MS = 4200
 
-// Playbook flow nodes (the real engine step types), laid out left→right.
-const FLOW = [
-  { key: 'assess', label: 'Assess', hint: 'AI scores 0–10', icon: Gauge, x: 120 },
-  { key: 'decide', label: 'Decide', hint: 'branch on severity', icon: GitBranch, x: 300 },
-  { key: 'approve', label: 'Approve', hint: 'pause for you', icon: ShieldCheck, x: 480 },
-  { key: 'act', label: 'Act', hint: 'across your apps', icon: Wrench, x: 660 },
-  { key: 'notify', label: 'Notify', hint: 'report back', icon: Bell, x: 840 },
+// Playbook scene: a real playbook in action — Orbit chains one app to the next,
+// bouncing along a dotted path, with the action it performs captioned at each hop.
+const CHAIN = [
+  { slug: 'crowdstrike', label: 'CrowdStrike', action: 'Detects a critical threat', x: 150, y: 180 },
+  { slug: 'pagerduty', label: 'PagerDuty', action: 'Opens a P1 incident', x: 390, y: 350 },
+  { slug: 'slack', label: 'Slack', action: 'Alerts the on-call team', x: 620, y: 180 },
+  { slug: 'teams', label: 'Teams', action: 'Posts an incident summary', x: 850, y: 350 },
 ] as const
-const FLOW_Y = 232
-const CHIP_W = 132
 
 function Pulse({ sx, sy, ex, ey, color, begin = '0s', dur = '1.1s' }: {
   sx: number; sy: number; ex: number; ey: number; color: string; begin?: string; dur?: string
@@ -65,9 +62,20 @@ export function ExplainerDiagram() {
   const [scene, setScene] = useState(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [pbStep, setPbStep] = useState(0)
+
   useEffect(() => {
-    timer.current = setTimeout(() => setScene(s => (s + 1) % STAGES.length), STEP_MS)
+    // Give the Playbook scene extra time so the app-to-app chain can play out.
+    const dur = scene === 2 ? 6200 : STEP_MS
+    timer.current = setTimeout(() => setScene(s => (s + 1) % STAGES.length), dur)
     return () => { if (timer.current) clearTimeout(timer.current) }
+  }, [scene])
+
+  // Advance the playbook chain one hop at a time while the Playbook scene is live.
+  useEffect(() => {
+    if (scene !== 2) { setPbStep(0); return }
+    const id = setInterval(() => setPbStep(s => Math.min(s + 1, CHAIN.length - 1)), 1150)
+    return () => clearInterval(id)
   }, [scene])
 
   function replay() {
@@ -79,8 +87,8 @@ export function ExplainerDiagram() {
   const hubActive = scene >= 1
   const Badge = STAGES[scene].icon
 
-  // Pulse travels Assess→Notify but DWELLS at the Approval gate (the hero moment).
-  const flowPath = `M ${FLOW[0].x} ${FLOW_Y} L ${FLOW[1].x} ${FLOW_Y} L ${FLOW[2].x} ${FLOW_Y} L ${FLOW[3].x} ${FLOW_Y} L ${FLOW[4].x} ${FLOW_Y}`
+  // The bouncing dotted backbone the playbook travels, app → app.
+  const chainPath = CHAIN.map((n, i) => `${i === 0 ? 'M' : 'L'} ${n.x} ${n.y}`).join(' ')
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[oklch(0.07_0.02_268)] text-white">
@@ -127,7 +135,7 @@ export function ExplainerDiagram() {
             </defs>
 
             {/* ─── Orbital view (stages 1 & 2) — dims behind the playbook flow ─── */}
-            <g style={{ transition: 'opacity 0.6s' }} opacity={isPlaybook ? 0.14 : 1}>
+            <g style={{ transition: 'opacity 0.6s' }} opacity={isPlaybook ? 0.1 : 1}>
               <circle cx={HUB.x} cy={HUB.y} r={APP_RADIUS} fill="none" stroke="oklch(0.6 0.12 274 / 16%)" strokeWidth="1" strokeDasharray="3 6" />
               <line x1={TRIGGER.x} y1={TRIGGER.y} x2={HUB.x} y2={HUB.y} stroke="oklch(0.7 0.16 274 / 40%)" strokeWidth="1.5" pathLength={1} className="spoke" style={{ animationDelay: '0.1s' }} />
               {APPS.map((a, i) => (
@@ -214,57 +222,42 @@ export function ExplainerDiagram() {
               )}
             </g>
 
-            {/* ─── Playbook flow (stage 3) ─────────────────────────────────── */}
+            {/* ─── Playbook in action (stage 3): Orbit chains app → app ─────── */}
             {isPlaybook && (
               <g className="animate-in fade-in duration-500">
-                {/* trigger label */}
-                <text x={FLOW[0].x} y={FLOW_Y - 64} textAnchor="middle" fill="oklch(0.7 0.02 274)" fontSize="11">event / schedule</text>
+                {/* trigger */}
+                <text x={CHAIN[0].x} y={CHAIN[0].y - 56} textAnchor="middle" fill="oklch(0.82 0.14 60)" fontSize="11.5" fontWeight="600">⚡ Trigger: threat detected</text>
 
-                {/* connecting arrows */}
-                {FLOW.slice(0, -1).map((n, i) => (
-                  <line key={n.key} x1={n.x + CHIP_W / 2} y1={FLOW_Y} x2={FLOW[i + 1].x - CHIP_W / 2 - 4} y2={FLOW_Y}
-                    stroke="oklch(0.7 0.12 274 / 60%)" strokeWidth="2" markerEnd="url(#arrow)" />
-                ))}
-                {/* "high severity" label between Decide and Approve */}
-                <text x={(FLOW[1].x + FLOW[2].x) / 2} y={FLOW_Y - 12} textAnchor="middle" fill="oklch(0.82 0.14 60)" fontSize="10.5" fontWeight="600">high</text>
-
-                {/* low-severity branch: Decide → Notify(low) */}
-                <path d={`M ${FLOW[1].x} ${FLOW_Y + 38} L ${FLOW[1].x} ${380 - 36}`} stroke="oklch(0.6 0.1 274 / 55%)" strokeWidth="2" markerEnd="url(#arrow)" fill="none" />
-                <text x={FLOW[1].x + 46} y={FLOW_Y + 70} textAnchor="middle" fill="oklch(0.7 0.02 274)" fontSize="10.5">low → just notify</text>
-                <FlowChip cx={FLOW[1].x} cy={380} label="Notify" hint="all clear" icon={Bell} />
-
-                {/* main flow chips */}
-                {FLOW.map(n => (
-                  <FlowChip key={n.key} cx={n.x} cy={FLOW_Y} label={n.label} hint={n.hint} icon={n.icon}
-                    highlight={n.key === 'approve'} />
-                ))}
-
-                {/* app logos under the Act step — it acts across your apps */}
-                {['crowdstrike', 'pagerduty', 'slack'].map((slug, i) => (
-                  <g key={slug}>
-                    <line x1={FLOW[3].x - 30 + i * 30} y1={FLOW_Y + 38} x2={FLOW[3].x - 30 + i * 30} y2={FLOW_Y + 60} stroke="oklch(0.6 0.1 274 / 40%)" strokeWidth="1.5" />
-                    <image href={`/logos/${slug}.svg`} x={FLOW[3].x - 40 + i * 30} y={FLOW_Y + 60} width="20" height="20" preserveAspectRatio="xMidYMid slice" clipPath="inset(0% round 4px)" />
-                  </g>
-                ))}
-
-                {/* approval gate emphasis */}
-                <circle cx={FLOW[2].x} cy={FLOW_Y} r="44" fill="none" stroke="oklch(0.82 0.16 60)" strokeWidth="2" opacity="0.7">
-                  <animate attributeName="r" values="40;52" dur="1.6s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.7;0" dur="1.6s" repeatCount="indefinite" />
-                </circle>
-
-                {/* travelling pulse — dwells at the Approval gate */}
-                <circle r="6.5" fill="oklch(0.85 0.16 200)">
-                  <animateMotion dur="3.6s" repeatCount="indefinite" path={flowPath}
-                    keyPoints="0;0.5;0.5;1" keyTimes="0;0.38;0.6;1" calcMode="linear" />
-                </circle>
-
-                {/* severity callout */}
-                <foreignObject x={FLOW[2].x - 95} y={FLOW_Y - 110} width={190} height={44}>
-                  <div className="text-center text-[11px] text-[oklch(0.85_0.13_60)] leading-snug">
-                    ⏸ Pauses for your approval<br />when the AI isn’t sure
+                {/* autonomy note — the defining Playbook behaviour */}
+                <foreignObject x={VB.w / 2 - 175} y={16} width={350} height={26}>
+                  <div className="text-center text-[11px] text-[oklch(0.85_0.13_60)]">
+                    Auto-acts when confident · ⏸ pauses for your OK when unsure
                   </div>
                 </foreignObject>
+
+                {/* full dotted backbone (faint) */}
+                <path d={chainPath} fill="none" stroke="oklch(0.6 0.12 274 / 30%)" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" />
+
+                {/* hops already completed light up */}
+                {CHAIN.slice(0, -1).map((n, i) => (
+                  i < pbStep ? (
+                    <line key={n.slug} x1={n.x} y1={n.y} x2={CHAIN[i + 1].x} y2={CHAIN[i + 1].y}
+                      stroke="oklch(0.78 0.16 200 / 75%)" strokeWidth="2.5" strokeDasharray="2 7" strokeLinecap="round" />
+                  ) : null
+                ))}
+
+                {/* travelling pulse bounces along the active hop */}
+                {pbStep < CHAIN.length - 1 && (
+                  <Pulse key={pbStep} sx={CHAIN[pbStep].x} sy={CHAIN[pbStep].y}
+                    ex={CHAIN[pbStep + 1].x} ey={CHAIN[pbStep + 1].y}
+                    color="oklch(0.85 0.16 200)" dur="0.95s" />
+                )}
+
+                {/* app nodes + the action each performs */}
+                {CHAIN.map((n, i) => (
+                  <ChainNode key={n.slug} slug={n.slug} label={n.label} action={n.action}
+                    x={n.x} y={n.y} active={i === pbStep} done={i < pbStep} />
+                ))}
               </g>
             )}
           </svg>
@@ -304,20 +297,34 @@ export function ExplainerDiagram() {
   )
 }
 
-// A playbook step chip rendered in SVG user space (aligns with the animated pulse).
-function FlowChip({ cx, cy, label, hint, icon: Icon, highlight = false }: {
-  cx: number; cy: number; label: string; hint: string; icon: React.ComponentType<{ className?: string }>; highlight?: boolean
+// One app in the playbook chain: logo node + the action it performs, in SVG space.
+function ChainNode({ slug, label, action, x, y, active, done }: {
+  slug: string; label: string; action: string; x: number; y: number; active: boolean; done: boolean
 }) {
-  const w = CHIP_W, h = 72
+  const revealed = active || done
+  const r = active ? 32 : 28
   return (
-    <foreignObject x={cx - w / 2} y={cy - h / 2} width={w} height={h}>
-      <div className={`h-full w-full rounded-xl border flex flex-col items-center justify-center text-center px-2 ${
-        highlight ? 'border-[oklch(0.82_0.16_60)]/70 bg-[oklch(0.3_0.08_60)]/40' : 'border-[oklch(0.6_0.16_274)]/40 bg-[oklch(0.16_0.03_274)]/90'
-      }`}>
-        <Icon className={`h-4 w-4 ${highlight ? 'text-[oklch(0.85_0.15_60)]' : 'text-[oklch(0.78_0.16_274)]'}`} />
-        <span className="text-[12px] font-bold text-white leading-tight mt-1">{label}</span>
-        <span className="text-[9.5px] text-white/55 leading-tight">{hint}</span>
-      </div>
-    </foreignObject>
+    <g style={{ transition: 'opacity 0.4s' }} opacity={revealed ? 1 : 0.4}>
+      {active && (
+        <circle cx={x} cy={y} r={r} fill="none" stroke="oklch(0.82 0.16 200)" strokeWidth="2">
+          <animate attributeName="r" values={`${r};${r + 16}`} dur="1.3s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.8;0" dur="1.3s" repeatCount="indefinite" />
+        </circle>
+      )}
+      <circle cx={x} cy={y} r={r} fill="oklch(0.15 0.025 274)"
+        stroke={active ? 'oklch(0.82 0.16 200)' : done ? 'oklch(0.6 0.16 200 / 60%)' : 'oklch(0.5 0.08 274 / 45%)'}
+        strokeWidth="2.5" style={{ transition: 'all 0.3s' }} />
+      <image href={`/logos/${slug}.svg`} x={x - r * 0.55} y={y - r * 0.55} width={r * 1.1} height={r * 1.1}
+        preserveAspectRatio="xMidYMid slice" clipPath="inset(0% round 6px)" />
+      <text x={x} y={y + r + 16} textAnchor="middle" fill="oklch(0.82 0.02 274)" fontSize="12" fontWeight="600">{label}</text>
+      {/* the action being performed at this hop */}
+      <foreignObject x={x - 82} y={y + r + 22} width={164} height={40}>
+        <div className={`text-center text-[11px] leading-snug transition-all duration-300 ${
+          active ? 'text-white font-semibold' : done ? 'text-white/55' : 'text-white/0'
+        }`}>
+          {action}
+        </div>
+      </foreignObject>
+    </g>
   )
 }
