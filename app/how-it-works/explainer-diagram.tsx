@@ -109,10 +109,10 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
   const Badge = STAGES[scene].icon
 
   return (
-    <div className={`relative overflow-hidden bg-[oklch(0.07_0.02_268)] text-white ${
-      embedded ? 'w-full h-[460px] sm:h-[560px] rounded-2xl border border-white/10' : 'h-screen w-screen'
+    <div className={`relative text-white ${
+      embedded ? 'w-full h-[440px] sm:h-[540px]' : 'h-screen w-screen overflow-hidden bg-[oklch(0.07_0.02_268)]'
     }`}>
-      <CosmicBackground autoSpin />
+      {!embedded && <CosmicBackground autoSpin />}
 
       <div className="relative z-10 h-full w-full flex flex-col">
         {!embedded && (
@@ -128,10 +128,13 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
             const I = s.icon
             const active = i === scene
             const done = i < scene
+            // Playbook is the final step — light it green (success) when reached.
+            const greenActive = active && i === STAGES.length - 1
             return (
               <div key={s.badge} className="flex items-center gap-2 sm:gap-3">
                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-all duration-300 ${
-                  active ? 'border-[oklch(0.66_0.2_274)] bg-[oklch(0.46_0.19_264)]/25 text-white'
+                  greenActive ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200'
+                  : active ? 'border-[oklch(0.66_0.2_274)] bg-[oklch(0.46_0.19_264)]/25 text-white'
                   : done ? 'border-emerald-500/30 text-emerald-300/80'
                   : 'border-white/10 text-white/40'
                 }`}>
@@ -235,7 +238,9 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
 
               <foreignObject x={HUB.x - 60} y={HUB.y + HUB.r + 10} width={120} height={28}>
                 <div className="flex items-center justify-center">
-                  <span key={scene} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[oklch(0.46_0.19_264)]/30 border border-[oklch(0.6_0.18_274)]/40 text-[11px] font-semibold text-white animate-in fade-in zoom-in duration-300">
+                  <span key={scene} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold animate-in fade-in zoom-in duration-300 ${
+                    isPlaybook ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-100' : 'bg-[oklch(0.46_0.19_264)]/30 border-[oklch(0.6_0.18_274)]/40 text-white'
+                  }`}>
                     <Badge className="h-3 w-3" /> {STAGES[scene].badge}
                   </span>
                 </div>
@@ -248,10 +253,10 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
               const d = bouncePath(nodes)
               return (
                 <g className="animate-in fade-in duration-500">
-                  {/* the dotted bounce path down the right-hand arc */}
-                  <path d={d} fill="none" stroke="oklch(0.72 0.14 200 / 55%)" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" />
+                  {/* the dotted bounce path down the right-hand arc — green (Playbook) */}
+                  <path d={d} fill="none" stroke="oklch(0.72 0.17 150 / 55%)" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" />
                   {/* one pulse, constant speed, fading at the loop boundary */}
-                  <PulsePath d={d} color="oklch(0.85 0.16 200)" dur="4.5s" />
+                  <PulsePath d={d} color="oklch(0.82 0.18 150)" dur="4.5s" />
                   {/* the action each app performs, to the right of its icon */}
                   {nodes.map((n, j) => (
                     <text key={n.slug} x={n.x + 38} y={n.y + 4} textAnchor="start"
@@ -265,19 +270,22 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
           </svg>
         </div>
 
-        {/* Caption + progress dots */}
-        <div className={`shrink-0 px-6 ${embedded ? 'pb-6' : 'pb-10'}`}>
-          <div className="max-w-2xl mx-auto text-center min-h-[3.5rem] flex items-center justify-center">
-            <p key={scene} className="text-lg sm:text-xl text-white/85 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              {STAGES[scene].caption}
-            </p>
+        {/* Caption + progress dots — only on the standalone page; the embedded
+            version relies on the step cards above it for labelling. */}
+        {!embedded && (
+          <div className="shrink-0 pb-10 px-6">
+            <div className="max-w-2xl mx-auto text-center min-h-[3.5rem] flex items-center justify-center">
+              <p key={scene} className="text-lg sm:text-xl text-white/85 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                {STAGES[scene].caption}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-5">
+              {STAGES.map((_, i) => (
+                <span key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === scene ? 'w-8 bg-[oklch(0.7_0.2_274)]' : 'w-1.5 bg-white/20'}`} />
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-2 mt-5">
-            {STAGES.map((_, i) => (
-              <span key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === scene ? 'w-8 bg-[oklch(0.7_0.2_274)]' : 'w-1.5 bg-white/20'}`} />
-            ))}
-          </div>
-        </div>
+        )}
       </div>
 
       {!embedded && (
@@ -288,9 +296,11 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
         </div>
       )}
 
-      <button onClick={replay} className="absolute bottom-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium backdrop-blur transition-colors opacity-50 hover:opacity-100" title="Replay">
-        <RotateCcw className="h-3.5 w-3.5" /> Replay
-      </button>
+      {!embedded && (
+        <button onClick={replay} className="absolute bottom-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-xs font-medium backdrop-blur transition-colors opacity-50 hover:opacity-100" title="Replay">
+          <RotateCcw className="h-3.5 w-3.5" /> Replay
+        </button>
+      )}
 
       <style>{`
         .spoke { stroke-dasharray: 1; stroke-dashoffset: 1; animation: spoke-draw 0.7s ease forwards; }
