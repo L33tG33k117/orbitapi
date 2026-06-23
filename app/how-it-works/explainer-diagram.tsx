@@ -38,14 +38,28 @@ const STAGES = [
 ]
 const STEP_MS = 4200
 
-// Playbook scene: a real playbook in action — Orbit chains one app to the next,
-// bouncing along a dotted path, with the action it performs captioned at each hop.
-const CHAIN = [
-  { slug: 'crowdstrike', label: 'CrowdStrike', action: 'Detects a critical threat', x: 150, y: 180 },
-  { slug: 'pagerduty', label: 'PagerDuty', action: 'Opens a P1 incident', x: 390, y: 350 },
-  { slug: 'slack', label: 'Slack', action: 'Alerts the on-call team', x: 620, y: 180 },
-  { slug: 'teams', label: 'Teams', action: 'Posts an incident summary', x: 850, y: 350 },
-] as const
+// Playbook scene reuses the SAME orbital app nodes — the pulse bounces down the
+// right-hand arc, app to app, with the action captioned as it reaches each one.
+const PB_CHAIN = [0, 1, 2, 3] // indices into APPS: CrowdStrike → PagerDuty → Slack → Teams
+const PB_ACTIONS = [
+  'Detects a critical threat',
+  'Opens a P1 incident',
+  'Alerts the on-call team',
+  'Posts an incident summary',
+]
+
+// A curved "bounce" arc between two app nodes, bulging away from the hub, with
+// its endpoints trimmed off the node edges so it doesn't run under the circles.
+function arcPath(a: { x: number; y: number }, b: { x: number; y: number }) {
+  const off = 55, R = 30
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+  const ox = mx - HUB.x, oy = my - HUB.y, ol = Math.hypot(ox, oy) || 1
+  const cx = mx + (ox / ol) * off, cy = my + (oy / ol) * off
+  const sa = Math.hypot(cx - a.x, cy - a.y) || 1, sb = Math.hypot(cx - b.x, cy - b.y) || 1
+  const sx = a.x + ((cx - a.x) / sa) * R, sy = a.y + ((cy - a.y) / sa) * R
+  const ex = b.x + ((cx - b.x) / sb) * R, ey = b.y + ((cy - b.y) / sb) * R
+  return `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`
+}
 
 function Pulse({ sx, sy, ex, ey, color, begin = '0s', dur = '1.1s' }: {
   sx: number; sy: number; ex: number; ey: number; color: string; begin?: string; dur?: string
@@ -54,6 +68,16 @@ function Pulse({ sx, sy, ex, ey, color, begin = '0s', dur = '1.1s' }: {
     <circle r="5.5" fill={color} opacity="0">
       <animateMotion dur={dur} begin={begin} repeatCount="indefinite" path={`M ${sx} ${sy} L ${ex} ${ey}`} />
       <animate attributeName="opacity" dur={dur} begin={begin} repeatCount="indefinite" keyTimes="0;0.15;0.85;1" values="0;1;1;0" />
+    </circle>
+  )
+}
+
+// A pulse that travels along an arbitrary path (used for the bouncing arcs).
+function PulsePath({ d, color, dur = '1s' }: { d: string; color: string; dur?: string }) {
+  return (
+    <circle r="6" fill={color} opacity="0">
+      <animateMotion dur={dur} repeatCount="indefinite" path={d} />
+      <animate attributeName="opacity" dur={dur} repeatCount="indefinite" keyTimes="0;0.15;0.85;1" values="0;1;1;0" />
     </circle>
   )
 }
@@ -74,7 +98,7 @@ export function ExplainerDiagram() {
   // Advance the playbook chain one hop at a time while the Playbook scene is live.
   useEffect(() => {
     if (scene !== 2) { setPbStep(0); return }
-    const id = setInterval(() => setPbStep(s => Math.min(s + 1, CHAIN.length - 1)), 1150)
+    const id = setInterval(() => setPbStep(s => Math.min(s + 1, PB_CHAIN.length - 1)), 1150)
     return () => clearInterval(id)
   }, [scene])
 
@@ -86,9 +110,6 @@ export function ExplainerDiagram() {
   const isPlaybook = scene === 2
   const hubActive = scene >= 1
   const Badge = STAGES[scene].icon
-
-  // The bouncing dotted backbone the playbook travels, app → app.
-  const chainPath = CHAIN.map((n, i) => `${i === 0 ? 'M' : 'L'} ${n.x} ${n.y}`).join(' ')
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[oklch(0.07_0.02_268)] text-white">
@@ -134,8 +155,8 @@ export function ExplainerDiagram() {
               </marker>
             </defs>
 
-            {/* ─── Orbital view (stages 1 & 2) — dims behind the playbook flow ─── */}
-            <g style={{ transition: 'opacity 0.6s' }} opacity={isPlaybook ? 0.1 : 1}>
+            {/* ─── Orbital view — the same hub + app circles in every stage ─── */}
+            <g style={{ transition: 'opacity 0.6s' }} opacity={1}>
               <circle cx={HUB.x} cy={HUB.y} r={APP_RADIUS} fill="none" stroke="oklch(0.6 0.12 274 / 16%)" strokeWidth="1" strokeDasharray="3 6" />
               <line x1={TRIGGER.x} y1={TRIGGER.y} x2={HUB.x} y2={HUB.y} stroke="oklch(0.7 0.16 274 / 40%)" strokeWidth="1.5" pathLength={1} className="spoke" style={{ animationDelay: '0.1s' }} />
               {APPS.map((a, i) => (
@@ -174,7 +195,7 @@ export function ExplainerDiagram() {
 
               {/* Hub */}
               <circle cx={HUB.x} cy={HUB.y} r={HUB.r + 36} fill="url(#hubGlow)" className="transition-opacity duration-500" opacity={hubActive ? 1 : 0.35} />
-              {hubActive && !isPlaybook && (
+              {hubActive && (
                 <circle cx={HUB.x} cy={HUB.y} r={HUB.r} fill="none" stroke="oklch(0.7 0.2 274)" strokeWidth="2">
                   <animate attributeName="r" values={`${HUB.r};${HUB.r + 22}`} dur="1.6s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.7;0" dur="1.6s" repeatCount="indefinite" />
@@ -211,55 +232,67 @@ export function ExplainerDiagram() {
                 </g>
               )}
 
-              {!isPlaybook && (
-                <foreignObject x={HUB.x - 60} y={HUB.y + HUB.r + 10} width={120} height={28}>
-                  <div className="flex items-center justify-center">
-                    <span key={scene} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[oklch(0.46_0.19_264)]/30 border border-[oklch(0.6_0.18_274)]/40 text-[11px] font-semibold text-white animate-in fade-in zoom-in duration-300">
-                      <Badge className="h-3 w-3" /> {STAGES[scene].badge}
-                    </span>
-                  </div>
-                </foreignObject>
-              )}
+              <foreignObject x={HUB.x - 60} y={HUB.y + HUB.r + 10} width={120} height={28}>
+                <div className="flex items-center justify-center">
+                  <span key={scene} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[oklch(0.46_0.19_264)]/30 border border-[oklch(0.6_0.18_274)]/40 text-[11px] font-semibold text-white animate-in fade-in zoom-in duration-300">
+                    <Badge className="h-3 w-3" /> {STAGES[scene].badge}
+                  </span>
+                </div>
+              </foreignObject>
             </g>
 
-            {/* ─── Playbook in action (stage 3): Orbit chains app → app ─────── */}
-            {isPlaybook && (
-              <g className="animate-in fade-in duration-500">
-                {/* trigger */}
-                <text x={CHAIN[0].x} y={CHAIN[0].y - 56} textAnchor="middle" fill="oklch(0.82 0.14 60)" fontSize="11.5" fontWeight="600">⚡ Trigger: threat detected</text>
+            {/* ─── Playbook overlay (stage 3): pulse bounces app→app on the arc ─ */}
+            {isPlaybook && (() => {
+              const nodes = PB_CHAIN.map(i => APPS[i])
+              return (
+                <g className="animate-in fade-in duration-500">
+                  {/* autonomy note — the defining Playbook behaviour */}
+                  <foreignObject x={VB.w / 2 - 175} y={12} width={350} height={24}>
+                    <div className="text-center text-[11px] text-[oklch(0.85_0.13_60)]">
+                      Auto-acts when confident · ⏸ pauses for your OK when unsure
+                    </div>
+                  </foreignObject>
 
-                {/* autonomy note — the defining Playbook behaviour */}
-                <foreignObject x={VB.w / 2 - 175} y={16} width={350} height={26}>
-                  <div className="text-center text-[11px] text-[oklch(0.85_0.13_60)]">
-                    Auto-acts when confident · ⏸ pauses for your OK when unsure
-                  </div>
-                </foreignObject>
+                  {/* bouncing arcs between consecutive app nodes */}
+                  {nodes.slice(1).map((b, idx) => {
+                    const j = idx + 1
+                    const d = arcPath(nodes[idx], b)
+                    const done = pbStep > j
+                    const active = pbStep === j
+                    return (
+                      <g key={j}>
+                        <path d={d} fill="none" strokeWidth={done || active ? 2.5 : 2}
+                          stroke={done ? 'oklch(0.78 0.16 200 / 80%)' : active ? 'oklch(0.82 0.16 200 / 70%)' : 'oklch(0.6 0.12 274 / 28%)'}
+                          strokeDasharray="2 7" strokeLinecap="round" markerEnd={active || done ? 'url(#arrow)' : undefined} />
+                        {active && <PulsePath key={`p${j}`} d={d} color="oklch(0.85 0.16 200)" dur="1s" />}
+                      </g>
+                    )
+                  })}
 
-                {/* full dotted backbone (faint) */}
-                <path d={chainPath} fill="none" stroke="oklch(0.6 0.12 274 / 30%)" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" />
-
-                {/* hops already completed light up */}
-                {CHAIN.slice(0, -1).map((n, i) => (
-                  i < pbStep ? (
-                    <line key={n.slug} x1={n.x} y1={n.y} x2={CHAIN[i + 1].x} y2={CHAIN[i + 1].y}
-                      stroke="oklch(0.78 0.16 200 / 75%)" strokeWidth="2.5" strokeDasharray="2 7" strokeLinecap="round" />
-                  ) : null
-                ))}
-
-                {/* travelling pulse bounces along the active hop */}
-                {pbStep < CHAIN.length - 1 && (
-                  <Pulse key={pbStep} sx={CHAIN[pbStep].x} sy={CHAIN[pbStep].y}
-                    ex={CHAIN[pbStep + 1].x} ey={CHAIN[pbStep + 1].y}
-                    color="oklch(0.85 0.16 200)" dur="0.95s" />
-                )}
-
-                {/* app nodes + the action each performs */}
-                {CHAIN.map((n, i) => (
-                  <ChainNode key={n.slug} slug={n.slug} label={n.label} action={n.action}
-                    x={n.x} y={n.y} active={i === pbStep} done={i < pbStep} />
-                ))}
-              </g>
-            )}
+                  {/* active-node ring + the action each app performs */}
+                  {nodes.map((n, j) => {
+                    const active = pbStep === j, done = pbStep > j
+                    return (
+                      <g key={n.slug}>
+                        {active && (
+                          <circle cx={n.x} cy={n.y} r="28" fill="none" stroke="oklch(0.85 0.16 200)" strokeWidth="2.5">
+                            <animate attributeName="r" values="28;42" dur="1.3s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.85;0" dur="1.3s" repeatCount="indefinite" />
+                          </circle>
+                        )}
+                        <foreignObject x={n.x - 82} y={n.y + 50} width={164} height={36}>
+                          <div className={`text-center text-[11px] leading-snug transition-all duration-300 ${
+                            active ? 'text-white font-semibold' : done ? 'text-white/55' : 'text-white/0'
+                          }`}>
+                            {PB_ACTIONS[j]}
+                          </div>
+                        </foreignObject>
+                      </g>
+                    )
+                  })}
+                </g>
+              )
+            })()}
           </svg>
         </div>
 
@@ -294,37 +327,5 @@ export function ExplainerDiagram() {
         @media (prefers-reduced-motion: reduce) { .spoke { animation: none; stroke-dashoffset: 0 } }
       `}</style>
     </div>
-  )
-}
-
-// One app in the playbook chain: logo node + the action it performs, in SVG space.
-function ChainNode({ slug, label, action, x, y, active, done }: {
-  slug: string; label: string; action: string; x: number; y: number; active: boolean; done: boolean
-}) {
-  const revealed = active || done
-  const r = active ? 32 : 28
-  return (
-    <g style={{ transition: 'opacity 0.4s' }} opacity={revealed ? 1 : 0.4}>
-      {active && (
-        <circle cx={x} cy={y} r={r} fill="none" stroke="oklch(0.82 0.16 200)" strokeWidth="2">
-          <animate attributeName="r" values={`${r};${r + 16}`} dur="1.3s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.8;0" dur="1.3s" repeatCount="indefinite" />
-        </circle>
-      )}
-      <circle cx={x} cy={y} r={r} fill="oklch(0.15 0.025 274)"
-        stroke={active ? 'oklch(0.82 0.16 200)' : done ? 'oklch(0.6 0.16 200 / 60%)' : 'oklch(0.5 0.08 274 / 45%)'}
-        strokeWidth="2.5" style={{ transition: 'all 0.3s' }} />
-      <image href={`/logos/${slug}.svg`} x={x - r * 0.55} y={y - r * 0.55} width={r * 1.1} height={r * 1.1}
-        preserveAspectRatio="xMidYMid slice" clipPath="inset(0% round 6px)" />
-      <text x={x} y={y + r + 16} textAnchor="middle" fill="oklch(0.82 0.02 274)" fontSize="12" fontWeight="600">{label}</text>
-      {/* the action being performed at this hop */}
-      <foreignObject x={x - 82} y={y + r + 22} width={164} height={40}>
-        <div className={`text-center text-[11px] leading-snug transition-all duration-300 ${
-          active ? 'text-white font-semibold' : done ? 'text-white/55' : 'text-white/0'
-        }`}>
-          {action}
-        </div>
-      </foreignObject>
-    </g>
   )
 }
