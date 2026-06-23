@@ -412,7 +412,7 @@ export default async function RootPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
               <Rocket className="h-3 w-3" /> Launch plans
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold">Pick your orbit</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold">Pick your takeoff</h2>
             <p className="mt-3 text-white/50 text-base">Start free. Upgrade to full autonomy when you&apos;re ready.</p>
           </Reveal>
           <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5">
