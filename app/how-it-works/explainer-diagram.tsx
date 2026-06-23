@@ -48,17 +48,19 @@ const PB_ACTIONS = [
   'Posts an incident summary',
 ]
 
-// A curved "bounce" arc between two app nodes, bulging away from the hub, with
-// its endpoints trimmed off the node edges so it doesn't run under the circles.
-function arcPath(a: { x: number; y: number }, b: { x: number; y: number }) {
-  const off = 55, R = 30
-  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
-  const ox = mx - HUB.x, oy = my - HUB.y, ol = Math.hypot(ox, oy) || 1
-  const cx = mx + (ox / ol) * off, cy = my + (oy / ol) * off
-  const sa = Math.hypot(cx - a.x, cy - a.y) || 1, sb = Math.hypot(cx - b.x, cy - b.y) || 1
-  const sx = a.x + ((cx - a.x) / sa) * R, sy = a.y + ((cy - a.y) / sa) * R
-  const ex = b.x + ((cx - b.x) / sb) * R, ey = b.y + ((cy - b.y) / sb) * R
-  return `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`
+// One continuous "bounce" path through the playbook's app nodes — each segment
+// curves outward, away from the hub, so a single pulse arcs smoothly app→app.
+function bouncePath(nodes: { x: number; y: number }[]) {
+  let d = `M ${nodes[0].x} ${nodes[0].y}`
+  for (let i = 1; i < nodes.length; i++) {
+    const a = nodes[i - 1], b = nodes[i]
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+    const ox = mx - HUB.x, oy = my - HUB.y, ol = Math.hypot(ox, oy) || 1
+    const off = 55
+    const cx = mx + (ox / ol) * off, cy = my + (oy / ol) * off
+    d += ` Q ${cx} ${cy} ${b.x} ${b.y}`
+  }
+  return d
 }
 
 function Pulse({ sx, sy, ex, ey, color, begin = '0s', dur = '1.1s' }: {
@@ -72,12 +74,14 @@ function Pulse({ sx, sy, ex, ey, color, begin = '0s', dur = '1.1s' }: {
   )
 }
 
-// A pulse that travels along an arbitrary path (used for the bouncing arcs).
-function PulsePath({ d, color, dur = '1s' }: { d: string; color: string; dur?: string }) {
+// A pulse that travels an arbitrary path at constant speed (animateMotion is
+// "paced" by default), fading in at the start and out at the end so the loop
+// reset is invisible — no jump, no restart jitter.
+function PulsePath({ d, color, dur = '4.5s' }: { d: string; color: string; dur?: string }) {
   return (
     <circle r="6" fill={color} opacity="0">
       <animateMotion dur={dur} repeatCount="indefinite" path={d} />
-      <animate attributeName="opacity" dur={dur} repeatCount="indefinite" keyTimes="0;0.15;0.85;1" values="0;1;1;0" />
+      <animate attributeName="opacity" dur={dur} repeatCount="indefinite" keyTimes="0;0.05;0.92;1" values="0;1;1;0" />
     </circle>
   )
 }
@@ -86,20 +90,11 @@ export function ExplainerDiagram() {
   const [scene, setScene] = useState(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [pbStep, setPbStep] = useState(0)
-
   useEffect(() => {
-    // Give the Playbook scene extra time so the app-to-app chain can play out.
-    const dur = scene === 2 ? 6200 : STEP_MS
+    // Give the Playbook scene extra time so the bounce can play out.
+    const dur = scene === 2 ? 6500 : STEP_MS
     timer.current = setTimeout(() => setScene(s => (s + 1) % STAGES.length), dur)
     return () => { if (timer.current) clearTimeout(timer.current) }
-  }, [scene])
-
-  // Advance the playbook chain one hop at a time while the Playbook scene is live.
-  useEffect(() => {
-    if (scene !== 2) { setPbStep(0); return }
-    const id = setInterval(() => setPbStep(s => Math.min(s + 1, PB_CHAIN.length - 1)), 1150)
-    return () => clearInterval(id)
   }, [scene])
 
   function replay() {
@@ -241,55 +236,23 @@ export function ExplainerDiagram() {
               </foreignObject>
             </g>
 
-            {/* ─── Playbook overlay (stage 3): pulse bounces app→app on the arc ─ */}
+            {/* ─── Playbook overlay (stage 3): a smooth pulse bounces app→app ─ */}
             {isPlaybook && (() => {
               const nodes = PB_CHAIN.map(i => APPS[i])
+              const d = bouncePath(nodes)
               return (
                 <g className="animate-in fade-in duration-500">
-                  {/* autonomy note — the defining Playbook behaviour */}
-                  <foreignObject x={VB.w / 2 - 175} y={12} width={350} height={24}>
-                    <div className="text-center text-[11px] text-[oklch(0.85_0.13_60)]">
-                      Auto-acts when confident · ⏸ pauses for your OK when unsure
-                    </div>
-                  </foreignObject>
-
-                  {/* bouncing arcs between consecutive app nodes */}
-                  {nodes.slice(1).map((b, idx) => {
-                    const j = idx + 1
-                    const d = arcPath(nodes[idx], b)
-                    const done = pbStep > j
-                    const active = pbStep === j
-                    return (
-                      <g key={j}>
-                        <path d={d} fill="none" strokeWidth={done || active ? 2.5 : 2}
-                          stroke={done ? 'oklch(0.78 0.16 200 / 80%)' : active ? 'oklch(0.82 0.16 200 / 70%)' : 'oklch(0.6 0.12 274 / 28%)'}
-                          strokeDasharray="2 7" strokeLinecap="round" markerEnd={active || done ? 'url(#arrow)' : undefined} />
-                        {active && <PulsePath key={`p${j}`} d={d} color="oklch(0.85 0.16 200)" dur="1s" />}
-                      </g>
-                    )
-                  })}
-
-                  {/* active-node ring + the action each app performs */}
-                  {nodes.map((n, j) => {
-                    const active = pbStep === j, done = pbStep > j
-                    return (
-                      <g key={n.slug}>
-                        {active && (
-                          <circle cx={n.x} cy={n.y} r="28" fill="none" stroke="oklch(0.85 0.16 200)" strokeWidth="2.5">
-                            <animate attributeName="r" values="28;42" dur="1.3s" repeatCount="indefinite" />
-                            <animate attributeName="opacity" values="0.85;0" dur="1.3s" repeatCount="indefinite" />
-                          </circle>
-                        )}
-                        <foreignObject x={n.x - 82} y={n.y + 50} width={164} height={36}>
-                          <div className={`text-center text-[11px] leading-snug transition-all duration-300 ${
-                            active ? 'text-white font-semibold' : done ? 'text-white/55' : 'text-white/0'
-                          }`}>
-                            {PB_ACTIONS[j]}
-                          </div>
-                        </foreignObject>
-                      </g>
-                    )
-                  })}
+                  {/* the dotted bounce path down the right-hand arc */}
+                  <path d={d} fill="none" stroke="oklch(0.72 0.14 200 / 55%)" strokeWidth="2" strokeDasharray="2 7" strokeLinecap="round" />
+                  {/* one pulse, constant speed, fading at the loop boundary */}
+                  <PulsePath d={d} color="oklch(0.85 0.16 200)" dur="4.5s" />
+                  {/* the action each app performs, to the right of its icon */}
+                  {nodes.map((n, j) => (
+                    <text key={n.slug} x={n.x + 38} y={n.y + 4} textAnchor="start"
+                      fill="oklch(0.92 0.015 274)" fontSize="11.5" fontWeight="500">
+                      {PB_ACTIONS[j]}
+                    </text>
+                  ))}
                 </g>
               )
             })()}
