@@ -163,11 +163,16 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         <SimulatedLightsPanel connectionId={connectionId} initialDevices={devices as never[]} />
       )}
 
-      <WidgetBoard
-        connectionId={connectionId}
-        connectorName={connector.name}
-        isAdmin={isAdmin}
-      />
+      {/* Widgets (incl. the Widget Wizard) rely on a real backend; the wizard's
+          preview/generate routes 404 ("Connection not found") for simulated
+          connections, so hide the whole section for sims. */}
+      {!connection.is_simulated && (
+        <WidgetBoard
+          connectionId={connectionId}
+          connectorName={connector.name}
+          isAdmin={isAdmin}
+        />
+      )}
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Live data</h2>
