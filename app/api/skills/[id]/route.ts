@@ -71,14 +71,21 @@ export async function PUT(req: Request, { params }: Params) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-  // Per-connection scope is persisted separately so a missing column (before
-  // migration 046 is applied) can never break the core save.
+  // Newer columns are persisted separately so a missing column (before its
+  // migration is applied) can never break the core save.
   if (Array.isArray(body.connection_ids)) {
     const { error: scopeErr } = await admin
       .from('skills')
       .update({ connection_ids: body.connection_ids })
       .eq('id', id)
     if (scopeErr) console.warn('[skills PUT] connection_ids not persisted (migration 046 pending?):', scopeErr.message)
+  }
+  if (typeof body.require_approval === 'boolean') {
+    const { error: apprErr } = await admin
+      .from('skills')
+      .update({ require_approval: body.require_approval })
+      .eq('id', id)
+    if (apprErr) console.warn('[skills PUT] require_approval not persisted (migration 047 pending?):', apprErr.message)
   }
 
   return new Response(null, { status: 204 })

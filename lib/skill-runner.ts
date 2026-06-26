@@ -16,7 +16,7 @@ export type RunStep = {
   params?: Record<string, unknown>
   result?: unknown
   risk?: string
-  status: 'success' | 'error' | 'dry_run' | 'blocked'
+  status: 'success' | 'error' | 'dry_run' | 'blocked' | 'awaiting_approval'
   note?: string
 }
 
@@ -89,6 +89,21 @@ export async function runSkill({
   }
 
   const blockedSlugs: string[] = skill.blocked_slugs ?? []
+
+  // Optional approval gate: when on (and running live), write/destructive actions
+  // are staged into the Approvals inbox instead of executing. Resolve an approver
+  // (workspace owner, else any admin) to attribute the pending action to.
+  const requireApproval = !!skill.require_approval && mode === 'live'
+  let approverId: string | null = null
+  if (requireApproval) {
+    const { data: appr } = await admin
+      .from('memberships')
+      .select('user_id, role')
+      .eq('workspace_id', workspaceId)
+      .in('role', ['owner', 'admin'])
+    approverId = ((appr ?? []).find(m => m.role === 'owner') ?? (appr ?? [])[0])?.user_id ?? null
+  }
+
   const steps: RunStep[] = []
   let stepIndex = 0
 
@@ -148,6 +163,41 @@ export async function runSkill({
               }
               steps.push(s)
               return { __dry_run: true, would_execute: action.slug, params: p }
+            }
+
+            // Approval gate — stage the write instead of executing it.
+            if (isWrite && requireApproval) {
+              if (!approverId) {
+                steps.push({
+                  step: myStep, type: 'tool_call', tool_name: action.name, params: p,
+                  risk: action.risk, status: 'blocked',
+                  note: 'Approval required, but no admin/owner was found to approve it.',
+                })
+                return { error: 'This write requires approval, but no approver is available.' }
+              }
+              await admin.from('pending_actions').insert({
+                workspace_id: workspaceId,
+                user_id: approverId,
+                connection_id: conn.id,
+                action_slug: action.slug,
+                params: p,
+                summary: `${action.name} on ${conn.label} — from skill “${skill.name}”`,
+                status: 'pending',
+              })
+              await createNotification({
+                workspaceId,
+                userId: approverId,
+                type: 'pending_action',
+                title: 'Skill action needs approval',
+                body: `${action.name} on ${conn.label} — from “${skill.name}”`,
+                link: '/approvals',
+              })
+              steps.push({
+                step: myStep, type: 'tool_call', tool_name: action.name, params: p,
+                risk: action.risk, status: 'awaiting_approval',
+                note: `Staged for approval on ${conn.label}`,
+              })
+              return { __awaiting_approval: true, action: action.slug, note: 'Queued for human approval — it will run once an admin approves it.' }
             }
 
             const startedAt = Date.now()
@@ -229,7 +279,7 @@ export async function runSkill({
     const systemPrompt = `${skill.persona}
 
 Today's date is ${today}.
-Run mode: ${mode === 'dry_run' ? 'DRY RUN — write actions will be logged but NOT executed. Read actions execute normally.' : 'LIVE — all actions will execute.'}
+Run mode: ${mode === 'dry_run' ? 'DRY RUN — write actions will be logged but NOT executed. Read actions execute normally.' : requireApproval ? 'LIVE (approval required) — read actions execute normally, but write/destructive actions are QUEUED for human approval and run only after an admin approves. When a write tool returns { __awaiting_approval: true }, it has been queued — note it in your summary and continue; do not retry it.' : 'LIVE — all actions will execute.'}
 ${triggerPrompt ? `
 Trigger condition (evaluate FIRST before taking any write actions):
 ${triggerPrompt}

@@ -179,14 +179,14 @@ function ResultView({ response, summary }: { response: unknown; summary?: string
 function StepRow({ s }: { s: ActivityStep }) {
   const color = {
     success: 'text-green-600', error: 'text-destructive', dry_run: 'text-blue-600',
-    blocked: 'text-orange-500', text: 'text-muted-foreground',
+    blocked: 'text-orange-500', awaiting_approval: 'text-amber-500', text: 'text-muted-foreground',
   }[s.status ?? ''] ?? 'text-muted-foreground'
   return (
     <div className="flex gap-3 text-xs py-1.5 border-b last:border-0">
       <span className="text-muted-foreground w-5 shrink-0 text-right">{s.step ?? '·'}</span>
       <div className="flex-1 min-w-0">
         <span className={`font-medium ${color}`}>
-          {s.status === 'dry_run' ? '◦ Would: ' : s.status === 'blocked' ? '✕ Blocked: ' : s.status === 'error' ? '✕ Error: ' : '✓ '}
+          {s.status === 'dry_run' ? '◦ Would: ' : s.status === 'awaiting_approval' ? '⏳ Awaiting approval: ' : s.status === 'blocked' ? '✕ Blocked: ' : s.status === 'error' ? '✕ Error: ' : '✓ '}
         </span>
         <span>{s.tool_name ?? 'step'}</span>
         {s.note && <span className="text-muted-foreground ml-1">— {s.note}</span>}

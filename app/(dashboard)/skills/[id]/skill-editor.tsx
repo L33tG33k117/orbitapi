@@ -20,6 +20,7 @@ interface SkillData {
   persona: string
   blocked_slugs: string[]
   connection_ids: string[]
+  require_approval: boolean
   autonomy: Autonomy
   enabled: boolean
   schedule: string
@@ -494,6 +495,27 @@ export function SkillEditor({
           )}
         </div>
       )}
+
+      {/* Approval gate */}
+      <div className="space-y-2">
+        <Label>Approvals</Label>
+        <label className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/40 transition-colors">
+          <input
+            type="checkbox"
+            checked={form.require_approval}
+            onChange={e => set('require_approval', e.target.checked)}
+            className="h-4 w-4 rounded mt-0.5 accent-primary"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Require approval for write &amp; destructive actions</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              When on, this skill&apos;s writes don&apos;t run automatically — they wait in the{' '}
+              <a href="/approvals" className="underline underline-offset-2 hover:text-foreground">Approvals</a> inbox
+              for an admin or owner to approve. Reads still run normally. Applies to live runs (Manual &amp; Autonomous).
+            </p>
+          </div>
+        </label>
+      </div>
 
       {/* Blocked actions */}
       {availableActions.length > 0 && (
