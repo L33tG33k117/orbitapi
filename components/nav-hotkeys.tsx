@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { Keyboard, X } from 'lucide-react'
 
-// Quick navigation: press `g` then a letter (Gmail/Linear-style). `?` lists them.
-// Cmd/Ctrl+K still opens search; these are for fast keyboard jumps.
+// Quick navigation: press `g` then a letter (Gmail/Linear-style). `?` opens a
+// panel listing every shortcut. Cmd/Ctrl+K still opens search.
 const ROUTES: Record<string, { path: string; label: string }> = {
   d: { path: '/dashboard', label: 'Overview' },
   a: { path: '/chat', label: 'Assistant' },
@@ -23,18 +23,38 @@ function isTyping(t: EventTarget | null): boolean {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
 }
 
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-md border border-border bg-muted px-1.5 font-mono text-[11px] font-semibold text-foreground shadow-sm">
+      {children}
+    </kbd>
+  )
+}
+
+function Row({ keys, label }: { keys: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-sm text-foreground">{label}</span>
+      <span className="flex items-center gap-1 shrink-0">{keys}</span>
+    </div>
+  )
+}
+
 export function NavHotkeys() {
   const router = useRouter()
+  const [open, setOpen] = useState(false)
+
   useEffect(() => {
     let pendingG = false
     let timer: ReturnType<typeof setTimeout> | undefined
 
     function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') { setOpen(false); return }
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return
 
       if (e.key === '?') {
         e.preventDefault()
-        toast('Press g then: ' + Object.entries(ROUTES).map(([k, v]) => `${k} ${v.label}`).join(' · '), { duration: 6000 })
+        setOpen(o => !o)
         return
       }
 
@@ -42,7 +62,7 @@ export function NavHotkeys() {
         pendingG = false
         if (timer) clearTimeout(timer)
         const dest = ROUTES[e.key.toLowerCase()]
-        if (dest) { e.preventDefault(); router.push(dest.path) }
+        if (dest) { e.preventDefault(); setOpen(false); router.push(dest.path) }
         return
       }
 
@@ -56,5 +76,46 @@ export function NavHotkeys() {
     return () => { window.removeEventListener('keydown', onKey); if (timer) clearTimeout(timer) }
   }, [router])
 
-  return null
+  if (!open) return null
+
+  const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform)
+
+  return (
+    <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+      <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+      <aside className="relative h-full w-[330px] max-w-[85vw] bg-background border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+        <header className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Keyboard className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">Keyboard shortcuts</h2>
+          </div>
+          <button onClick={() => setOpen(false)} aria-label="Close" className="p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+              Go to <span className="normal-case font-normal">— press <Kbd>g</Kbd> then the key</span>
+            </p>
+            <div className="divide-y divide-border/60">
+              {Object.entries(ROUTES).map(([k, v]) => (
+                <Row key={k} label={v.label} keys={<><Kbd>g</Kbd><span className="text-muted-foreground text-xs">then</span><Kbd>{k}</Kbd></>} />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">General</p>
+            <div className="divide-y divide-border/60">
+              <Row label="Search" keys={<><Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd><Kbd>K</Kbd></>} />
+              <Row label="Show this menu" keys={<Kbd>?</Kbd>} />
+              <Row label="Close" keys={<Kbd>Esc</Kbd>} />
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+  )
 }

@@ -5,6 +5,7 @@ import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification, emailSkillRunOutcome } from '@/lib/notify'
 import { riskAllowed } from '@/lib/connector-access'
+import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
 import { SAFETY_SYSTEM_RULES } from '@/lib/prompt-safety'
@@ -70,11 +71,11 @@ export async function runSkill({
   }
 
   // Load connections (scoped as resolved above, or all active workspace connections).
-  let connections: { id: string; label: string; vault_secret_id: string | null; allowed_risk_levels: string[] | null; connector: { slug: string; name: string } }[] = []
+  let connections: { id: string; label: string; vault_secret_id: string | null; allowed_risk_levels: string[] | null; is_simulated: boolean; connector: { slug: string; name: string } }[] = []
   {
     let q = admin
       .from('connections')
-      .select('id, label, vault_secret_id, allowed_risk_levels, connector:connectors(slug, name)')
+      .select('id, label, vault_secret_id, allowed_risk_levels, is_simulated, connector:connectors(slug, name)')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active')
     if (connIdFilter) q = q.in('id', connIdFilter.length ? connIdFilter : ['00000000-0000-0000-0000-000000000000'])
@@ -132,7 +133,7 @@ export async function runSkill({
       const manifest = getConnector(conn.connector.slug)
       if (!manifest) continue
 
-      credCache[conn.id] = await resolveCredentials(conn)
+      credCache[conn.id] = conn.is_simulated ? { __simulated: 'true' } : await resolveCredentials(conn)
 
       for (const action of manifest.actions) {
         // Per-connector access controls: skip classes this connection has disabled
@@ -165,8 +166,9 @@ export async function runSkill({
               return { __dry_run: true, would_execute: action.slug, params: p }
             }
 
-            // Approval gate — stage the write instead of executing it.
-            if (isWrite && requireApproval) {
+            // Approval gate — stage the write instead of executing it. Skipped for
+            // simulated connections (a sandbox write has no real-world impact).
+            if (isWrite && requireApproval && !conn.is_simulated) {
               if (!approverId) {
                 steps.push({
                   step: myStep, type: 'tool_call', tool_name: action.name, params: p,
@@ -201,7 +203,16 @@ export async function runSkill({
             }
 
             const startedAt = Date.now()
-            const result = await action.execute(credCache[conn.id], p)
+            const result = conn.is_simulated
+              ? await resolveSimulatedAction({
+                  workspaceId,
+                  connectionId: conn.id,
+                  connectorSlug: conn.connector.slug,
+                  connectorName: conn.connector.name,
+                  action,
+                  params: p,
+                })
+              : await action.execute(credCache[conn.id], p)
             const durationMs = Date.now() - startedAt
 
             const s: RunStep = {

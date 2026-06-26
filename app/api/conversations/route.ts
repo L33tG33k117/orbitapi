@@ -38,6 +38,19 @@ export async function GET() {
   }
 
   if (err) return Response.json({ error: err.message }, { status: 500 })
+
+  // Hide empty conversations — legacy shells (created before messages persisted)
+  // and any that never got a saved message would otherwise open to a blank pane.
+  const ids = (rows ?? []).map(r => r.id)
+  if (ids.length) {
+    const { data: msgRows } = await admin
+      .from('conversation_messages')
+      .select('conversation_id')
+      .in('conversation_id', ids)
+    const withMessages = new Set((msgRows ?? []).map(m => m.conversation_id))
+    rows = (rows ?? []).filter(r => withMessages.has(r.id))
+  }
+
   return Response.json(rows ?? [])
 }
 

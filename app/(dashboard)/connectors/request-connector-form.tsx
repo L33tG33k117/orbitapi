@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -41,6 +42,7 @@ function getStatusDisplay(req: CommunityRequest): { label: string; className: st
 }
 
 function RequestCard({ req, onVote }: { req: CommunityRequest; onVote: (id: string, newCount: number) => void }) {
+  const router = useRouter()
   const [voting, setVoting] = useState(false)
   const [voted, setVoted] = useState(req.has_voted)
   const [voteCount, setVoteCount] = useState(req.vote_count)
@@ -65,7 +67,15 @@ function RequestCard({ req, onVote }: { req: CommunityRequest; onVote: (id: stri
   async function loadMessages() {
     if (!req.is_own) return
     const res = await fetch(`/api/connector-requests/${req.id}/messages`)
-    if (res.ok) setMessages(await res.json())
+    if (res.ok) {
+      const msgs = await res.json()
+      setMessages(msgs)
+      // Opening the thread marks admin messages read server-side; refresh so the
+      // sidebar's "unread" badge (rendered in the server layout) recomputes.
+      if (Array.isArray(msgs) && msgs.some((m: Message) => m.sender_type === 'admin')) {
+        router.refresh()
+      }
+    }
   }
 
   async function sendReply() {
