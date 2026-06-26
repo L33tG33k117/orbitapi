@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { getConnector } from '@/connectors'
-import { pageGate } from '@/components/page-gate'
 import { SectionIntro } from '@/components/section-intro'
-import { DataMappingClient } from './data-mapping-client'
+import { Shuffle, ArrowRight } from 'lucide-react'
 
+// Data mapping is parked as "coming soon": people can read what it will do, but
+// the builder itself is greyed out. (The working client lives in
+// data-mapping-client.tsx and can be wired back in when the feature ships.)
 export default async function DataMappingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,42 +13,59 @@ export default async function DataMappingPage() {
     .from('memberships').select('workspace_id, role').eq('user_id', user!.id).single()
   if (!membership) redirect('/dashboard')
 
-  const gate = await pageGate('data_mapping'); if (gate) return gate
-  if (membership.role === 'member') {
-    return <div className="p-8 max-w-3xl"><h1 className="text-2xl font-bold">Data mapping</h1><p className="text-muted-foreground mt-2">Admins only.</p></div>
-  }
-
-  const admin = createAdminClient()
-  const { data: conns } = await admin
-    .from('connections')
-    .select('id, label, connector:connectors(slug, name)')
-    .eq('workspace_id', membership.workspace_id)
-    .eq('status', 'active')
-
-  const connections = (conns ?? []).map(c => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const slug = (c.connector as any)?.slug
-    const manifest = getConnector(slug)
-    return {
-      id: c.id, label: c.label,
-      reads: (manifest?.actions ?? []).filter(a => a.risk === 'read').map(a => ({ slug: a.slug, name: a.name })),
-      writes: (manifest?.actions ?? []).filter(a => a.risk !== 'read').map(a => ({ slug: a.slug, name: a.name })),
-    }
-  })
-
   return (
     <div className="p-8 space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold">Data mapping</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Data mapping</h1>
+          <span className="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            Coming soon
+          </span>
+        </div>
         <p className="text-muted-foreground mt-1">
           Sync data between API connectors — e.g. Zendesk tickets → ServiceNow incidents. Orbit proposes the field
           mappings, previews the transformed record against a live sample, and you approve before automating.
         </p>
       </div>
 
+      {/* Let people read what it will do */}
       <SectionIntro id="data-mapping" />
-      <div data-tour="data-mapping">
-        <DataMappingClient connections={connections} />
+
+      {/* Greyed-out preview of the feature with a coming-soon overlay */}
+      <div className="relative overflow-hidden rounded-2xl border border-dashed border-border">
+        <div className="pointer-events-none select-none p-6 opacity-30">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium">Zendesk · Ticket</div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium">ServiceNow · Incident</div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {[
+              ['subject', 'short_description'],
+              ['description', 'description'],
+              ['priority', 'urgency'],
+              ['requester.email', 'caller_id'],
+            ].map(([from, to]) => (
+              <div key={from} className="flex items-center gap-3 text-xs">
+                <span className="flex-1 rounded-md bg-muted px-2 py-1.5 font-mono">{from}</span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="flex-1 rounded-md bg-muted px-2 py-1.5 font-mono">{to}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[1px]">
+          <div className="text-center px-6">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+              <Shuffle className="h-5 w-5 text-primary" />
+            </div>
+            <p className="font-semibold">Coming soon</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+              Field-level data mapping between your connectors is on the way. You&apos;ll be able to set this up here when it launches.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

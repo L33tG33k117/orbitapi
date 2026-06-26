@@ -95,8 +95,7 @@ const TOURS: Record<string, Tour> = {
   '/data-mapping': {
     key: 'data-mapping',
     steps: [
-      { popover: { title: 'Data Mapping', description: 'Translate fields from one connector into another — e.g. a Zendesk ticket becomes a ServiceNow incident with the right fields.' } },
-      { element: '[data-tour="data-mapping"]', popover: { title: 'Propose a mapping', description: 'Pick a source and target action; Orbit proposes the field mappings and previews the result against a live sample before you automate.', side: 'top' } },
+      { popover: { title: 'Data Mapping (coming soon)', description: 'Soon you’ll be able to translate fields from one connector into another — e.g. a Zendesk ticket becomes a ServiceNow incident with the right fields. This page previews what’s on the way.' } },
       HELP_OUTRO,
     ],
   },

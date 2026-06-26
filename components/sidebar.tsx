@@ -19,6 +19,7 @@ interface NavItem {
   indent?: boolean
   excludeStartsWith?: string | string[]
   capability?: Capability
+  comingSoon?: boolean
 }
 
 interface NavSection {
@@ -62,8 +63,8 @@ const sections: NavSection[] = [
     items: [
       { href: '/skills', label: 'Skills', icon: Zap, capability: 'skills' },
       { href: '/playbooks', label: 'Playbooks', icon: ShieldAlert, capability: 'playbooks' },
-      { href: '/data-mapping', label: 'Data Mapping', icon: Shuffle, capability: 'data_mapping' },
       { href: '/bundles', label: 'Bundles', icon: Package, capability: 'bundles' },
+      { href: '/data-mapping', label: 'Data Mapping', icon: Shuffle, comingSoon: true },
     ],
   },
   {
@@ -129,7 +130,9 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
   function renderItem(item: NavItem) {
     const active = isActive(item)
     const Icon = item.icon
-    const locked = !!item.capability && !hasCapability(tier, flags, item.capability)
+    const comingSoon = !!item.comingSoon
+    const locked = !comingSoon && !!item.capability && !hasCapability(tier, flags, item.capability)
+    const dimmed = locked || comingSoon
     const badge =
       item.href === '/approvals' ? (pendingApprovals ?? 0) :
       item.href === '/connectors/requests' ? (unreadConnectorMessages ?? 0) : 0
@@ -138,13 +141,13 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
       <Link
         key={item.href}
         href={item.href}
-        title={locked ? ((item.capability && LOCKED_HINTS[item.capability]) ?? 'Upgrade to unlock') : undefined}
+        title={comingSoon ? 'Coming soon — click to learn more' : locked ? ((item.capability && LOCKED_HINTS[item.capability]) ?? 'Upgrade to unlock') : undefined}
         className={cn(
           'group relative flex items-center gap-2.5 rounded-lg font-medium transition-all duration-150',
           item.indent ? 'ml-3.5 px-2.5 py-1.5 text-[13px]' : 'px-2.5 py-2 text-sm',
           active
             ? 'text-white shadow-[0_6px_18px_-8px_var(--brand-to)]'
-            : locked
+            : dimmed
               ? 'text-sidebar-foreground/40 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground/70'
               : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
           active && !item.indent && 'bg-gradient-to-r from-[var(--brand-from)] to-[var(--brand-to)]',
@@ -156,13 +159,15 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
         )}
         <Icon className={cn('shrink-0', item.indent ? 'h-3.5 w-3.5' : 'h-[18px] w-[18px]')} />
         <span className="flex-1 truncate">{item.label}</span>
-        {locked
-          ? <Lock className="h-3 w-3 shrink-0 opacity-60" />
-          : badge > 0 && (
-              <span className="h-4 min-w-4 px-1 rounded-full bg-amber-500 text-[10px] font-bold text-white flex items-center justify-center">
-                {badge}
-              </span>
-            )}
+        {comingSoon
+          ? <span className="shrink-0 rounded-full bg-sidebar-accent/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">Soon</span>
+          : locked
+            ? <Lock className="h-3 w-3 shrink-0 opacity-60" />
+            : badge > 0 && (
+                <span className="h-4 min-w-4 px-1 rounded-full bg-amber-500 text-[10px] font-bold text-white flex items-center justify-center">
+                  {badge}
+                </span>
+              )}
       </Link>
     )
   }
