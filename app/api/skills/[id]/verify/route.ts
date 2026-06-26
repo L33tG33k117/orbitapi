@@ -36,6 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const triggerPrompt: string = (body.trigger_prompt ?? '').toString()
   const groupId: string | null = body.group_id || null
   const blockedSlugs: string[] = Array.isArray(body.blocked_slugs) ? body.blocked_slugs : []
+  const selectedConnIds: string[] = Array.isArray(body.connection_ids) ? body.connection_ids : []
 
   // Resolve the connections this skill can use: a group's connections, or all
   // active workspace connections when no group is selected.
@@ -49,6 +50,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       .single()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     connectionIds = ((group as any)?.group_connections ?? []).map((gc: { connection_id: string }) => gc.connection_id)
+  }
+
+  // A per-connection allow-list narrows the scope further (intersect with group).
+  if (selectedConnIds.length) {
+    connectionIds = connectionIds ? connectionIds.filter(id => selectedConnIds.includes(id)) : selectedConnIds
   }
 
   let connQuery = admin

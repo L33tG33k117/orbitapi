@@ -70,6 +70,17 @@ export async function PUT(req: Request, { params }: Params) {
   }).eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  // Per-connection scope is persisted separately so a missing column (before
+  // migration 046 is applied) can never break the core save.
+  if (Array.isArray(body.connection_ids)) {
+    const { error: scopeErr } = await admin
+      .from('skills')
+      .update({ connection_ids: body.connection_ids })
+      .eq('id', id)
+    if (scopeErr) console.warn('[skills PUT] connection_ids not persisted (migration 046 pending?):', scopeErr.message)
+  }
+
   return new Response(null, { status: 204 })
 }
 

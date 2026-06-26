@@ -58,11 +58,18 @@ export async function runSkill({
   const group = skill.group as any
   // A group scopes the skill to specific connections; NO group means "all my
   // connections" (matches the editor label + chat behavior).
-  const groupConnIds: string[] | null = group
+  let connIdFilter: string[] | null = group
     ? (group.group_connections ?? []).map((gc: { connection_id: string }) => gc.connection_id)
     : null
 
-  // Load connections (scoped to the group, or all active workspace connections).
+  // Per-connection allow-list on the skill narrows the scope further (intersect
+  // with any group scope). Empty / missing column = no restriction.
+  const selectedConnIds: string[] = Array.isArray(skill.connection_ids) ? skill.connection_ids : []
+  if (selectedConnIds.length) {
+    connIdFilter = connIdFilter ? connIdFilter.filter(id => selectedConnIds.includes(id)) : selectedConnIds
+  }
+
+  // Load connections (scoped as resolved above, or all active workspace connections).
   let connections: { id: string; label: string; vault_secret_id: string | null; allowed_risk_levels: string[] | null; connector: { slug: string; name: string } }[] = []
   {
     let q = admin
@@ -70,7 +77,7 @@ export async function runSkill({
       .select('id, label, vault_secret_id, allowed_risk_levels, connector:connectors(slug, name)')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active')
-    if (groupConnIds) q = q.in('id', groupConnIds.length ? groupConnIds : ['00000000-0000-0000-0000-000000000000'])
+    if (connIdFilter) q = q.in('id', connIdFilter.length ? connIdFilter : ['00000000-0000-0000-0000-000000000000'])
     const { data } = await q
     connections = (data ?? []) as unknown as typeof connections
   }

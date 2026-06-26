@@ -19,6 +19,7 @@ interface SkillData {
   group_id: string
   persona: string
   blocked_slugs: string[]
+  connection_ids: string[]
   autonomy: Autonomy
   enabled: boolean
   schedule: string
@@ -104,18 +105,43 @@ export function SkillEditor({
   const [verifyState, setVerifyState] = useState<'idle' | 'running' | 'passed' | 'failed'>('idle')
   const [verifyReport, setVerifyReport] = useState<VerifyReport | null>(null)
 
-  // Connections this skill can use given the selected group (updates live).
+  // The candidate pool of connections, narrowed by the chosen group (updates live).
   const scopedConnections = useMemo(
     () => form.group_id ? connections.filter(c => c.groupIds.includes(form.group_id)) : connections,
     [connections, form.group_id],
   )
 
+  // Per-connection allow-list. Empty = "use all connections in the pool" (the
+  // default / backward-compatible behavior). We only ever store ids that are in
+  // the current pool, and normalize "all selected" back to empty.
+  const poolIds = useMemo(() => scopedConnections.map(c => c.id), [scopedConnections])
+  const explicitIds = useMemo(() => form.connection_ids.filter(id => poolIds.includes(id)), [form.connection_ids, poolIds])
+  const allMode = explicitIds.length === 0
+  const isConnSelected = (id: string) => allMode || explicitIds.includes(id)
+
   // Editing anything that affects behavior invalidates a prior verification.
-  const VERIFY_KEYS: (keyof SkillData)[] = ['persona', 'trigger_prompt', 'group_id', 'blocked_slugs', 'autonomy']
+  const VERIFY_KEYS: (keyof SkillData)[] = ['persona', 'trigger_prompt', 'group_id', 'blocked_slugs', 'connection_ids', 'autonomy']
   function set<K extends keyof SkillData>(key: K, value: SkillData[K]) {
     setForm(f => ({ ...f, [key]: value }))
     setSaved(false)
     if (VERIFY_KEYS.includes(key)) { setVerifyState('idle'); setVerifyReport(null) }
+  }
+
+  function toggleConnection(id: string) {
+    let next: string[]
+    if (allMode) next = poolIds.filter(x => x !== id)           // uncheck one from "all"
+    else if (explicitIds.includes(id)) next = explicitIds.filter(x => x !== id)
+    else next = [...explicitIds, id]
+    // Full pool or none selected → normalize to "all" (empty).
+    if (next.length === 0 || next.length === poolIds.length) next = []
+    set('connection_ids', next)
+  }
+
+  // Changing the group changes the pool — drop any now-irrelevant selection.
+  function changeGroup(groupId: string) {
+    setForm(f => ({ ...f, group_id: groupId, connection_ids: [] }))
+    setSaved(false)
+    setVerifyState('idle'); setVerifyReport(null)
   }
 
   async function verify() {
@@ -126,6 +152,7 @@ export function SkillEditor({
         body: JSON.stringify({
           persona: form.persona, trigger_prompt: form.trigger_prompt,
           group_id: form.group_id, blocked_slugs: form.blocked_slugs,
+          connection_ids: form.connection_ids,
         }),
       })
       const data = await res.json()
@@ -254,7 +281,7 @@ export function SkillEditor({
           <Label>Connectors this skill can use</Label>
           <select
             value={form.group_id}
-            onChange={e => set('group_id', e.target.value)}
+            onChange={e => changeGroup(e.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
             <option value="">All my connections</option>
@@ -537,25 +564,46 @@ export function SkillEditor({
 
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">
-            Available connectors {form.group_id ? '(in this group)' : '(all connections)'}
+            Connections this skill can use {form.group_id ? '(in this group)' : '(all connections)'}
           </p>
           {scopedConnections.length === 0 ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-500">
               No connectors available{form.group_id ? ' in this group' : ''}. This skill can&apos;t do anything until you connect one or pick a different group.
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {scopedConnections.map(c => (
-                <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5">
-                  <Plug className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{c.label}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{c.name}</p>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0">{c.reads}r · {c.writes}w</span>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="space-y-1.5">
+                {scopedConnections.map(c => {
+                  const checked = isConnSelected(c.id)
+                  return (
+                    <label
+                      key={c.id}
+                      className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 cursor-pointer transition-colors ${
+                        checked ? 'border-border bg-background' : 'border-dashed border-border bg-muted/30 opacity-60'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleConnection(c.id)}
+                        className="h-3.5 w-3.5 rounded shrink-0 accent-primary"
+                      />
+                      <Plug className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">{c.label}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{c.name}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0">{c.reads}r · {c.writes}w</span>
+                    </label>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {allMode
+                  ? 'All of the above are in scope. Uncheck any to limit this skill to only the ones you pick.'
+                  : `Limited to ${explicitIds.length} of ${poolIds.length} connection${poolIds.length !== 1 ? 's' : ''}. Re-check all to use every one.`}
+              </p>
+            </>
           )}
         </div>
 

@@ -128,6 +128,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
           group_id: skill.group_id ?? '',
           persona: skill.persona ?? '',
           blocked_slugs: (skill.blocked_slugs ?? []) as string[],
+          connection_ids: ((skill as unknown as { connection_ids?: string[] }).connection_ids ?? []) as string[],
           autonomy: skill.autonomy as 'supervised' | 'manual' | 'autonomous',
           enabled: skill.enabled,
           schedule: skill.schedule ?? '',
