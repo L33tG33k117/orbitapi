@@ -251,6 +251,7 @@ export async function POST(req: Request) {
             action_slug: action.slug,
             risk: action.risk,
             params: p,
+            response: result.ok ? (result.data ?? null) : { error: result.error },
             result_status: result.ok ? 'success' : 'error',
             result_summary: result.ok
               ? JSON.stringify(result.data).slice(0, 500)
