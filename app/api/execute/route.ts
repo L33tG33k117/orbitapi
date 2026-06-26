@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
-import { simulateAction } from '@/lib/simulate-action'
+import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { riskAllowed } from '@/lib/connector-access'
 
 export async function POST(req: Request) {
@@ -35,6 +35,8 @@ export async function POST(req: Request) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const connSlug = (conn.connector as any)?.slug
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const connName = (conn.connector as any)?.name ?? connSlug
   const manifest = getConnector(connSlug)
   if (!manifest) return NextResponse.json({ error: 'Connector not found' }, { status: 404 })
 
@@ -63,7 +65,14 @@ export async function POST(req: Request) {
 
   const started = Date.now()
   const result = conn.is_simulated
-    ? simulateAction(connSlug, actionSlug, params ?? {})
+    ? await resolveSimulatedAction({
+        workspaceId: membership.workspace_id,
+        connectionId,
+        connectorSlug: connSlug,
+        connectorName: connName,
+        action,
+        params: params ?? {},
+      })
     : await action.execute(await resolveCredentials(conn), params ?? {})
 
   // Audit log (Foundation B: capture full response + latency; link replays)
