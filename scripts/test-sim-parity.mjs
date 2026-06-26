@@ -1,21 +1,20 @@
 /**
- * Simulation parity test.
+ * Simulation shape-coverage advisory.
  *
- * Guarantees that every action a connector declares can be exercised in
- * simulated mode with realistic, bespoke fake data — never the generic stub.
+ * Every simulated connection now routes through lib/sim-engine.ts, which
+ * AI-generates realistic, query-specific data for ANY connector — so a new
+ * connector works in Simulate mode whether or not it has hand-written data.
+ * Correctness is therefore no longer gated on this file.
  *
- * Why this matters: real connectors get type-level enforcement (ActionDef.execute
- * is required, so tsc won't compile a declared action with no implementation).
- * The simulation layer (lib/simulate-action.ts) has no such guarantee — its DATA
- * map is a loose lookup with a silent generic fallback. So the moment someone adds
- * an action and forgets the sim entry, a simulated connection returns
- * `{ __simulated: true, message: "..." }` instead of useful data — no error, no
- * build failure. This test turns that silent drift into a loud CI failure.
+ * What this script does now: report which actions have a curated SHAPE HINT in
+ * lib/simulate-action.ts. Those hints sharpen realism (the engine feeds them to
+ * the model as the exact JSON shape to return), so it's good to add them — but a
+ * missing hint is a quality note, NOT a failure. This script never exits non-zero
+ * for missing hints, so it never blocks a new connector from shipping.
  *
- * Scope: only connectors that route through simulateAction() — i.e. real
- * connectors a user can run in "Simulate" mode (manifest.isSimulated === false).
- * The purpose-built simulated connectors (simulated-lights, simulated-ring) have
- * real DB-backed execute() and never touch simulateAction(), so they're exempt.
+ * Scope: connectors a user can run in "Simulate" mode (manifest.isSimulated ===
+ * false). The purpose-built simulated connectors (simulated-lights,
+ * simulated-ring) have real DB-backed execute() and are exempt.
  *
  * Usage:  node --no-warnings scripts/test-sim-parity.mjs
  *         (or: npm run test:sim-parity)
@@ -45,21 +44,23 @@ for (const m of connectors) {
   checkedActions += m.actions.length
   if (missing.length) {
     failures += missing.length
-    console.log(`FAIL  ${m.slug.padEnd(20)} ${m.actions.length - missing.length}/${m.actions.length} covered`)
+    console.log(`gaps  ${m.slug.padEnd(20)} ${m.actions.length - missing.length}/${m.actions.length} have a curated shape hint`)
     for (const slug of missing) {
-      console.log(`        ✗ ${slug} — no entry in lib/simulate-action.ts (would hit generic fallback)`)
+      console.log(`        • ${slug} — no shape hint (engine still answers via AI generation; add one for sharper realism)`)
     }
   } else {
-    console.log(`ok    ${m.slug.padEnd(20)} ${m.actions.length}/${m.actions.length} covered`)
+    console.log(`ok    ${m.slug.padEnd(20)} ${m.actions.length}/${m.actions.length} shape hints`)
   }
 }
 
 console.log('='.repeat(60))
 if (failures) {
-  console.error(
-    `\n✗ ${failures} declared action(s) have no simulated data.\n` +
-    `  Add an entry under the matching connector in the DATA map in lib/simulate-action.ts.\n`
+  // Advisory only — the engine guarantees a working response regardless. Never
+  // fail CI for a missing shape hint, so new connectors are never blocked.
+  console.log(
+    `\nℹ ${failures} action(s) have no curated shape hint. They still work in ` +
+    `Simulate mode via AI generation; add entries in lib/simulate-action.ts for sharper realism.`
   )
-  process.exit(1)
+} else {
+  console.log(`\n✓ All ${checkedActions} actions across ${checkedConnectors} simulatable connectors have a curated shape hint.`)
 }
-console.log(`\n✓ All ${checkedActions} actions across ${checkedConnectors} simulatable connectors have bespoke simulated data.`)

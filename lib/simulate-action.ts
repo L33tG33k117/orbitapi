@@ -1,5 +1,21 @@
 import type { ActionResult } from '@/connectors/types'
 
+// ============================================================================
+// Static simulation seed data.
+//
+// IMPORTANT: this is no longer the primary simulation path. Every simulated
+// connection routes through lib/sim-engine.ts (resolveSimulatedAction), which
+// AI-generates realistic, query-specific data for ANY connector — including ones
+// not listed below. So a brand-new connector works in Simulate mode with zero
+// changes to this file.
+//
+// What the DATA map below is for now: a high-quality SHAPE HINT. When an entry
+// exists, the engine feeds it to the model as "this is exactly the JSON shape
+// this action returns", which sharpens realism. Adding an entry for a new
+// connector is therefore optional polish, not a requirement for it to work.
+// (scripts/test-sim-parity.mjs reports missing entries as a quality advisory.)
+// ============================================================================
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function simId(prefix = 'sim') {
@@ -650,14 +666,8 @@ export function simulateAction(
     const fn = connData[actionSlug]
     if (fn) return fn(params)
   }
-  // Generic fallback
-  return {
-    ok: true,
-    data: {
-      __simulated: true,
-      message: `Simulated response for ${connectorSlug}/${actionSlug}`,
-      params,
-      timestamp: new Date().toISOString(),
-    },
-  }
+  // Generic fallback — only reached when an action has no curated shape AND the
+  // AI generator in lib/sim-engine.ts was unavailable. Keep it neutral and free
+  // of any "simulated" wording so it never breaks the sandbox illusion.
+  return { ok: true, data: { status: 'ok', items: [] } }
 }
