@@ -14,6 +14,7 @@ import { SkillDeleteButton } from './skill-delete-button'
 import { SkillToggle } from './skill-toggle'
 import { SectionIntro } from '@/components/section-intro'
 import { PageHero } from '@/components/page-hero'
+import { getBuiltinBundle } from '@/lib/bundle-registry'
 
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ groupId?: string }> }) {
   const { groupId } = await searchParams
@@ -43,7 +44,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [{ data: skills }, { data: groups }, { data: recentRuns }] = await Promise.all([
+  const [{ data: skills }, { data: groups }, { data: recentRuns }, { data: installs }] = await Promise.all([
     admin
       .from('skills')
       .select('*, group:groups(id, name, color)')
@@ -60,7 +61,21 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
       .eq('workspace_id', membership.workspace_id)
       .gte('started_at', sevenDaysAgo)
       .limit(500),
+    admin
+      .from('bundle_installations')
+      .select('bundle_slug, created_resources')
+      .eq('workspace_id', membership.workspace_id),
   ])
+
+  // Provenance: which installed bundle created each skill, so bundle output is
+  // recognizable here ("where did my bundle go?" → it's these skills).
+  const bundleOfSkill: Record<string, string> = {}
+  for (const inst of installs ?? []) {
+    const created = inst.created_resources as { skills?: string[] } | null
+    const label = getBuiltinBundle(inst.bundle_slug)?.name
+      ?? inst.bundle_slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+    for (const id of created?.skills ?? []) bundleOfSkill[id] = label
+  }
 
   const healthMap: Record<string, { ok: number; fail: number }> = {}
   for (const run of recentRuns ?? []) {
@@ -137,7 +152,14 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
                 {s.name[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">{s.name}</p>
+                <p className="font-medium text-sm flex items-center gap-2">
+                  <span className="truncate">{s.name}</span>
+                  {bundleOfSkill[s.id] && (
+                    <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-medium border border-violet-500/20">
+                      📦 {bundleOfSkill[s.id]}
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {g ? g.name : 'No group'}
                   {s.schedule ? ` · ${s.autonomy === 'autonomous' ? 'polls' : 'runs'} ${scheduleLabel(s.schedule)}` : ''}

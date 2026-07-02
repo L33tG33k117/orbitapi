@@ -9,6 +9,16 @@ import { toast } from 'sonner'
 import { Webhook, Plus, Copy, Play, ChevronDown, ChevronUp, Trash2, RefreshCw } from 'lucide-react'
 
 interface Item { id: string; name: string }
+
+// Common inbound hooks people actually wire up — used as one-click form recipes.
+const RECIPES: { label: string; name: string; event: string }[] = [
+  { label: '💳 Stripe: payment received', name: 'Stripe payments', event: 'stripe_payment_received' },
+  { label: '🐙 GitHub: issue opened', name: 'GitHub issues', event: 'github_issue_opened' },
+  { label: '📝 Typeform: new response', name: 'Typeform responses', event: 'typeform_response' },
+  { label: '🛒 Shopify: new order', name: 'Shopify orders', event: 'shopify_order_created' },
+  { label: '📅 Calendly: meeting booked', name: 'Calendly bookings', event: 'calendly_meeting_booked' },
+  { label: '📮 Mailchimp: new subscriber', name: 'Mailchimp subscribers', event: 'mailchimp_subscribed' },
+]
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Endpoint = any
 
@@ -57,6 +67,30 @@ export function WebhooksClient({ initialEndpoints, skills, playbooks }: { initia
     <div className="space-y-4">
       {creating ? (
         <form onSubmit={create} className="border rounded-xl p-4 bg-card space-y-3">
+          {/* Recipes: one click fills the form for the most common inbound hooks,
+              so nobody has to invent an endpoint config from a blank slate. */}
+          <div className="space-y-1.5">
+            <Label>Start from a recipe</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {RECIPES.map(r => (
+                <button
+                  key={r.event}
+                  type="button"
+                  onClick={() => { setName(r.name); setTargetType('event'); setEventName(r.event) }}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    eventName === r.event && name === r.name
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground hover:border-muted-foreground/40'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              A recipe just pre-fills the fields — point the other app&apos;s webhook at the URL you get, and you&apos;re done.
+            </p>
+          </div>
           <div className="space-y-1.5"><Label htmlFor="wname">Name</Label>
             <Input id="wname" value={name} onChange={e => setName(e.target.value)} placeholder="Lodgify booking webhook" required autoFocus /></div>
           <div className="space-y-1.5"><Label htmlFor="wtype">On delivery</Label>

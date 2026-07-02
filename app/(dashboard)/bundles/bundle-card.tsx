@@ -55,6 +55,11 @@ export function BundleCard(b: BundleCardData) {
           {b.isAdmin && (b.installed ? (
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-500"><Check className="h-3.5 w-3.5" /> Installed</span>
+              {b.skills.length > 0 && (
+                <Button size="sm" variant="secondary" onClick={() => router.push('/skills')} className="gap-1">
+                  <Zap className="h-3 w-3" /> Open skills
+                </Button>
+              )}
               <button onClick={uninstall} disabled={removing} className="text-xs text-muted-foreground hover:text-destructive underline underline-offset-2 disabled:opacity-50">
                 {removing ? 'Removing…' : 'Remove'}
               </button>
