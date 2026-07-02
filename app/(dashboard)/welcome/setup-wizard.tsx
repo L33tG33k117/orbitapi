@@ -1,10 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Lightbulb, Bell, Check, ArrowRight, Sparkles, Loader2, Zap, Plug } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Markdown } from '@/components/markdown'
+
+// Shown while the first run executes (~30s). The run endpoint is synchronous,
+// so these are honest descriptions of the phases, cycled on a timer to keep
+// the wait feeling alive.
+const RUN_PHASES = [
+  'Waking up your skill…',
+  'Connecting to the demo tool…',
+  'Reading the device data…',
+  'Thinking about what it found…',
+  'Writing your report…',
+]
 
 // Two zero-config simulated connectors the wizard can spin up instantly — no API
 // keys, real demo data. Each carries the persona for the starter skill so step 2
@@ -41,6 +53,22 @@ export function SetupWizard() {
   const [starter, setStarter] = useState<Starter | null>(null)
   const [skillId, setSkillId] = useState<string | null>(null)
   const [ran, setRan] = useState(false)
+  const [report, setReport] = useState<string | null>(null)
+  const [phase, setPhase] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+  const running = busy && step === 2
+
+  // Cycle the phase line + elapsed seconds while the first run executes.
+  useEffect(() => {
+    if (!running) { setPhase(0); setElapsed(0); return }
+    const t0 = Date.now()
+    const iv = setInterval(() => {
+      setElapsed(Math.round((Date.now() - t0) / 1000))
+      setPhase(p => (p + 1 < RUN_PHASES.length ? p + 1 : p))
+    }, 6000)
+    const tick = setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 1000)
+    return () => { clearInterval(iv); clearInterval(tick) }
+  }, [running])
 
   async function connect(s: Starter) {
     setBusy(true); setError(null)
@@ -102,6 +130,13 @@ export function SetupWizard() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.message ?? data.error ?? 'The run failed.'); return }
+      // Fetch the run's final report so the payoff shows right here, inline.
+      try {
+        const runsRes = await fetch(`/api/skills/${skillId}/runs`)
+        const runs = await runsRes.json()
+        const latest = Array.isArray(runs) ? runs[0] : null
+        if (latest?.prompt) setReport(latest.prompt as string)
+      } catch { /* report is a bonus — the success state works without it */ }
       setRan(true)
     } catch {
       setError('Network error. Please try again.')
@@ -209,23 +244,49 @@ export function SetupWizard() {
               Run the skill now. It&apos;ll read your demo {starter?.label.toLowerCase()} and report what it sees —
               this is exactly what an automated run does, just triggered by you.
             </p>
-            <Button onClick={runSkill} disabled={busy} className="w-full">
-              {busy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Running…</> : <>Run my skill ▷</>}
-            </Button>
+            {busy ? (
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  {RUN_PHASES[phase]}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A real AI agent is doing real work — the first run usually takes about 30 seconds. ({elapsed}s)
+                </p>
+              </div>
+            ) : (
+              <>
+                <Button onClick={runSkill} disabled={busy} className="w-full">
+                  Run my skill ▷
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center">Takes about 30 seconds — you&apos;ll see the result right here.</p>
+              </>
+            )}
           </div>
         )}
 
-        {/* Done */}
+        {/* Done — show the actual report so the payoff lands right here */}
         {ran && (
-          <div className="space-y-4 text-center">
-            <div className="mx-auto h-11 w-11 rounded-full bg-emerald-500/15 flex items-center justify-center">
-              <Check className="h-5 w-5 text-emerald-500" />
+          <div className="space-y-4">
+            <div className="text-center space-y-2">
+              <div className="mx-auto h-11 w-11 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <Check className="h-5 w-5 text-emerald-500" />
+              </div>
+              <h2 className="font-semibold text-lg">That&apos;s the whole loop 🎉</h2>
+              <p className="text-sm text-muted-foreground">
+                You connected a tool, created a skill, and ran it. Here&apos;s what your skill just reported:
+              </p>
             </div>
-            <h2 className="font-semibold text-lg">That&apos;s the whole loop 🎉</h2>
-            <p className="text-sm text-muted-foreground">
-              You connected a tool, created a skill, and ran it. See what it did in the run history —
-              or head to your dashboard to connect a real app next.
-            </p>
+            {report ? (
+              <div className="rounded-xl border bg-muted/30 p-4 max-h-64 overflow-y-auto text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Your skill&apos;s report</p>
+                <Markdown text={report} className="text-sm" />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">
+                The run finished — see the full details in the run history.
+              </p>
+            )}
             <div className="flex gap-2 justify-center pt-1">
               {skillId && (
                 <Button onClick={() => router.push(`/skills/${skillId}`)} variant="outline" size="sm">

@@ -7,7 +7,7 @@ import { ExplainerDiagram } from './how-it-works/explainer-diagram'
 import {
   Orbit, Zap, Shield, ArrowRight, CheckCircle,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
-  ShieldAlert, Package, Webhook, Shuffle, ScrollText, Clock, Gauge, ClipboardCheck,
+  ShieldAlert, Package, Webhook, ScrollText, Clock, Gauge, ClipboardCheck,
 } from 'lucide-react'
 
 export default async function RootPage() {
@@ -137,6 +137,11 @@ export default async function RootPage() {
           </div>
         </div>
 
+        {/* The terminal above is the product's real behavior — say so */}
+        <p className="max-w-3xl mx-auto mt-5 text-center text-xs text-white/35">
+          Not a mockup — every connector has a Simulated mode, so this exact conversation works before you hand over a single API key.
+        </p>
+
         {/* Connector logos strip */}
         <div className="max-w-3xl mx-auto mt-10 flex items-center justify-center gap-3 flex-wrap">
           {['crowdstrike', 'netsuite', 'servicenow', 'slack', 'teams', 'sendgrid', 'twilio', 'pagerduty'].map(slug => (
@@ -168,7 +173,7 @@ export default async function RootPage() {
                 step: '01',
                 icon: Plug,
                 title: 'Connect your APIs',
-                desc: 'Browse 100+ pre-built connectors. Pick the tools you use — security, ERP, communication, cloud — and connect them in one click with guided credential setup.',
+                desc: 'Browse 100+ pre-built connectors — security, ERP, communication, cloud. Start any of them in Simulated mode with realistic demo data, and add real credentials only when you’re ready.',
                 color: 'text-[oklch(0.7_0.2_264)]',
                 bg: 'bg-[oklch(0.46_0.19_264)]/10 border-[oklch(0.46_0.19_264)]/20',
               },
@@ -258,10 +263,10 @@ export default async function RootPage() {
                 tag: 'New',
               },
               {
-                icon: Shuffle,
-                title: 'Cross-API data mapping',
-                desc: 'Map fields between apps so data flows automatically — a record in one system becomes the right action in another, no glue code required.',
-                tag: 'New',
+                icon: Rocket,
+                title: 'Simulated mode — try before you trust',
+                desc: 'Every connector works as a realistic sandbox: create tickets, query invoices, flip lights — the data stays consistent, and nothing real can break. Convert to live credentials whenever you’re ready.',
+                tag: 'Only on OrbitAPI',
               },
               {
                 icon: ScrollText,
