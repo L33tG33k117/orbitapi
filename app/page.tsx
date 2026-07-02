@@ -5,10 +5,10 @@ import { CosmicBackground } from '@/components/cosmic-background'
 import { Reveal } from '@/components/reveal'
 import { ExplainerDiagram } from './how-it-works/explainer-diagram'
 import { HeroTerminal } from './hero-terminal'
-import { MarketingFooter } from '@/components/marketing/site-chrome'
+import { MarketingNav, MarketingFooter } from '@/components/marketing/site-chrome'
 import { getMarketingStats } from '@/lib/marketing-stats'
 import {
-  Orbit, Zap, Shield, ArrowRight, CheckCircle, Play,
+  Orbit, Zap, Shield, ArrowRight, CheckCircle, Play, Bot,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
   ShieldAlert, Package, Webhook, ScrollText, Clock, Gauge, ClipboardCheck,
 } from 'lucide-react'
@@ -29,35 +29,8 @@ export default async function RootPage() {
       {/* All content sits above the cosmos canvas (z-0) */}
       <div className="relative z-10">
 
-      {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/8 backdrop-blur-md bg-[oklch(0.07_0.02_268)]/80">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/20">
-              <Orbit className="h-4 w-4 text-[oklch(0.7_0.2_264)]" />
-            </div>
-            <span className="font-bold text-[15px] tracking-tight">OrbitAPI</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-6 text-sm text-white/50">
-            <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <Link href="/integrations" className="hover:text-white transition-colors">Integrations</Link>
-            <Link href="/solutions" className="hover:text-white transition-colors">Solutions</Link>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-            <Link href="/changelog" className="hover:text-white transition-colors">Changelog</Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors">
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[oklch(0.46_0.19_264)] text-white text-sm font-medium hover:bg-[oklch(0.52_0.2_264)] transition-colors"
-            >
-              Launch free <Rocket className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      {/* ── Nav (shared with all marketing pages) ───────────────────────── */}
+      <MarketingNav />
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section className="relative pt-28 pb-20 sm:pt-40 sm:pb-32 px-6">
@@ -205,85 +178,12 @@ export default async function RootPage() {
         </div>
       </section>
 
-      {/* ── Features ────────────────────────────────────────────────────── */}
+      {/* ── Features — architecture + differentiators, consolidated ─────── */}
       <section id="features" className="py-24 px-6 border-t border-white/6">
-        <div className="max-w-6xl mx-auto">
-          <Reveal className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
-              <Globe2 className="h-3 w-3" /> Systems overview
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold">Full-stack mission capabilities</h2>
-            <p className="mt-3 text-white/50 text-base max-w-xl mx-auto">
-              Everything you need to operate your entire tech stack from a single control center.
-            </p>
-          </Reveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                icon: MessageSquare,
-                title: 'Orbit Assistant',
-                desc: 'Command any connected app in plain English. Ask about open invoices, threat detections, or bookings — Orbit answers with real data and chains actions across APIs, not raw JSON.',
-                tag: null,
-              },
-              {
-                icon: ShieldAlert,
-                title: 'Autonomous Playbooks',
-                desc: 'Multi-step workflows that act on their own — assess severity, take action, and escalate for approval only when it matters. Your always-on operator.',
-                tag: 'New',
-              },
-              {
-                icon: Zap,
-                title: 'Skills & smart triggers',
-                desc: 'Turn any workflow into a reusable skill, then run it on a schedule, from a webhook, or on a real-time event. Set it once; it runs the mission for you.',
-                tag: 'New',
-              },
-              {
-                icon: Package,
-                title: 'Bundles & Marketplace',
-                desc: 'Install ready-made packs of connectors, skills, and playbooks in one click — Security SOC, Support Ops, and more — or publish your own.',
-                tag: 'New',
-              },
-              {
-                icon: Rocket,
-                title: 'Simulated mode — try before you trust',
-                desc: 'Every connector works as a realistic sandbox: create tickets, query invoices, flip lights — the data stays consistent, and nothing real can break. Convert to live credentials whenever you’re ready.',
-                tag: 'Only on OrbitAPI',
-              },
-              {
-                icon: ScrollText,
-                title: 'Governed by default',
-                desc: 'Approvals for risky actions, a complete searchable audit trail, and one-click replay with fresh data. Full visibility into every move, human or AI.',
-                tag: null,
-              },
-            ].map(f => {
-              const Icon = f.icon
-              return (
-                <div key={f.title} className="rounded-xl border border-white/8 bg-[oklch(0.10_0.018_268)] p-6 space-y-3 hover:border-[oklch(0.46_0.19_264)]/40 hover:bg-[oklch(0.11_0.02_268)] transition-all card-lift">
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/15">
-                      <Icon className="h-5 w-5 text-[oklch(0.7_0.2_264)]" />
-                    </div>
-                    {f.tag && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[oklch(0.7_0.2_264)]/15 text-[oklch(0.78_0.16_264)]">
-                        {f.tag}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-base">{f.title}</h3>
-                  <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Harmony infographic ─────────────────────────────────────────── */}
-      <section id="harmony" className="py-24 px-6 border-t border-white/6">
         <div className="max-w-6xl mx-auto">
           <Reveal className="text-center mb-14">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 text-white/40 text-xs font-medium mb-4">
-              <Satellite className="h-3 w-3" /> Mission architecture
+              <Globe2 className="h-3 w-3" /> Systems overview
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold">One system, working in harmony</h2>
             <p className="mt-3 text-white/50 text-base max-w-xl mx-auto">
@@ -397,6 +297,46 @@ export default async function RootPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* What the pipeline can't show — the differentiators */}
+          <div className="grid sm:grid-cols-3 gap-5 mt-6">
+            {[
+              {
+                icon: Rocket,
+                title: 'Simulated mode — try before you trust',
+                desc: 'Every connector works as a realistic sandbox: create tickets, query invoices, flip lights — the data stays consistent, and nothing real can break. Convert to live credentials whenever you’re ready.',
+                tag: 'Only on OrbitAPI',
+              },
+              {
+                icon: Package,
+                title: 'Bundles & Marketplace',
+                desc: 'Install ready-made packs of connectors, skills, and playbooks in one click — Security SOC, Support Ops, and more — or publish your own.',
+                tag: 'New',
+              },
+              {
+                icon: Bot,
+                title: 'Connect your AI',
+                desc: 'Already live in Claude, ChatGPT, or Cursor? Plug OrbitAPI in as an MCP server and your assistant can operate your connected tools — reads run instantly, risky actions wait for your approval.',
+                tag: 'New',
+              },
+            ].map(f => {
+              const Icon = f.icon
+              return (
+                <div key={f.title} className="rounded-xl border border-white/8 bg-[oklch(0.10_0.018_268)] p-6 space-y-3 hover:border-[oklch(0.46_0.19_264)]/40 hover:bg-[oklch(0.11_0.02_268)] transition-all card-lift">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/15">
+                      <Icon className="h-5 w-5 text-[oklch(0.7_0.2_264)]" />
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[oklch(0.7_0.2_264)]/15 text-[oklch(0.78_0.16_264)]">
+                      {f.tag}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-base">{f.title}</h3>
+                  <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>

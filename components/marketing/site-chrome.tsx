@@ -16,6 +16,7 @@ export function MarketingNav() {
           <span className="font-bold text-[15px] tracking-tight text-white">OrbitAPI</span>
         </Link>
         <div className="hidden sm:flex items-center gap-6 text-sm text-white/50">
+          <Link href="/#how-it-works" className="hover:text-white transition-colors">How it works</Link>
           <Link href="/integrations" className="hover:text-white transition-colors">Integrations</Link>
           <Link href="/solutions" className="hover:text-white transition-colors">Solutions</Link>
           <Link href="/#pricing" className="hover:text-white transition-colors">Pricing</Link>
