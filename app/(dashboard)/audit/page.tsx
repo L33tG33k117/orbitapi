@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AuditTable } from './audit-table'
 import { PageHero } from '@/components/page-hero'
+import { InsightsTabs } from '@/components/insights-tabs'
 
 export default async function AuditPage() {
   const supabase = await createClient()
@@ -33,6 +34,8 @@ export default async function AuditPage() {
         description="Every action executed through OrbitAPI — who ran it, what happened, and when."
         stats={[{ label: 'recent entries', value: rows.length }]}
       />
+
+      <InsightsTabs />
 
       {rows.length === 0 ? (
         <div className="py-16 text-center border rounded-lg text-muted-foreground">

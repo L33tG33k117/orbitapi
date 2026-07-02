@@ -84,6 +84,16 @@ export default async function RootPage() {
               See how it works
             </a>
           </div>
+
+          {/* The zero-risk trial pitch — nobody else in the market can say this */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/45">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-emerald-400/80" /> Try every connector in Simulated mode — no API keys, nothing real can break
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-emerald-400/80" /> No credits, no model math — agents never stop mid-task
+            </span>
+          </div>
         </div>
 
         {/* Hero terminal mockup */}
@@ -413,7 +423,9 @@ export default async function RootPage() {
               <Rocket className="h-3 w-3" /> Launch plans
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold">Pick your takeoff</h2>
-            <p className="mt-3 text-white/50 text-base">Start free. Upgrade to full autonomy when you&apos;re ready.</p>
+            <p className="mt-3 text-white/50 text-base">
+              Start free — try everything in Simulated mode before a single API key touches the system.
+            </p>
           </Reveal>
           <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5">
             {[
@@ -512,7 +524,9 @@ export default async function RootPage() {
               </div>
             ))}
           </div>
-          <p className="text-center text-xs text-white/25 mt-6">Flat-rate pricing — no per-run or per-task fees · Cancel anytime</p>
+          <p className="text-center text-xs text-white/25 mt-6">
+            Flat-rate pricing — no credits, no per-task fees, no model-tier math. Your automations never pause mid-task. Cancel anytime.
+          </p>
         </div>
       </section>
 
@@ -537,7 +551,7 @@ export default async function RootPage() {
           >
             Launch your free workspace <Rocket className="h-4 w-4" />
           </Link>
-          <p className="text-xs text-white/25">No credit card required · Free forever plan · Cancel anytime</p>
+          <p className="text-xs text-white/25">No credit card · No API keys needed to try · Free forever plan · Cancel anytime</p>
         </Reveal>
       </section>
 

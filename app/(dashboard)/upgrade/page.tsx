@@ -125,7 +125,7 @@ export default async function UpgradePage() {
       <PageHero
         eyebrow="Plan"
         title="Upgrade your plan"
-        description={`You're currently on the ${currentTier} plan.${currentRank < TIER_RANK.pro ? ' Unlock AI-powered automation, skills, and autonomous agents for your team.' : ''}`}
+        description={`You're currently on the ${currentTier} plan.${currentRank < TIER_RANK.pro ? ' Unlock AI-powered automation, skills, and autonomous agents for your team.' : ''} Every plan is flat-rate — no credits, no per-task fees, and your automations never pause mid-task.`}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">

@@ -25,7 +25,16 @@ export async function updateSession(request: NextRequest) {
 
   const url = request.nextUrl.clone()
   const isAuth = url.pathname.startsWith('/login') || url.pathname.startsWith('/signup')
-  const isPublic = url.pathname === '/' || isAuth || url.pathname.startsWith('/api/auth')
+  // Server-to-server routes authenticate themselves (webhook token + HMAC,
+  // Stripe signature, CRON_SECRET, MCP token). External senders have no
+  // Supabase session, so redirecting them to /login breaks them.
+  const isServerToServer = url.pathname.startsWith('/api/hooks/')
+    || url.pathname.startsWith('/api/mcp/')
+    || url.pathname.startsWith('/api/cron/')
+    || url.pathname.startsWith('/api/billing/webhook')
+    || url.pathname.startsWith('/api/webhooks/skills/')
+  const isPublic = url.pathname === '/' || isAuth || isServerToServer
+    || url.pathname.startsWith('/api/auth')
     || url.pathname.startsWith('/privacy')
     || url.pathname.startsWith('/terms')
     || url.pathname.startsWith('/contact')

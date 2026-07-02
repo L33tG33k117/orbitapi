@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ActivityFeed, type ActivityItem } from './activity-feed'
 import { PageHero } from '@/components/page-hero'
+import { InsightsTabs } from '@/components/insights-tabs'
 
 export default async function ActivityPage() {
   const supabase = await createClient()
@@ -97,6 +98,8 @@ export default async function ActivityPage() {
         description="Every run and its result in one place — your assistant, manual actions, and automations (real and simulated)."
         stats={[{ label: 'recent events', value: items.length }]}
       />
+
+      <InsightsTabs />
 
       {items.length === 0 ? (
         <div className="py-16 text-center border rounded-lg text-muted-foreground">

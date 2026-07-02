@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Activity, Zap, Plug, TrendingUp, Shield, AlertCircle, FileDown, CalendarRange } from 'lucide-react'
 import { PageHero } from '@/components/page-hero'
+import { InsightsTabs } from '@/components/insights-tabs'
 
 const RISK_CONFIG = {
   read:        { label: 'Read',        color: 'bg-blue-500',    text: 'text-blue-400' },
@@ -177,6 +178,10 @@ export function UsageClient({ data }: { data: UsageData }) {
               Export PDF
             </button>
           </PageHero>
+        </div>
+
+        <div className="no-print">
+          <InsightsTabs />
         </div>
 
         {/* Date range controls */}

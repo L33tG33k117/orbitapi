@@ -17,20 +17,17 @@ redirect to login correctly; two clean type-checked builds.
 
 ## Findings to consider (not yet changed — product decisions)
 
-1. **Three overlapping "what happened" tabs.** Activity, Audit Log, and Usage all answer
-   "what did the system do." Activity is the friendly feed, Audit is the compliance table,
-   Usage is charts. Recommendation: keep all three but make Activity the default Insights
-   landing and cross-link the other two from it; longer-term consider folding Audit into an
-   "Advanced" toggle on Activity. Non-technical users should never need to choose.
+1. ~~**Three overlapping "what happened" tabs.**~~ **Fixed 2026-07-02:** Activity, Usage,
+   and Audit Log now share an `InsightsTabs` view-switcher under each hero, so they read as
+   three views of one section rather than three competing tabs.
 
-2. **Groups is a concept-tax on the first skill.** Skills require picking a Group, so a new
-   user must learn Groups before their first automation. Recommendation: auto-create a
-   default "Everything" group per workspace (all connections), pre-selected in the skill
-   form. Groups then becomes an optional power feature, not a prerequisite.
+2. ~~**Groups is a concept-tax on the first skill.**~~ **Correction (2026-07-02):** wrong on
+   closer reading — the skill form already defaults to "All my connections" and a group is
+   optional (`skills.group_id` nullable; runner treats no group as all connections). No
+   change needed; Groups is already an optional power feature.
 
-3. **Two different "3-step start" narratives.** The Guide says connect → install a bundle →
-   run; the Welcome wizard says connect demo → create skill → run. Pick one canonical story
-   (suggest the wizard's) and align the Guide.
+3. ~~**Two different "3-step start" narratives.**~~ **Fixed 2026-07-02:** the Guide
+   quick-start now tells the wizard's story — connect (simulated ok) → create a skill → run.
 
 4. **"Admins only" dead ends.** AI Power, Webhooks, and Discover show a bare "Admins only."
    for members. Friendlier: explain what the page does + "ask your workspace admin

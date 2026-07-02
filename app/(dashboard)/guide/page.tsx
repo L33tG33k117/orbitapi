@@ -187,9 +187,9 @@ export default function GuidePage() {
         </div>
         <div className="grid sm:grid-cols-3 gap-4">
           {[
-            { n: 1, t: 'Connect an app', d: 'Add an API connector (or try one in Simulated mode).', href: '/connectors' },
-            { n: 2, t: 'Install a bundle', d: 'Get working playbooks & skills instantly.', href: '/bundles' },
-            { n: 3, t: 'Run it', d: 'Trigger a playbook or just ask the Orbit Assistant.', href: '/chat' },
+            { n: 1, t: 'Connect an app', d: 'Add an API connector — or try one in Simulated mode, no API keys needed.', href: '/connectors' },
+            { n: 2, t: 'Create a skill', d: 'Tell Orbit its job in plain English (or install a ready-made bundle).', href: '/skills' },
+            { n: 3, t: 'Run it', d: 'Trigger the skill, or just ask the Orbit Assistant.', href: '/chat' },
           ].map(s => (
             <Link key={s.n} href={s.href} className="group rounded-xl border bg-card p-4 hover:border-primary/40 transition-colors">
               <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)] text-white flex items-center justify-center text-xs font-bold mb-2">{s.n}</div>
