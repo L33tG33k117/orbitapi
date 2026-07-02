@@ -258,11 +258,9 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside
-        className="orbit-stars w-[236px] hidden lg:flex flex-col h-full shrink-0 bg-sidebar"
-        style={{ borderRight: '1px solid var(--sidebar-border)' }}
-      >
+      {/* Desktop sidebar — no right border; it blends into the deep-space shell
+          background and the floating content panel provides the separation. */}
+      <aside className="orbit-stars w-[236px] hidden lg:flex flex-col h-full shrink-0 bg-sidebar">
         {navInner}
       </aside>
 

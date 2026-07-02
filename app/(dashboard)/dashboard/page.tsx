@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Plug, Zap, Activity, CheckCircle, XCircle, Clock, ChevronRight, Sparkles } from 'lucide-react'
 import { GetStartedChecklist } from '@/components/get-started-checklist'
+import { OrbitVisual } from '@/components/orbit-visual'
 
 const RISK_COLORS: Record<string, string> = {
   read: 'bg-blue-500/10 text-blue-400',
@@ -62,6 +63,7 @@ export default async function DashboardPage() {
     { count: groupsCount },
     { count: conversationsCount },
     { count: skillRunsCount },
+    { data: orbitConnectionsData },
   ] = await Promise.all([
     supabase.from('connections').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
     admin.from('audit_log').select('*', { count: 'exact', head: true })
@@ -78,6 +80,10 @@ export default async function DashboardPage() {
     admin.from('groups').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
     admin.from('conversations').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
     admin.from('skill_runs').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
+    // Feeds the orbital visual in the hero — each connection is a satellite.
+    supabase.from('connections').select('id, label, status')
+      .eq('workspace_id', wsId ?? '').neq('status', 'trashed')
+      .order('created_at').limit(20),
   ])
 
   // Drives the Get Started checklist — each flag reflects real workspace state.
@@ -93,115 +99,80 @@ export default async function DashboardPage() {
   const runs = (recentRuns ?? []) as any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const audit = (recentAudit ?? []) as any[]
+  const orbitConnections = (orbitConnectionsData ?? []) as { id: string; label: string; status: string }[]
   const isEmpty = (connectionCount ?? 0) === 0
+  const needsAttention = orbitConnections.filter(c => /error|fail|expired|invalid|revoked/i.test(c.status)).length
 
   const stats = [
-    {
-      label: 'Connected APIs',
-      value: connectionCount ?? 0,
-      icon: Plug,
-      href: '/connectors',
-      linkLabel: 'Manage',
-      accent: 'from-[oklch(0.46_0.19_264)] to-[oklch(0.6_0.22_264)]',
-      iconColor: 'text-[oklch(0.7_0.2_264)]',
-      iconBg: 'bg-[oklch(0.46_0.19_264)]/10',
-    },
-    {
-      label: 'Actions today',
-      value: actionsToday ?? 0,
-      icon: Activity,
-      href: '/audit',
-      linkLabel: 'View log',
-      accent: 'from-amber-500 to-orange-500',
-      iconColor: 'text-amber-400',
-      iconBg: 'bg-amber-500/10',
-    },
-    {
-      label: 'Active skills',
-      value: enabledSkills ?? 0,
-      icon: Zap,
-      href: '/skills',
-      linkLabel: 'Manage',
-      accent: 'from-emerald-500 to-green-400',
-      iconColor: 'text-emerald-400',
-      iconBg: 'bg-emerald-500/10',
-    },
-    {
-      label: 'Calls this month',
-      value: (callsMonth ?? 0).toLocaleString(),
-      icon: Activity,
-      href: '/usage',
-      linkLabel: 'View usage',
-      accent: 'from-violet-500 to-purple-400',
-      iconColor: 'text-violet-400',
-      iconBg: 'bg-violet-500/10',
-    },
+    { label: 'Connected APIs', value: connectionCount ?? 0, href: '/connectors' },
+    { label: 'Actions today', value: actionsToday ?? 0, href: '/audit' },
+    { label: 'Active skills', value: enabledSkills ?? 0, href: '/skills' },
+    { label: 'Calls this month', value: (callsMonth ?? 0).toLocaleString(), href: '/usage' },
   ]
 
   return (
-    <div className="p-8 space-y-8 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {firstName ? <>Welcome back, <span className="text-gradient">{firstName}</span></> : 'Overview'}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{workspaceName}</p>
-        </div>
-        <Link
-          href="/chat"
-          data-tour="dash-assistant"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--brand-from)] to-[var(--brand-to)] text-white text-sm font-medium transition-all hover:opacity-95 orbit-glow"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          Orbit Assistant
-        </Link>
-      </div>
-
-      {/* Brand-new workspace → offer the guided 3-step setup */}
-      {isEmpty && (
-        <Link
-          href="/welcome"
-          className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/[0.08] to-primary/[0.02] p-4 hover:from-primary/[0.12] transition-colors"
-        >
-          <div className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">New here? Take the 1-minute guided setup</p>
-            <p className="text-xs text-muted-foreground">Connect a demo tool, create a skill, and run it — no API keys needed.</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-primary shrink-0" />
-        </Link>
-      )}
-
-      {/* Stat cards */}
-      <div data-tour="dash-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {stats.map(s => {
-          const Icon = s.icon
-          return (
-            <div key={s.label} className="rounded-xl border bg-card overflow-hidden group hover:shadow-md transition-all duration-200 card-lift">
-              <div className={`h-0.5 w-full bg-gradient-to-r ${s.accent}`} />
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground font-medium">{s.label}</p>
-                  <div className={`h-7 w-7 rounded-lg ${s.iconBg} flex items-center justify-center`}>
-                    <Icon className={`h-3.5 w-3.5 ${s.iconColor}`} />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold tracking-tight">{s.value}</p>
-                <Link
-                  href={s.href}
-                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors group-hover:text-foreground/70"
-                >
-                  {s.linkLabel}
-                  <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-              </div>
+    <div className="p-4 sm:p-8 space-y-8 max-w-6xl">
+      {/* Mission control hero — deep space in both themes, with the workspace's
+          live connections rendered as an orbital system. */}
+      <section className="deep-space-panel relative overflow-hidden rounded-3xl border border-white/10 p-6 sm:p-8 lg:p-10">
+        <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
+          <div className="flex-1 min-w-0 space-y-6 w-full">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">{workspaceName}</p>
+              <h1 className="mt-2 text-3xl lg:text-4xl font-bold tracking-tight text-white">
+                {firstName ? <>Welcome back, <span className="text-gradient">{firstName}</span></> : 'Mission control'}
+              </h1>
+              <p className="mt-2 text-sm text-white/55 max-w-md">
+                {isEmpty
+                  ? 'Your orbit is empty — connect your first app and watch it come alive.'
+                  : needsAttention > 0
+                    ? `${connectionCount} ${connectionCount === 1 ? 'app' : 'apps'} in orbit · ${needsAttention} need${needsAttention === 1 ? 's' : ''} attention`
+                    : `${connectionCount} ${connectionCount === 1 ? 'app' : 'apps'} in orbit · all systems nominal`}
+              </p>
             </div>
-          )
-        })}
-      </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/chat"
+                data-tour="dash-assistant"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--brand-from)] to-[var(--brand-to)] text-white text-sm font-medium transition-all hover:opacity-95 orbit-glow"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Orbit Assistant
+              </Link>
+              {isEmpty ? (
+                <Link
+                  href="/welcome"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  1-minute guided setup
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              ) : (
+                <Link
+                  href="/connectors"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  <Plug className="h-3.5 w-3.5" />
+                  Add a connector
+                </Link>
+              )}
+            </div>
+
+            {/* Live stats — each cell links to its detail page */}
+            <div data-tour="dash-stats" className="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-2xl overflow-hidden border border-white/10 bg-white/10">
+              {stats.map(s => (
+                <Link key={s.label} href={s.href} className="group block bg-[oklch(0.14_0.026_276)]/95 px-4 py-3 hover:bg-[oklch(0.19_0.03_276)] transition-colors">
+                  <p className="text-[11px] font-medium text-white/45 group-hover:text-white/60 transition-colors">{s.label}</p>
+                  <p className="mt-1 text-2xl font-bold tracking-tight text-white tabular-nums font-heading">{s.value}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <OrbitVisual connections={orbitConnections} />
+        </div>
+      </section>
 
       {/* Get started checklist — tracked from real state, dismissible, auto-hides when complete */}
       <GetStartedChecklist state={checklist} />
@@ -210,7 +181,7 @@ export default async function DashboardPage() {
       {!isEmpty && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Recent skill runs */}
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="rounded-2xl border bg-card overflow-hidden">
             <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-2">
                 <Zap className="h-3.5 w-3.5 text-emerald-400" />
@@ -247,7 +218,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Recent API actions */}
-          <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="rounded-2xl border bg-card overflow-hidden">
             <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-2">
                 <Activity className="h-3.5 w-3.5 text-amber-400" />

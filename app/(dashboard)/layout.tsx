@@ -84,7 +84,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    // The shell sits on the deep-space sidebar color in both themes; the app
+    // content floats on top of it as a rounded, elevated panel.
+    <div className="flex h-screen overflow-hidden bg-sidebar">
       <Sidebar
         workspace={membershipResult.data.workspace}
         role={membershipResult.data.role}
@@ -94,16 +96,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
         pendingApprovals={pendingApprovals ?? 0}
         unreadConnectorMessages={unreadConnectorMessages ?? 0}
       />
-      <div className="app-ambiance flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar
-          user={user}
-          role={membershipResult.data.role}
-          workspaceId={membershipResult.data.workspace_id}
-          impersonating={impersonating}
-        />
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 lg:py-2 lg:pr-2">
+        <div className="app-ambiance flex-1 flex flex-col overflow-hidden min-w-0 lg:rounded-2xl lg:border lg:border-white/10 lg:shadow-[0_0_60px_-20px_oklch(0.5_0.2_280/40%)]">
+          <TopBar
+            user={user}
+            role={membershipResult.data.role}
+            workspaceId={membershipResult.data.workspace_id}
+            impersonating={impersonating}
+          />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </div>
       </div>
       <CommandPalette />
       <FloatingAssistant />
