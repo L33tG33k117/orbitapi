@@ -40,6 +40,10 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/contact')
     || url.pathname.startsWith('/demo')
     || url.pathname.startsWith('/how-it-works')
+    || url.pathname.startsWith('/integrations')
+    || url.pathname.startsWith('/solutions')
+    || url.pathname.startsWith('/changelog')
+    || url.pathname.startsWith('/opengraph-image')
 
   if (!user && !isPublic) {
     url.pathname = '/login'

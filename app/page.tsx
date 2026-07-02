@@ -4,8 +4,11 @@ import Link from 'next/link'
 import { CosmicBackground } from '@/components/cosmic-background'
 import { Reveal } from '@/components/reveal'
 import { ExplainerDiagram } from './how-it-works/explainer-diagram'
+import { HeroTerminal } from './hero-terminal'
+import { MarketingFooter } from '@/components/marketing/site-chrome'
+import { getMarketingStats } from '@/lib/marketing-stats'
 import {
-  Orbit, Zap, Shield, ArrowRight, CheckCircle,
+  Orbit, Zap, Shield, ArrowRight, CheckCircle, Play,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
   ShieldAlert, Package, Webhook, ScrollText, Clock, Gauge, ClipboardCheck,
 } from 'lucide-react'
@@ -14,6 +17,8 @@ export default async function RootPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
+
+  const stats = getMarketingStats()
 
   return (
     <div className="min-h-screen bg-[oklch(0.07_0.02_268)] text-white overflow-x-hidden">
@@ -35,8 +40,10 @@ export default async function RootPage() {
           </div>
           <div className="hidden sm:flex items-center gap-6 text-sm text-white/50">
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <Link href="/integrations" className="hover:text-white transition-colors">Integrations</Link>
+            <Link href="/solutions" className="hover:text-white transition-colors">Solutions</Link>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+            <Link href="/changelog" className="hover:text-white transition-colors">Changelog</Link>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors">
@@ -57,7 +64,7 @@ export default async function RootPage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[oklch(0.46_0.19_264)]/40 bg-[oklch(0.46_0.19_264)]/10 text-[oklch(0.75_0.18_264)] text-xs font-medium mb-8">
             <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block shrink-0" />
-            100+ integrations now in orbit
+            AI agents that operate your tools
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight">
             Every API in{' '}
@@ -77,12 +84,12 @@ export default async function RootPage() {
             >
               Begin your mission <ArrowRight className="h-4 w-4" />
             </Link>
-            <a
-              href="#how-it-works"
+            <Link
+              href="/demo"
               className="flex items-center gap-2 px-6 py-3.5 rounded-xl border border-white/15 text-white/80 hover:text-white hover:border-white/30 font-medium text-base transition-colors"
             >
-              See how it works
-            </a>
+              <Play className="h-4 w-4" /> Watch the demo
+            </Link>
           </div>
 
           {/* The zero-risk trial pitch — nobody else in the market can say this */}
@@ -96,61 +103,35 @@ export default async function RootPage() {
           </div>
         </div>
 
-        {/* Hero terminal mockup */}
-        <div className="max-w-3xl mx-auto mt-20 rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-2xl shadow-black/60 animate-float">
-          <div className="flex items-center gap-1.5 px-5 py-3.5 border-b border-white/8 bg-[oklch(0.11_0.02_268)]">
-            <span className="h-3 w-3 rounded-full bg-red-500/60" />
-            <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
-            <span className="h-3 w-3 rounded-full bg-green-500/60" />
-            <span className="ml-4 text-xs text-white/30 font-mono">Orbit Assistant — Mission Control</span>
-          </div>
-          <div className="p-4 sm:p-6 space-y-5 text-xs sm:text-sm font-mono">
-            <div className="flex gap-3 items-start">
-              <span className="text-[oklch(0.7_0.2_264)] shrink-0 mt-0.5">you</span>
-              <span className="text-[oklch(0.7_0.2_264)] shrink-0 mt-0.5">→</span>
-              <span className="text-white/80">Show open critical invoices in NetSuite over $50k, then email me a summary and post to Teams</span>
-            </div>
-            <div className="flex gap-3 items-start">
-              <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5 font-semibold">orbit</span>
-              <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5">→</span>
-              <div className="text-white/70 space-y-2.5 flex-1">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md bg-[oklch(0.46_0.19_264)]/15 border border-[oklch(0.46_0.19_264)]/20 text-[oklch(0.72_0.18_264)]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.7_0.2_264)] animate-pulse inline-block shrink-0" />
-                    Querying NetSuite → list_open_invoices
-                  </span>
-                </div>
-                <p className="text-white/75">Found <strong className="text-white">3 invoices</strong> — $247,800 total. Acme Corp ($120k, 14d overdue), TechVentures ($89k, 7d), GlobalSystems ($38.8k, 3d).</p>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse inline-block shrink-0" />
-                    Sending via SendGrid → send_alert_email
-                  </span>
-                  <span className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse inline-block shrink-0" />
-                    Posting to Teams → send_alert
-                  </span>
-                </div>
-                <p className="text-[oklch(0.78_0.12_200)]">✓ Email sent · Teams channel notified · 3 actions across 3 APIs in 2.3s</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* The terminal above is the product's real behavior — say so */}
-        <p className="max-w-3xl mx-auto mt-5 text-center text-xs text-white/35">
-          Not a mockup — every connector has a Simulated mode, so this exact conversation works before you hand over a single API key.
-        </p>
+        {/* Interactive hero terminal — visitor picks a mission, watches it play */}
+        <HeroTerminal />
 
         {/* Connector logos strip */}
         <div className="max-w-3xl mx-auto mt-10 flex items-center justify-center gap-3 flex-wrap">
           {['crowdstrike', 'netsuite', 'servicenow', 'slack', 'teams', 'sendgrid', 'twilio', 'pagerduty'].map(slug => (
-            <div key={slug} className="h-8 w-8 rounded-lg overflow-hidden opacity-60 hover:opacity-100 transition-opacity" title={slug}>
+            <Link key={slug} href={`/integrations/${slug}`} className="h-8 w-8 rounded-lg overflow-hidden opacity-60 hover:opacity-100 transition-opacity" title={slug}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/logos/${slug}.svg`} alt={slug} className="h-full w-full object-cover" />
+            </Link>
+          ))}
+          <Link href="/integrations" className="text-xs text-white/30 hover:text-white/70 transition-colors ml-1">
+            + {stats.total - 8} more →
+          </Link>
+        </div>
+
+        {/* Real numbers, straight from the catalog the app runs on */}
+        <div className="max-w-3xl mx-auto mt-12 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { n: String(stats.total), label: 'connectors in the catalog' },
+            { n: `${stats.actions}+`, label: 'ready-to-run actions' },
+            { n: String(stats.bundles), label: 'one-click bundles' },
+            { n: '0', label: 'API keys needed to try it all' },
+          ].map(s => (
+            <div key={s.label} className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3.5 text-center">
+              <p className="text-2xl font-extrabold text-white">{s.n}</p>
+              <p className="text-[11px] text-white/40 mt-0.5">{s.label}</p>
             </div>
           ))}
-          <span className="text-xs text-white/30 ml-1">+ 95 more</span>
         </div>
       </section>
 
@@ -535,6 +516,52 @@ export default async function RootPage() {
         </div>
       </section>
 
+      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
+      <section id="faq" className="py-24 px-6 border-t border-white/6">
+        <div className="max-w-3xl mx-auto">
+          <Reveal className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold">Before you ask</h2>
+            <p className="mt-3 text-white/50 text-base">The questions everyone has before their first launch.</p>
+          </Reveal>
+          <div className="space-y-3">
+            {[
+              {
+                q: 'Can I really try it without connecting anything real?',
+                a: `Yes — that's the point of Simulated mode. Every available connector can spin up as a realistic sandbox with consistent demo data: query invoices, create tickets, contain endpoints. No API keys, no accounts on other services, and nothing real can break. When you're ready, swap in live credentials on the same connection.`,
+              },
+              {
+                q: 'What stops the AI from doing something destructive?',
+                a: 'Guardrails are built into the execution layer, not left to the AI\'s judgment. Write and destructive actions can be gated behind human approval — they queue up and run only after you approve. Every single action lands in a searchable audit trail, and simulated connections physically cannot touch real systems.',
+              },
+              {
+                q: 'Which AI does it use?',
+                a: 'OrbitAPI runs on frontier Claude models from Anthropic. You choose the AI Power level per task — Economy for routine checks, Maximum for complex missions — without managing API keys, tokens, or model names yourself.',
+              },
+              {
+                q: 'How is this different from Zapier, Make, or n8n?',
+                a: 'Those tools make you build the flowchart: every step, every branch, every field mapping. In OrbitAPI you state the goal in plain English and the AI plans the steps across your tools — and can re-plan when reality doesn\'t match the happy path. Plus: try-before-you-trust Simulated mode and human-approval gates that flowchart tools don\'t have.',
+              },
+              {
+                q: 'Are my API keys safe?',
+                a: 'Credentials are stored in a dedicated secrets vault, are only decrypted server-side at the moment an action executes, and are never included in AI prompts or shown back in the UI. You can revoke a connection at any time.',
+              },
+              {
+                q: 'Do I need a credit card to start?',
+                a: 'No. The Free plan needs no card and doesn\'t expire — it includes Simulated mode, up to 3 connected apps, and trial AI credits to run real missions. Paid plans are flat-rate with no per-task fees, and you can cancel anytime.',
+              },
+            ].map(item => (
+              <details key={item.q} className="group rounded-xl border border-white/8 bg-[oklch(0.10_0.018_268)] open:border-[oklch(0.46_0.19_264)]/40 transition-colors">
+                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none px-5 py-4 text-sm font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
+                  {item.q}
+                  <span className="text-white/30 group-open:rotate-45 transition-transform text-lg leading-none shrink-0">+</span>
+                </summary>
+                <p className="px-5 pb-5 text-sm text-white/55 leading-relaxed">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ───────────────────────────────────────────────────── */}
       <section className="py-28 px-6 border-t border-white/6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
@@ -547,8 +574,8 @@ export default async function RootPage() {
             Ready to enter orbit?
           </h2>
           <p className="text-white/50 text-lg">
-            Join teams already using OrbitAPI to run autonomous security response,
-            financial reporting, and cross-system operations — on autopilot.
+            {stats.total} connectors, {stats.actions}+ actions, and an AI operator that plans the work for you —
+            with every risky move gated behind your approval. Your first mission takes about 60 seconds.
           </p>
           <Link
             href="/signup"
@@ -560,53 +587,8 @@ export default async function RootPage() {
         </Reveal>
       </section>
 
-      {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/6 py-12 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-8 mb-10">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[oklch(0.46_0.19_264)]/20">
-                  <Orbit className="h-3.5 w-3.5 text-[oklch(0.7_0.2_264)]" />
-                </div>
-                <span className="text-sm font-bold">OrbitAPI</span>
-              </div>
-              <p className="text-xs text-white/35 max-w-xs leading-relaxed">
-                Mission control for your modern tech stack. Connect, automate, and command your APIs with AI.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 text-sm">
-              <div className="space-y-3">
-                <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">Product</p>
-                <div className="space-y-2">
-                  <a href="#features" className="block text-white/45 hover:text-white transition-colors">Features</a>
-                  <a href="#how-it-works" className="block text-white/45 hover:text-white transition-colors">How it works</a>
-                  <a href="#pricing" className="block text-white/45 hover:text-white transition-colors">Pricing</a>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">Account</p>
-                <div className="space-y-2">
-                  <Link href="/login" className="block text-white/45 hover:text-white transition-colors">Sign in</Link>
-                  <Link href="/signup" className="block text-white/45 hover:text-white transition-colors">Create account</Link>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <p className="text-white/20 text-xs uppercase tracking-widest font-semibold">Legal</p>
-                <div className="space-y-2">
-                  <Link href="/privacy" className="block text-white/45 hover:text-white transition-colors">Privacy policy</Link>
-                  <Link href="/terms" className="block text-white/45 hover:text-white transition-colors">Terms of service</Link>
-                  <Link href="/contact" className="block text-white/45 hover:text-white transition-colors">Contact us</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-white/6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-white/25">© 2026 OrbitAPI. All rights reserved.</p>
-            <p className="text-xs text-white/20">Built for the teams that keep the world running.</p>
-          </div>
-        </div>
-      </footer>
+      {/* ── Footer (shared with all marketing pages) ────────────────────── */}
+      <MarketingFooter />
 
       </div>{/* /content layer */}
     </div>

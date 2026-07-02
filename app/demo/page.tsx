@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
-import { ExplainerReel } from './explainer-reel'
+import { MissionPlayback } from './mission-playback'
 
 export const metadata: Metadata = {
-  title: 'OrbitAPI — in 15 seconds',
-  description: 'A short animated explainer of OrbitAPI: connect every API, command it in plain English, and let it run autonomously.',
+  title: 'OrbitAPI — live mission playback',
+  description:
+    'Watch OrbitAPI run real missions: security response, finance patrol, and support triage — with you as the human in the loop.',
 }
 
-// Standalone, public, full-screen explainer reel — built to be played
-// full-screen and screen-recorded into a shareable clip.
+// Public, full-screen animated demo. One continuous scene (orbit map +
+// synced terminal), not a slideshow — the viewer even clicks the approval.
 export default function DemoPage() {
-  return <ExplainerReel />
+  return <MissionPlayback />
 }
