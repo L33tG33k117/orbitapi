@@ -584,7 +584,15 @@ const DATA: Record<string, Record<string, SimFn>> = {
     get_booking: (p) => ({ ok: true, data: { id: p.booking_id ?? 50001, arrival: past(-2), departure: past(0), guest_name: 'John Smith', total_price: 1200 } }),
     get_availability: () => ({ ok: true, data: [] }),
     get_quote: (p) => ({ ok: true, data: { total: 875, per_night: 125, nights: 7, guests: p.guests ?? 2 } }),
-    list_messages: () => ({ ok: true, data: [] }),
+    list_messages: () => ({ ok: true, data: { threads: [
+      { booking_id: 50001, thread: { uid: 'th_' + simId(), subject: 'Booking #50001 — Beachfront Villa', messages: [
+        { sender: 'John Smith', message: 'Hi! What time is check-in?', created_at: past(1, 2) },
+        { sender: 'Host', message: 'Check-in is anytime after 3pm — the door code is in your arrival guide.', created_at: past(1, 1) },
+      ] } },
+      { booking_id: 50002, thread: { uid: 'th_' + simId(), subject: 'Booking #50002 — Mountain Cabin', messages: [
+        { sender: 'Sarah Johnson', message: 'Is the hot tub available in July?', created_at: past(0, 6) },
+      ] } },
+    ] } }),
     send_message: () => writeOk(),
     create_booking: () => writeOk({ id: Math.floor(Math.random() * 90000) + 50000 }),
     cancel_booking: () => writeOk(),

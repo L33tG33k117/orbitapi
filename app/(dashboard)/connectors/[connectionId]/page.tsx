@@ -159,19 +159,24 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         </section>
       )}
 
+      {/* The "how do I actually use this?" answer, up top where new users look. */}
+      <section className="grid sm:grid-cols-3 gap-3">
+        <Link href={`/connectors/${connectionId}/manual`} className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-1 hover:border-primary/60 hover:bg-primary/10 transition-colors">
+          <p className="text-sm font-semibold flex items-center gap-1.5">▶ Use it now</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">Pick an action, fill in a field or two, and see the answer immediately — like using {connector.name} without logging in.</p>
+        </Link>
+        <Link href="/chat" className="rounded-xl border p-4 space-y-1 hover:border-primary/40 hover:bg-muted/40 transition-colors">
+          <p className="text-sm font-semibold flex items-center gap-1.5">💬 Ask in plain English</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">Orbit Assistant can answer questions like &ldquo;what came in this week?&rdquo; using this connection.</p>
+        </Link>
+        <Link href="/activity" className="rounded-xl border p-4 space-y-1 hover:border-primary/40 hover:bg-muted/40 transition-colors">
+          <p className="text-sm font-semibold flex items-center gap-1.5">🕘 See past answers</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">Every run and result is saved in Activity, so you can come back to a number later.</p>
+        </Link>
+      </section>
+
       {connector.slug === 'simulated-lights' && (
         <SimulatedLightsPanel connectionId={connectionId} initialDevices={devices as never[]} />
-      )}
-
-      {/* Widgets (incl. the Widget Wizard) rely on a real backend; the wizard's
-          preview/generate routes 404 ("Connection not found") for simulated
-          connections, so hide the whole section for sims. */}
-      {!connection.is_simulated && (
-        <WidgetBoard
-          connectionId={connectionId}
-          connectorName={connector.name}
-          isAdmin={isAdmin}
-        />
       )}
 
       <section className="space-y-3">
@@ -192,6 +197,18 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         <h2 className="text-lg font-semibold">Available actions</h2>
         <ActionsList actions={manifest.actions.map(a => ({ slug: a.slug, name: a.name, risk: a.risk }))} />
       </section>
+
+      {/* Widgets (incl. the Widget Wizard) rely on a real backend; the wizard's
+          preview/generate routes 404 ("Connection not found") for simulated
+          connections, so hide the whole section for sims. Deliberately low on the
+          page — it's a power feature, not the main way to use a connector. */}
+      {!connection.is_simulated && (
+        <WidgetBoard
+          connectionId={connectionId}
+          connectorName={connector.name}
+          isAdmin={isAdmin}
+        />
+      )}
 
       {isAdmin && (
         <section className="space-y-3">

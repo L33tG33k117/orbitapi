@@ -40,6 +40,22 @@ redirect to login correctly; two clean type-checked builds.
 6. **Naming consistency win to keep:** sidebar label, page title, and eyebrow now match on
    every tab (e.g. "Groups", not "Connection Groups"). Keep this rule for new pages.
 
+## 2026-07-02 usability pass (from founder walkthrough)
+
+Shipped: connector row actions now read as buttons (icons + fill, stronger outline style
+globally); "Manual" renamed **"Use now"** and promoted as the primary action; Widget Wizard
+moved below Available actions (power feature, not the front door); Available actions grouped
+by topic (Bookings, Guests, …) with collapsible sections when >12 actions; connector detail
+page opens with a 3-card "Use it now / Ask in plain English / See past answers" section;
+Lodgify guest-messages action rewritten to endpoints that actually exist (old one always
+errored on real accounts); run-history error steps now show the actual error + a "how to fix
+it" panel; test-run explainer line; bundle install ends with a "what you got & where it
+lives" screen instead of a toast.
+
+Open ideas from the same walkthrough: badge skills/playbooks with the bundle they came from;
+a "Run" button directly on installed bundle cards (runs its first skill); webhook recipes
+(finding 5).
+
 ## Strong dummy-proofing already in place (keep)
 
 - Approvals risk legend (read/write/destructive in plain words).

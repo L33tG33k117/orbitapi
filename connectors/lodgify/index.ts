@@ -169,20 +169,47 @@ export const lodgifyManifest: ConnectorManifest = {
       slug: 'list_messages',
       name: 'List guest messages',
       description:
-        'Returns guest messages/conversations. ' +
-        'booking_id: filter by booking (optional). limit: max results (default 20).',
+        'Returns guest message threads. Lodgify exposes messages per booking (via the booking\'s ' +
+        'thread), not as one global list. booking_id: read that booking\'s thread. Omit booking_id ' +
+        'to fetch threads for the most recent bookings. limit: max bookings to check (default 5).',
       risk: 'read',
       inputSchema: {
         type: 'object',
         properties: {
-          booking_id: { type: 'integer', description: 'Filter by booking (optional)' },
-          limit:      { type: 'integer', description: 'Max results, default 20' },
+          booking_id: { type: 'integer', description: 'Read this booking\'s message thread (optional)' },
+          limit:      { type: 'integer', description: 'Max recent bookings to check when booking_id is omitted (default 5)' },
         },
       },
+      // Lodgify has no "list all messages" endpoint — the only real path is
+      // booking → thread_uid → GET /v2/messaging/{thread_uid}. (/v1/communication/
+      // messages, used previously, does not exist and always errored.)
       execute: async (creds, params) => {
-        const qs = new URLSearchParams({ limit: String(params.limit ?? 20) })
-        if (params.booking_id) qs.set('bookingId', String(params.booking_id))
-        return lodgifyFetch(creds.api_key, `/v1/communication/messages?${qs}`)
+        const threadFor = async (bookingId: number | string): Promise<{ booking_id: number | string; thread: unknown } | null> => {
+          const booking = await lodgifyFetch(creds.api_key, `/v2/reservations/bookings/${bookingId}`)
+          if (!booking.ok) return null
+          const uid = (booking.data as { thread_uid?: string | null } | null)?.thread_uid
+          if (!uid) return null
+          const thread = await lodgifyFetch(creds.api_key, `/v2/messaging/${uid}`)
+          return thread.ok ? { booking_id: bookingId, thread: thread.data } : null
+        }
+
+        if (params.booking_id) {
+          const t = await threadFor(params.booking_id as number)
+          return { ok: true, data: { threads: t ? [t] : [], note: t ? undefined : 'No message thread found for this booking.' } }
+        }
+
+        const bookings = await lodgifyFetch(creds.api_key, '/v2/reservations/bookings?size=25')
+        if (!bookings.ok) return bookings
+        const items = ((bookings.data as { items?: { id: number }[] } | null)?.items ?? [])
+          .slice(0, Math.min(Number(params.limit ?? 5), 10))
+        const threads = (await Promise.all(items.map(b => threadFor(b.id)))).filter(Boolean)
+        return {
+          ok: true,
+          data: {
+            threads,
+            note: threads.length ? undefined : 'No message threads on the most recent bookings.',
+          },
+        }
       },
     },
     {
@@ -201,11 +228,23 @@ export const lodgifyManifest: ConnectorManifest = {
           message:    { type: 'string', description: 'Message text to send to the guest' },
         },
       },
-      execute: async (creds, params) =>
-        lodgifyFetch(creds.api_key, '/v1/communication/messages', {
+      // Correct v1 path is per-booking. Note: Lodgify support acknowledges the v1
+      // message endpoints can return 200 without delivering — surface that caveat
+      // in the result so the AI/user can verify in the Lodgify inbox.
+      execute: async (creds, params) => {
+        const result = await lodgifyFetch(creds.api_key, `/v1/reservation/booking/${params.booking_id}/messages`, {
           method: 'POST',
-          body: JSON.stringify({ bookingId: params.booking_id, message: params.message }),
-        }),
+          body: JSON.stringify([{ message: params.message, type: 'Owner' }]),
+        })
+        if (!result.ok) return result
+        return {
+          ok: true,
+          data: {
+            ...(typeof result.data === 'object' && result.data !== null ? result.data : { response: result.data }),
+            note: 'Message submitted. Lodgify\'s API can accept a message without delivering it — verify in your Lodgify inbox if it\'s important.',
+          },
+        }
+      },
     },
     {
       slug: 'create_booking',

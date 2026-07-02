@@ -40,6 +40,9 @@ function StepRow({ s }: { s: RunStep }) {
           </span>
         )}
         {s.note && <span className="text-muted-foreground ml-1">— {s.note}</span>}
+        {s.status === 'error' && (s.result as { error?: string } | undefined)?.error && (
+          <p className="text-destructive/80 mt-1 break-words">{String((s.result as { error: string }).error).slice(0, 300)}</p>
+        )}
       </div>
       {s.risk && (
         <Badge variant={s.risk === 'read' ? 'outline' : 'secondary'} className="shrink-0 text-xs">
@@ -96,6 +99,17 @@ function RunCard({ run }: { run: Run }) {
             <p className="text-xs text-muted-foreground py-2">No steps recorded.</p>
           ) : (
             run.steps.map(s => <StepRow key={s.step} s={s} />)
+          )}
+          {run.steps.some(s => s.status === 'error') && (
+            <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1.5">
+              <p className="text-xs font-semibold">A step hit an error — here&apos;s how to fix it</p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+                <li>The red text under the step says what the connected app reported back.</li>
+                <li>If it mentions a key or 401/403, open <a href="/connectors" className="text-primary hover:underline">API Connectors</a> and hit <span className="font-medium text-foreground">Test</span> on that connection — it may need new credentials.</li>
+                <li>Errors on one action don&apos;t stop the skill — it works around them. If this action isn&apos;t essential, you can block it in the skill&apos;s settings.</li>
+                <li>Still stuck? Use the <span className="font-medium text-foreground">Feedback</span> button (top right) — the error details come along automatically.</li>
+              </ul>
+            </div>
           )}
           {run.prompt && (
             <div className="mt-3 pt-3 border-t">
@@ -168,6 +182,12 @@ export function RunHistory({
           {!runnable && <p className="text-sm text-muted-foreground">Add a persona and verify this skill before running it.</p>}
           {runError && <p className="text-sm text-destructive">{runError}</p>}
         </div>
+      )}
+      {isAdmin && autonomy === 'supervised' && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          A test run is a safe rehearsal: it reads real data but only <em>shows</em> what it would change
+          (marked &ldquo;Would&rdquo;), without changing anything.
+        </p>
       )}
 
       {runs.length === 0 ? (

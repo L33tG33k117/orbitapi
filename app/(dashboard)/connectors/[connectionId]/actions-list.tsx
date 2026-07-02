@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 type Risk = 'read' | 'write' | 'destructive'
@@ -13,9 +14,52 @@ const FILTERS: { key: 'all' | Risk; label: string }[] = [
   { key: 'destructive', label: 'Destructive' },
 ]
 
+const VERB_PREFIXES = [
+  'list', 'get', 'search', 'create', 'update', 'delete', 'send', 'add', 'remove',
+  'cancel', 'block', 'run', 'set', 'toggle', 'apply', 'assign', 'change', 'close',
+  'open', 'start', 'stop', 'trigger', 'acknowledge', 'resolve', 'mark', 'merge',
+  'suspend', 'schedule', 'record', 'validate', 'check', 'fetch', 'collect',
+  'isolate', 'release', 'contain', 'lift', 'hide', 'snooze', 'reboot', 'enable',
+  'disable', 'invite', 'kick', 'archive', 'authorize', 'decommission', 'initiate',
+  'abort', 'mitigate', 'reconnect', 'rejoin', 'scan', 'make', 'lookup', 'post', 'reply',
+]
+
+// "list_guest_messages" → "Guest messages"; "get_booking" / "list_bookings" both → "Bookings".
+// Grouping by the thing acted on turns a 40-row flat list into a handful of scannable topics.
+function topicOf(slug: string): string {
+  const words = slug.split(/[_-]/).filter(Boolean)
+  const noun = (words.length > 1 && VERB_PREFIXES.includes(words[0]) ? words.slice(1) : words)
+    .join(' ')
+    .trim() || slug
+  // Normalize singular/plural so get_booking and list_bookings share a group key.
+  const key = noun.endsWith('ies') ? noun.slice(0, -3) + 'y' : noun.endsWith('s') ? noun.slice(0, -1) : noun
+  return key
+}
+
+function displayTopic(key: string): string {
+  const label = key.endsWith('y') ? key.slice(0, -1) + 'ies' : key + 's'
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+function ActionRow({ a }: { a: ActionItem }) {
+  return (
+    <div className="px-4 py-2.5 flex items-center gap-3">
+      <Badge
+        variant={a.risk === 'read' ? 'outline' : a.risk === 'write' ? 'secondary' : 'destructive'}
+        className="text-xs shrink-0 w-20 justify-center"
+      >
+        {a.risk}
+      </Badge>
+      <p className="text-sm font-medium flex-1 min-w-0 truncate">{a.name}</p>
+      <p className="text-xs text-muted-foreground font-mono shrink-0 hidden sm:block">{a.slug}</p>
+    </div>
+  )
+}
+
 export function ActionsList({ actions }: { actions: ActionItem[] }) {
   const [filter, setFilter] = useState<'all' | Risk>('all')
   const [query, setQuery] = useState('')
+  const [openTopics, setOpenTopics] = useState<Record<string, boolean>>({})
 
   const counts = useMemo(() => ({
     all: actions.length,
@@ -29,6 +73,18 @@ export function ActionsList({ actions }: { actions: ActionItem[] }) {
     (filter === 'all' || a.risk === filter) &&
     (!q || a.name.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q)),
   )
+
+  const groups = useMemo(() => {
+    const map = new Map<string, ActionItem[]>()
+    for (const a of visible) {
+      const t = topicOf(a.slug)
+      map.set(t, [...(map.get(t) ?? []), a])
+    }
+    return [...map.entries()].sort((x, y) => y[1].length - x[1].length || x[0].localeCompare(y[0]))
+  }, [visible])
+
+  // Short lists don't need the accordion; grouping earns its keep on big connectors.
+  const grouped = actions.length > 12 && !q
 
   return (
     <div className="space-y-3">
@@ -52,27 +108,39 @@ export function ActionsList({ actions }: { actions: ActionItem[] }) {
           </button>
         ))}
       </div>
-      <div className="border rounded-lg divide-y">
-        {visible.map(a => (
-          <div key={a.slug} className="px-4 py-3 flex items-start gap-3">
-            <Badge
-              variant={a.risk === 'read' ? 'outline' : a.risk === 'write' ? 'secondary' : 'destructive'}
-              className="text-xs mt-0.5 shrink-0"
-            >
-              {a.risk}
-            </Badge>
-            <div>
-              <p className="text-sm font-medium">{a.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 font-mono">{a.slug}</p>
-            </div>
-          </div>
-        ))}
-        {visible.length === 0 && (
-          <p className="px-4 py-3 text-sm text-muted-foreground">
-            {q ? `No actions match “${query.trim()}”.` : `No ${filter} actions.`}
-          </p>
-        )}
-      </div>
+
+      {grouped ? (
+        <div className="border rounded-lg divide-y">
+          {groups.map(([topic, items]) => {
+            const open = openTopics[topic] ?? false
+            return (
+              <div key={topic}>
+                <button
+                  onClick={() => setOpenTopics(o => ({ ...o, [topic]: !open }))}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-left hover:bg-muted/40 transition-colors"
+                >
+                  {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <span className="text-sm font-medium flex-1">{displayTopic(topic)}</span>
+                  <span className="text-xs text-muted-foreground">{items.length} action{items.length !== 1 ? 's' : ''}</span>
+                </button>
+                {open && <div className="divide-y border-t bg-muted/20">{items.map(a => <ActionRow key={a.slug} a={a} />)}</div>}
+              </div>
+            )
+          })}
+          {groups.length === 0 && (
+            <p className="px-4 py-3 text-sm text-muted-foreground">No {filter === 'all' ? '' : filter + ' '}actions.</p>
+          )}
+        </div>
+      ) : (
+        <div className="border rounded-lg divide-y">
+          {visible.map(a => <ActionRow key={a.slug} a={a} />)}
+          {visible.length === 0 && (
+            <p className="px-4 py-3 text-sm text-muted-foreground">
+              {q ? `No actions match “${query.trim()}”.` : `No ${filter} actions.`}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { FlaskConical, Trash2, X, Clock, Zap } from 'lucide-react'
+import { FlaskConical, Trash2, X, Clock, Zap, Settings2, Play, PlugZap } from 'lucide-react'
 
 interface Connection {
   id: string
@@ -195,18 +195,22 @@ export function ConnectionList({
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Link href={`/connectors/${c.id}`}>
-                <Button variant="outline" size="sm">{c.is_simulated ? 'Manage / Convert' : 'Manage'}</Button>
-              </Link>
               <Link href={`/connectors/${c.id}/manual`}>
-                <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5">
-                  <span className="font-mono text-xs">{'>'}_</span>
-                  Manual
+                <Button variant="secondary" size="sm" className="gap-1.5">
+                  <Play className="h-3.5 w-3.5" />
+                  Use now
+                </Button>
+              </Link>
+              <Link href={`/connectors/${c.id}`}>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  {c.is_simulated ? 'Manage / Convert' : 'Manage'}
                 </Button>
               </Link>
               {canManage && (
                 <>
-                  <Button variant="outline" size="sm" disabled={testing === c.id} onClick={() => handleTest(c.id)}>
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled={testing === c.id} onClick={() => handleTest(c.id)}>
+                    <PlugZap className="h-3.5 w-3.5" />
                     {testing === c.id ? 'Testing…' : 'Test'}
                   </Button>
                   <Button

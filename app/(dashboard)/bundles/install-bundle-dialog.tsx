@@ -37,9 +37,15 @@ interface Props {
 // A selection is either reuse an existing connection or add a new one for a slug.
 type Selection = { kind: 'existing'; connectionId: string; connectorSlug: string } | { kind: 'new'; connectorSlug: string }
 
+interface InstallOutcome {
+  created: { connections: string[]; groups: string[]; playbooks: string[]; skills: string[] }
+  needsSetup: { name: string }[]
+}
+
 export function InstallBundleDialog({ slug, bundleName, source, connectors, existingConnections, open, onOpenChange }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [outcome, setOutcome] = useState<InstallOutcome | null>(null)
 
   // Build the option list + default selection for each bundle connector.
   const rows = useMemo(() => connectors.map(c => {
@@ -92,16 +98,68 @@ export function InstallBundleDialog({ slug, bundleName, source, connectors, exis
     const data = await res.json()
     setLoading(false)
     if (!res.ok) { toast.error(data.error ?? 'Install failed'); return }
-    const setup = data.needsSetup ?? []
-    if (setup.length) {
-      toast.success(`Installed. Set up credentials for: ${setup.map((s: { name: string }) => s.name).join(', ')}`, {
-        action: { label: 'Connectors', onClick: () => router.push('/connectors') },
-      })
-    } else {
-      toast.success('Installed — using your existing connectors.')
-    }
-    onOpenChange(false)
+    // Don't just toast-and-vanish: show exactly what the bundle created and
+    // where it now lives, so "where did my bundle go?" never comes up.
+    setOutcome({
+      created: data.created ?? { connections: [], groups: [], playbooks: [], skills: [] },
+      needsSetup: data.needsSetup ?? [],
+    })
     router.refresh()
+  }
+
+  function goTo(path: string) {
+    onOpenChange(false)
+    router.push(path)
+  }
+
+  if (outcome) {
+    const { created, needsSetup } = outcome
+    const rows: { count: number; label: string; where: string; path: string; cta: string }[] = [
+      { count: created.skills.length, label: 'skill', where: 'They live in your Skills tab — open one and hit "Test run" to see it work.', path: '/skills', cta: 'Go to Skills' },
+      { count: created.playbooks.length, label: 'playbook', where: 'Multi-step flows, now in your Playbooks tab.', path: '/playbooks', cta: 'Go to Playbooks' },
+      { count: created.connections.length, label: 'connection', where: 'Added to API Connectors.', path: '/connectors', cta: 'View connectors' },
+      { count: created.groups.length, label: 'group', where: 'A group that scopes this bundle\'s skills to its connections.', path: '/groups', cta: 'View groups' },
+    ].filter(r => r.count > 0)
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500" /> {bundleName} installed</DialogTitle>
+            <DialogDescription>Here&apos;s what it set up and where to find it:</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {rows.map(r => (
+              <div key={r.label} className="rounded-lg border p-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{r.count} {r.label}{r.count !== 1 ? 's' : ''}</p>
+                  <p className="text-xs text-muted-foreground">{r.where}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => goTo(r.path)}>{r.cta}</Button>
+              </div>
+            ))}
+            {rows.length === 0 && (
+              <p className="text-sm text-muted-foreground">Everything was already in place — no new resources needed.</p>
+            )}
+          </div>
+
+          {needsSetup.length > 0 && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/25 p-3 text-xs space-y-1">
+              <p className="font-medium text-amber-500 flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> One more step</p>
+              <p className="text-muted-foreground">
+                {needsSetup.map(s => s.name).join(', ')} still need{needsSetup.length === 1 ? 's' : ''} credentials before the
+                skills can use {needsSetup.length === 1 ? 'it' : 'them'} — add them in API Connectors (or convert to Simulated to try without keys).
+              </p>
+            </div>
+          )}
+
+          <Button onClick={() => goTo(created.skills.length ? '/skills' : '/connectors')} className="w-full gap-2">
+            <Sparkles className="h-4 w-4" /> {created.skills.length ? 'Try a skill now' : 'Finish setup'}
+          </Button>
+        </DialogContent>
+      </Dialog>
+    )
   }
 
   return (
