@@ -2,6 +2,7 @@ import { Check, Zap, Building2, Rocket, Crown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
 import { getWorkspaceFeatures } from '@/lib/workspace-features'
+import { PageHero } from '@/components/page-hero'
 import type { WorkspaceTier } from '@/types'
 
 const TIER_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2, enterprise: 3 }
@@ -120,14 +121,12 @@ export default async function UpgradePage() {
   const currentRank = TIER_RANK[currentTier] ?? 0
 
   return (
-    <div className="p-8 space-y-10 max-w-7xl">
-      <div>
-        <h1 className="text-2xl font-bold">Upgrade your plan</h1>
-        <p className="text-muted-foreground mt-1">
-          You&apos;re currently on the <span className="font-semibold text-foreground capitalize">{currentTier}</span> plan.
-          {currentRank < TIER_RANK.pro && ' Unlock AI-powered automation, skills, and autonomous agents for your team.'}
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-10 max-w-7xl">
+      <PageHero
+        eyebrow="Plan"
+        title="Upgrade your plan"
+        description={`You're currently on the ${currentTier} plan.${currentRank < TIER_RANK.pro ? ' Unlock AI-powered automation, skills, and autonomous agents for your team.' : ''}`}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {tiers.map(tier => {

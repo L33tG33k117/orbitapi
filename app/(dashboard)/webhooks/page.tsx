@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { pageGate } from '@/components/page-gate'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHero } from '@/components/page-hero'
 import { WebhooksClient } from './webhooks-client'
 
 export default async function WebhooksPage() {
@@ -26,14 +27,13 @@ export default async function WebhooksPage() {
   ])
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Webhooks</h1>
-        <p className="text-muted-foreground mt-1">
-          HMAC-signed inbound endpoints. Trigger a skill or playbook, or emit an event that resumes paused
-          playbook runs. Every delivery is logged and replay-testable.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <PageHero
+        eyebrow="Operate"
+        title="Webhooks"
+        description="Give another app a secure URL that instantly kicks off one of your skills or playbooks when something happens. Every delivery is signed, logged, and can be replayed for testing."
+        stats={[{ label: 'endpoints', value: (endpoints ?? []).length }]}
+      />
 
       <SectionIntro id="webhooks" />
       <div data-tour="webhooks">

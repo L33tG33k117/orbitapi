@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHero } from '@/components/page-hero'
 import { CreateGroupForm } from './create-group-form'
 import { GroupDeleteButton } from './group-delete-button'
 
@@ -24,13 +25,13 @@ export default async function GroupsPage() {
     .order('created_at')
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Connection Groups</h1>
-        <p className="text-muted-foreground mt-1">
-          Bundle related connections together. Skills are attached to groups, and the AI only uses APIs in that group.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <PageHero
+        eyebrow="Connect"
+        title="Groups"
+        description="Bundle related connections together. Skills are attached to groups, and the AI only uses APIs in that group."
+        stats={[{ label: 'groups', value: (groups ?? []).length }]}
+      />
 
       <SectionIntro id="groups" />
 

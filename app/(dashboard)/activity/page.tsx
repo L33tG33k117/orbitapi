@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ActivityFeed, type ActivityItem } from './activity-feed'
+import { PageHero } from '@/components/page-hero'
 
 export default async function ActivityPage() {
   const supabase = await createClient()
@@ -89,13 +90,13 @@ export default async function ActivityPage() {
   items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold">Activity</h1>
-        <p className="text-muted-foreground mt-1">
-          Every run and its result in one place — your assistant, manual actions, and automations (real and simulated).
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
+      <PageHero
+        eyebrow="Insights"
+        title="Activity"
+        description="Every run and its result in one place — your assistant, manual actions, and automations (real and simulated)."
+        stats={[{ label: 'recent events', value: items.length }]}
+      />
 
       {items.length === 0 ? (
         <div className="py-16 text-center border rounded-lg text-muted-foreground">

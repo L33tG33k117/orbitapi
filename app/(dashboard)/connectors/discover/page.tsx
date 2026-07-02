@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { pageGate } from '@/components/page-gate'
 import { DiscoverClient } from './discover-client'
+import { PageHeader } from '@/components/page-header'
 
 export default async function DiscoverPage() {
   const supabase = await createClient()
@@ -16,14 +17,12 @@ export default async function DiscoverPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Discover a connector</h1>
-        <p className="text-muted-foreground mt-1">
-          Point Orbit at an API&apos;s OpenAPI spec (or just name it) and it will introspect the schema and
-          propose a connector — actions, methods, and risk classification — ready to request as a build.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <PageHeader
+        eyebrow="Connect"
+        title="Discover a connector"
+        description="Name any app (or paste its API documentation link) and Orbit will map out what it can do and propose a ready-to-build connector for it."
+      />
       <DiscoverClient />
     </div>
   )

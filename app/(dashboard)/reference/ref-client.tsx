@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { Search, ChevronRight, ChevronDown, Play, AlertTriangle, BookOpen, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
+import { PageHero } from '@/components/page-hero'
 
 interface ParamDef {
   type: string
@@ -117,18 +118,18 @@ export function RefClient({ connectors }: { connectors: ConnectorEntry[] }) {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <BookOpen className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold">Connector Actions</h1>
-          </div>
-          <p className="text-muted-foreground text-sm">
-            {connectors.length} connected API{connectors.length !== 1 ? 's' : ''} · {totalActions} available commands
-          </p>
-        </div>
-        <div className="relative w-72 shrink-0">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
+      <PageHero
+        eyebrow="Operate"
+        title="Connector Actions"
+        description="Full, searchable docs for every command your connected APIs can run — and a way to run them directly."
+        stats={[
+          { label: 'connected APIs', value: connectors.length },
+          { label: 'commands', value: totalActions },
+        ]}
+      />
+      <div className="flex justify-end">
+        <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             value={search}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Activity, Zap, Plug, TrendingUp, Shield, AlertCircle, FileDown, CalendarRange } from 'lucide-react'
+import { PageHero } from '@/components/page-hero'
 
 const RISK_CONFIG = {
   read:        { label: 'Read',        color: 'bg-blue-500',    text: 'text-blue-400' },
@@ -139,7 +140,7 @@ export function UsageClient({ data }: { data: UsageData }) {
         }
       `}</style>
 
-      <div className="p-8 space-y-8 max-w-4xl print:p-0 print:max-w-none print:space-y-6">
+      <div className="p-4 sm:p-8 space-y-8 max-w-4xl print:p-0 print:max-w-none print:space-y-6">
 
         {/* Print-only report header */}
         <div className="print-header hidden print:block mb-6 pb-4 border-b-2 border-foreground/20">
@@ -160,19 +161,22 @@ export function UsageClient({ data }: { data: UsageData }) {
         </div>
 
         {/* Page header */}
-        <div className="flex items-start justify-between no-print">
-          <div>
-            <h1 className="text-2xl font-bold">Usage</h1>
-            <p className="text-muted-foreground mt-1 text-sm">{rangeLabel} · {totalConnections} connected APIs</p>
-          </div>
-          <button
-            onClick={exportPDF}
-            data-tour="usage-export"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card text-sm font-medium hover:bg-muted transition-colors"
+        <div className="no-print">
+          <PageHero
+            eyebrow="Insights"
+            title="Usage"
+            description={`${rangeLabel} · ${totalConnections} connected API${totalConnections !== 1 ? 's' : ''}`}
+            stats={[{ label: 'API calls', value: totalCalls.toLocaleString() }]}
           >
-            <FileDown className="h-4 w-4" />
-            Export PDF
-          </button>
+            <button
+              onClick={exportPDF}
+              data-tour="usage-export"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <FileDown className="h-4 w-4" />
+              Export PDF
+            </button>
+          </PageHero>
         </div>
 
         {/* Date range controls */}

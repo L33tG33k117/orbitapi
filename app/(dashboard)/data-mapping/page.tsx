@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHeader } from '@/components/page-header'
 import { Shuffle, ArrowRight } from 'lucide-react'
 
 // Data mapping is parked as "coming soon": people can read what it will do, but
@@ -14,19 +15,16 @@ export default async function DataMappingPage() {
   if (!membership) redirect('/dashboard')
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Data mapping</h1>
-          <span className="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-semibold text-primary">
-            Coming soon
-          </span>
-        </div>
-        <p className="text-muted-foreground mt-1">
-          Sync data between API connectors — e.g. Zendesk tickets → ServiceNow incidents. Orbit proposes the field
-          mappings, previews the transformed record against a live sample, and you approve before automating.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <PageHeader
+        eyebrow="Automate"
+        title="Data mapping"
+        description="Sync data between API connectors — e.g. Zendesk tickets → ServiceNow incidents. Orbit proposes the field mappings, previews the transformed record against a live sample, and you approve before automating."
+      >
+        <span className="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-xs font-semibold text-primary">
+          Coming soon
+        </span>
+      </PageHeader>
 
       {/* Let people read what it will do */}
       <SectionIntro id="data-mapping" />

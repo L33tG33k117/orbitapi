@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Check, X, Clock, AlertTriangle, ShieldAlert, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHero } from '@/components/page-hero'
 
 interface PendingAction {
   id: string
@@ -127,13 +128,13 @@ export default function ApprovalsPage() {
   const pendingCount = actions.filter(a => a.status === 'pending').length
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Approvals</h1>
-        <p className="text-muted-foreground mt-1">
-          When a skill wants to make a change, it queues the action here for your sign-off before it runs.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <PageHero
+        eyebrow="Operate"
+        title="Approvals"
+        description="When a skill wants to make a change, it queues the action here for your sign-off before it runs."
+        stats={[{ label: 'awaiting you', value: loading ? '…' : pendingCount }]}
+      />
 
       <SectionIntro id="approvals" />
 

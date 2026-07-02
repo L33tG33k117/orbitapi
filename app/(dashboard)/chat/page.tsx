@@ -5,6 +5,7 @@ import { hasCapability, requiredTierFor } from '@/lib/entitlements'
 import { FeatureGate } from '@/components/feature-gate'
 import { CONNECTOR_EXAMPLES } from '@/lib/connector-examples'
 import { getAiPower } from '@/lib/ai-power'
+import { Sparkles } from 'lucide-react'
 import { ChatUI } from './chat-ui'
 
 // Build up to 6 starter prompts from the connectors the workspace actually has,
@@ -80,11 +81,15 @@ export default async function ChatPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-8 py-5 border-b shrink-0">
-        <h1 className="text-2xl font-bold">Orbit Assistant</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">
-          Talk to your connected APIs in plain English
-        </p>
+      {/* Slim deep-space strip — the chat itself keeps the vertical space */}
+      <div className="deep-space-panel flex items-center gap-3 px-4 sm:px-8 py-3.5 border-b border-white/10 shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)] shadow-[0_4px_16px_-4px_var(--brand-to)] shrink-0">
+          <Sparkles className="h-4 w-4 text-white" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold tracking-tight text-white leading-tight">Orbit Assistant</h1>
+          <p className="text-white/50 text-xs truncate">Talk to your connected APIs in plain English</p>
+        </div>
       </div>
       <div className="flex-1 overflow-hidden">
         <ChatUI

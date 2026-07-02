@@ -7,7 +7,8 @@ import { MarketplaceInstall } from './marketplace-install'
 import { type ExistingConnection } from '../bundles/install-bundle-dialog'
 import { PublishForm } from './publish-form'
 import { ReviewButtons } from './review-buttons'
-import { Store, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
+import { PageHero } from '@/components/page-hero'
 
 const nameFor = (slug: string, fallback?: string) => getConnector(slug)?.name ?? fallback ?? slug
 function manifestConnectors(manifest: BundleManifest) {
@@ -60,13 +61,13 @@ export default async function MarketplacePage() {
     : { data: [] }
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Store className="h-6 w-6 text-primary" /> Marketplace</h1>
-        <p className="text-muted-foreground mt-1">
-          Install community-built bundles, or publish your own playbooks and skills and earn a revenue share.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-8 max-w-4xl">
+      <PageHero
+        eyebrow="Automate"
+        title="Marketplace"
+        description="Install community-built bundles, or publish your own playbooks and skills and earn a revenue share."
+        stats={[{ label: 'published', value: (approved ?? []).length }]}
+      />
 
       {/* Admin review queue */}
       {superAdmin && (pending ?? []).length > 0 && (

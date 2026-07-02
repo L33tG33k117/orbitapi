@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AuditTable } from './audit-table'
+import { PageHero } from '@/components/page-hero'
 
 export default async function AuditPage() {
   const supabase = await createClient()
@@ -25,11 +26,13 @@ export default async function AuditPage() {
   const rows = (entries ?? []) as any[]
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold">Audit Log</h1>
-        <p className="text-muted-foreground mt-1">Every action executed through OrbitAPI — who ran it, what happened, and when.</p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
+      <PageHero
+        eyebrow="Insights"
+        title="Audit Log"
+        description="Every action executed through OrbitAPI — who ran it, what happened, and when."
+        stats={[{ label: 'recent entries', value: rows.length }]}
+      />
 
       {rows.length === 0 ? (
         <div className="py-16 text-center border rounded-lg text-muted-foreground">

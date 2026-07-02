@@ -10,6 +10,7 @@ import { type ExistingConnection } from './install-bundle-dialog'
 import { BundlesClient } from './bundles-client'
 import { pageGate } from '@/components/page-gate'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHero } from '@/components/page-hero'
 import { Store } from 'lucide-react'
 
 const nameFor = (slug: string, fallback?: string) => getConnector(slug)?.name ?? fallback ?? slug
@@ -75,18 +76,23 @@ export default async function BundlesPage() {
   const fromMarket = (listings ?? []).map(l => enrich(l.manifest as BundleManifest, 'marketplace', installedSlugs.has(l.slug), isAdmin, existingConnections, l.install_count))
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold">Bundles</h1>
-          <p className="text-muted-foreground mt-1">
-            Install a complete, pre-wired solution — API connectors, groups, playbooks, and skills — in one click.
-          </p>
-        </div>
-        <Link href="/marketplace" className="shrink-0 whitespace-nowrap text-sm text-primary hover:underline inline-flex items-center gap-1.5">
-          <Store className="h-3.5 w-3.5" /> Browse marketplace
+    <div className="p-4 sm:p-8 space-y-8 max-w-4xl">
+      <PageHero
+        eyebrow="Automate"
+        title="Bundles"
+        description="Install a complete, pre-wired solution — API connectors, groups, playbooks, and skills — in one click."
+        stats={[
+          { label: 'available', value: builtin.length + fromMarket.length },
+          { label: 'installed', value: installedSlugs.size },
+        ]}
+      >
+        <Link
+          href="/marketplace"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/15 text-white/80 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors whitespace-nowrap"
+        >
+          <Store className="h-3.5 w-3.5" /> Marketplace
         </Link>
-      </div>
+      </PageHero>
 
       <SectionIntro id="bundles" />
 

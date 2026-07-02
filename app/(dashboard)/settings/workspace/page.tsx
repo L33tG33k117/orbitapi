@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { WorkspaceForm } from './workspace-form'
+import { PageHeader } from '@/components/page-header'
 
 export default async function WorkspaceSettingsPage() {
   const supabase = await createClient()
@@ -21,11 +22,12 @@ export default async function WorkspaceSettingsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">Workspace settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your workspace configuration.</p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-2xl">
+      <PageHeader
+        eyebrow="Settings"
+        title="Workspace"
+        description="Manage your workspace configuration."
+      />
       <WorkspaceForm
         workspaceId={workspace.id}
         currentName={workspace.name}

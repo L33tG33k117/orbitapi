@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ProfileForm } from './profile-form'
+import { PageHeader } from '@/components/page-header'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -22,11 +23,12 @@ export default async function ProfilePage() {
   const connectionDeleteLocked = !!ws?.connection_delete_locked
 
   return (
-    <div className="p-8 space-y-8 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold">Profile</h1>
-        <p className="text-muted-foreground mt-1">Manage your account information and password</p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-8 max-w-2xl">
+      <PageHeader
+        eyebrow="Settings"
+        title="Profile"
+        description="Manage your account information and password"
+      />
 
       <ProfileForm
         email={user?.email ?? ''}
