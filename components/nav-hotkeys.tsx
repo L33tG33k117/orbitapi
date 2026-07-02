@@ -83,7 +83,10 @@ export function NavHotkeys() {
   return (
     <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
       <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-      <aside className="relative h-full w-[330px] max-w-[85vw] bg-background border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      {/* Floats inset with rounded corners on desktop to match the app shell's
+          floating panel (otherwise its square corner pokes past the rounded
+          frame and looks cut off). Full-bleed on mobile as before. */}
+      <aside className="relative h-full w-[330px] max-w-[85vw] overflow-hidden bg-background border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 lg:my-2 lg:mr-2 lg:h-[calc(100%-1rem)] lg:rounded-2xl lg:border">
         <header className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <Keyboard className="h-4 w-4 text-primary" />

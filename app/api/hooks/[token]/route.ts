@@ -19,8 +19,9 @@ export async function POST(req: Request, { params }: Params) {
     .eq('token', token)
     .maybeSingle()
 
-  // Don't leak which tokens exist.
-  if (!endpoint || !endpoint.enabled) {
+  // Don't leak which tokens exist. The reserved '__mcp__' row is the MCP
+  // endpoint (served at /api/mcp/{token}), never an inbound webhook.
+  if (!endpoint || !endpoint.enabled || endpoint.name === '__mcp__') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

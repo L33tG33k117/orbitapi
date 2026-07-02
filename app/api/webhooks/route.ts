@@ -21,6 +21,7 @@ export async function GET() {
     .from('webhook_endpoints')
     .select('*')
     .eq('workspace_id', membership.workspace_id)
+    .neq('name', '__mcp__') // reserved row for the MCP endpoint, not a webhook
     .order('created_at', { ascending: false })
 
   return NextResponse.json(data ?? [])

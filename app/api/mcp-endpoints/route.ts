@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateToken } from '@/lib/webhooks'
-import { isMissingTable } from '@/lib/mcp'
+import { generateToken, generateSigningSecret } from '@/lib/webhooks'
+import { MCP_ENDPOINT_NAME } from '@/lib/mcp'
 
-// Manage the workspace's single MCP endpoint. Admin/owner only for writes.
-// If migration 048 hasn't been applied, GET reports { migrationNeeded: true }
-// so the UI can explain instead of erroring.
+// Manage the workspace's single MCP endpoint. It lives as a reserved row in
+// webhook_endpoints (name '__mcp__') so no migration is needed; the webhooks
+// UI and the /api/hooks receiver exclude it. Admin/owner only for writes.
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -24,12 +24,12 @@ export async function GET() {
 
   const admin = createAdminClient()
   const { data, error } = await admin
-    .from('mcp_endpoints')
-    .select('id, token, enabled, created_at, last_used_at')
+    .from('webhook_endpoints')
+    .select('id, token, enabled, created_at')
     .eq('workspace_id', ctx.membership.workspace_id)
+    .eq('name', MCP_ENDPOINT_NAME)
     .maybeSingle()
 
-  if (error && isMissingTable(error)) return NextResponse.json({ migrationNeeded: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ endpoint: data ?? null })
 }
@@ -40,22 +40,35 @@ export async function POST() {
   if (ctx.membership.role === 'member') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const admin = createAdminClient()
-  // Create or rotate: one endpoint per workspace, so upsert on workspace_id.
-  const { data, error } = await admin
-    .from('mcp_endpoints')
-    .upsert(
-      {
-        workspace_id: ctx.membership.workspace_id,
-        token: generateToken(),
-        enabled: true,
-        created_by: ctx.user.id,
-      },
-      { onConflict: 'workspace_id' },
-    )
-    .select('id, token, enabled, created_at, last_used_at')
-    .single()
+  const { data: existing } = await admin
+    .from('webhook_endpoints')
+    .select('id')
+    .eq('workspace_id', ctx.membership.workspace_id)
+    .eq('name', MCP_ENDPOINT_NAME)
+    .maybeSingle()
 
-  if (error && isMissingTable(error)) return NextResponse.json({ migrationNeeded: true }, { status: 503 })
+  // Create or rotate: one MCP endpoint per workspace.
+  const { data, error } = existing
+    ? await admin
+        .from('webhook_endpoints')
+        .update({ token: generateToken(), enabled: true })
+        .eq('id', existing.id)
+        .select('id, token, enabled, created_at')
+        .single()
+    : await admin
+        .from('webhook_endpoints')
+        .insert({
+          workspace_id: ctx.membership.workspace_id,
+          name: MCP_ENDPOINT_NAME,
+          token: generateToken(),
+          signing_secret: generateSigningSecret(), // required column; unused by MCP
+          target_type: 'event',
+          require_signature: false,
+          created_by: ctx.user.id,
+        })
+        .select('id, token, enabled, created_at')
+        .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ endpoint: data })
 }
@@ -67,10 +80,11 @@ export async function DELETE() {
 
   const admin = createAdminClient()
   const { error } = await admin
-    .from('mcp_endpoints')
+    .from('webhook_endpoints')
     .update({ enabled: false })
     .eq('workspace_id', ctx.membership.workspace_id)
+    .eq('name', MCP_ENDPOINT_NAME)
 
-  if (error && !isMissingTable(error)) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

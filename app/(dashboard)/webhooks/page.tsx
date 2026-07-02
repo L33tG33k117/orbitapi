@@ -21,7 +21,7 @@ export default async function WebhooksPage() {
 
   const admin = createAdminClient()
   const [{ data: endpoints }, { data: skills }, { data: playbooks }] = await Promise.all([
-    admin.from('webhook_endpoints').select('*').eq('workspace_id', membership.workspace_id).order('created_at', { ascending: false }),
+    admin.from('webhook_endpoints').select('*').eq('workspace_id', membership.workspace_id).neq('name', '__mcp__').order('created_at', { ascending: false }),
     admin.from('skills').select('id, name').eq('workspace_id', membership.workspace_id).order('name'),
     admin.from('playbooks').select('id, name').eq('workspace_id', membership.workspace_id).order('name'),
   ])

@@ -20,22 +20,21 @@ export interface McpEndpointRow {
   created_by: string
 }
 
-/** Table missing (migration 048 not applied yet) → feature is dormant, not broken. */
-export function isMissingTable(error: { code?: string } | null): boolean {
-  return error?.code === '42P01'
-}
+// The MCP endpoint is stored as a reserved row in webhook_endpoints (name
+// '__mcp__', target_type 'event') so the feature needs no new table / no
+// migration. The webhooks UI and the /api/hooks receiver both exclude it.
+export const MCP_ENDPOINT_NAME = '__mcp__'
 
 export async function getEndpointByToken(token: string): Promise<McpEndpointRow | null> {
   const admin = createAdminClient()
   const { data, error } = await admin
-    .from('mcp_endpoints')
+    .from('webhook_endpoints')
     .select('id, workspace_id, token, enabled, created_by')
     .eq('token', token)
+    .eq('name', MCP_ENDPOINT_NAME)
     .eq('enabled', true)
-    .single()
+    .maybeSingle()
   if (error || !data) return null
-  // Fire-and-forget usage timestamp.
-  void admin.from('mcp_endpoints').update({ last_used_at: new Date().toISOString() }).eq('id', data.id)
   return data as McpEndpointRow
 }
 

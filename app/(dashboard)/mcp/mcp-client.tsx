@@ -10,12 +10,10 @@ interface Endpoint {
   token: string
   enabled: boolean
   created_at: string
-  last_used_at: string | null
 }
 
 export function McpClient({ isAdmin }: { isAdmin: boolean }) {
   const [endpoint, setEndpoint] = useState<Endpoint | null>(null)
-  const [migrationNeeded, setMigrationNeeded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -24,8 +22,7 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
     fetch('/api/mcp-endpoints')
       .then(r => r.json())
       .then(data => {
-        if (data.migrationNeeded) setMigrationNeeded(true)
-        else setEndpoint(data.endpoint ?? null)
+        setEndpoint(data.endpoint ?? null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -42,8 +39,6 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
     if (res.ok) {
       setEndpoint(data.endpoint)
       toast.success(rotate ? 'New URL generated — the old one no longer works' : 'MCP access enabled')
-    } else if (data.migrationNeeded) {
-      setMigrationNeeded(true)
     } else {
       toast.error(data.error ?? 'Something went wrong')
     }
@@ -68,18 +63,6 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
   }
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>
-
-  if (migrationNeeded) {
-    return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-1.5">
-        <p className="text-sm font-semibold text-amber-500">One-time database update needed</p>
-        <p className="text-sm text-muted-foreground">
-          This feature needs migration <span className="font-mono">048_mcp_endpoints.sql</span> applied in the
-          Supabase dashboard (SQL Editor → paste → run). Reload this page afterwards.
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -116,7 +99,6 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <p className="text-xs text-muted-foreground">
               Treat this URL like a password — anyone who has it can read data through your connectors.
-              {endpoint?.last_used_at && <> Last used {new Date(endpoint.last_used_at).toLocaleString()}.</>}
             </p>
             {isAdmin && (
               <div className="flex gap-2">
