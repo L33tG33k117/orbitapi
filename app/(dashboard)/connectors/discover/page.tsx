@@ -3,17 +3,25 @@ import { createClient } from '@/lib/supabase/server'
 import { pageGate } from '@/components/page-gate'
 import { DiscoverClient } from './discover-client'
 import { PageHeader } from '@/components/page-header'
+import { AdminsOnly } from '@/components/admins-only'
 
 export default async function DiscoverPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: membership } = await supabase
-    .from('memberships').select('role').eq('user_id', user!.id).single()
+    .from('memberships').select('workspace_id, role').eq('user_id', user!.id).single()
   if (!membership) redirect('/dashboard')
 
   const gate = await pageGate('discover'); if (gate) return gate
   if (membership.role === 'member') {
-    return <div className="p-8 max-w-3xl"><h1 className="text-2xl font-bold">Discover a connector</h1><p className="text-muted-foreground mt-2">Admins only.</p></div>
+    return (
+      <AdminsOnly
+        workspaceId={membership.workspace_id}
+        eyebrow="Connect"
+        title="Discover a connector"
+        description="This is where admins name any app (or paste its API documentation link) and Orbit maps out what it can do and builds a connector for it."
+      />
+    )
   }
 
   return (

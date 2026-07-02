@@ -5,6 +5,7 @@ import { pageGate } from '@/components/page-gate'
 import { SectionIntro } from '@/components/section-intro'
 import { PageHero } from '@/components/page-hero'
 import { WebhooksClient } from './webhooks-client'
+import { AdminsOnly } from '@/components/admins-only'
 
 export default async function WebhooksPage() {
   const supabase = await createClient()
@@ -16,7 +17,14 @@ export default async function WebhooksPage() {
   const gate = await pageGate('webhooks'); if (gate) return gate
 
   if (membership.role === 'member') {
-    return <div className="p-8 max-w-3xl"><h1 className="text-2xl font-bold">Webhooks</h1><p className="text-muted-foreground mt-2">Admins only.</p></div>
+    return (
+      <AdminsOnly
+        workspaceId={membership.workspace_id}
+        eyebrow="Operate"
+        title="Webhooks"
+        description="This is where admins create secure URLs that let other apps kick off your skills and playbooks automatically when something happens."
+      />
+    )
   }
 
   const admin = createAdminClient()

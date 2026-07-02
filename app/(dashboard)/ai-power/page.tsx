@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getAiPower, TOPUP_PACKS, EFFICIENCY_INFO, EFFICIENCY_ORDER, type Efficiency } from '@/lib/ai-power'
 import { AiPowerClient } from './ai-power-client'
 import { PageHero } from '@/components/page-hero'
+import { AdminsOnly } from '@/components/admins-only'
 
 // Customer-facing AI Power — credits + efficiency. No dollars, tokens, models, or vendor.
 export default async function AiPowerPage() {
@@ -13,7 +14,14 @@ export default async function AiPowerPage() {
     .from('memberships').select('workspace_id, role').eq('user_id', user!.id).single()
   if (!membership) redirect('/dashboard')
   if (membership.role === 'member') {
-    return <div className="p-8 max-w-3xl"><h1 className="text-2xl font-bold">AI Power</h1><p className="text-muted-foreground mt-2">Admins only.</p></div>
+    return (
+      <AdminsOnly
+        workspaceId={membership.workspace_id}
+        eyebrow="Insights"
+        title="AI Power"
+        description="This is where admins see how much AI Power the workspace has left, set how much horsepower skills use, and top up the monthly pool."
+      />
+    )
   }
 
   const power = await getAiPower(membership.workspace_id)

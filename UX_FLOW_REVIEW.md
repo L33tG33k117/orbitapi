@@ -29,9 +29,9 @@ redirect to login correctly; two clean type-checked builds.
 3. ~~**Two different "3-step start" narratives.**~~ **Fixed 2026-07-02:** the Guide
    quick-start now tells the wizard's story — connect (simulated ok) → create a skill → run.
 
-4. **"Admins only" dead ends.** AI Power, Webhooks, and Discover show a bare "Admins only."
-   for members. Friendlier: explain what the page does + "ask your workspace admin
-   (name/email) for access."
+4. ~~**"Admins only" dead ends.**~~ **Fixed 2026-07-02:** AI Power, Webhooks, and Discover
+   now render a shared `AdminsOnly` notice for members — keeps the page header, explains in
+   plain words what the page does, and lists the workspace admins (name + mailto) to ask.
 
 5. **Webhooks setup is still technical past the header.** Consider preset "recipes"
    (Stripe payment received, GitHub issue opened, Typeform response) that pre-fill the

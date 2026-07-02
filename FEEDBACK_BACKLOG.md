@@ -31,7 +31,11 @@ tooltip · webhook usage examples (cURL/PowerShell/Python) · sidebar shortcut h
 
 ## Bigger items to scope
 
-### 1. Per-connector access controls (RBAC) — *raised twice, high signal*
+> **Status update 2026-07-02:** every item below has **shipped** — kept here
+> (struck through) for the record. Only the "other notable single mentions" at
+> the bottom remain open.
+
+### ~~1. Per-connector access controls (RBAC)~~ — ✅ SHIPPED 2026-06-21
 **Ask:** Enable/disable **Read / Write / Destructive** actions per connector
 ("API Connector Controls" with checkboxes), and a "mark connector read-only" toggle.
 **Current state:** We have an action-type *filter* (view only) and per-member
@@ -41,8 +45,11 @@ read/read_write grants, but no per-connector cap on action classes.
 playbook runners (skip/deny actions whose `risk` isn't allowed). UI: checkboxes on
 the connector detail page.
 **Effort:** Medium (1 migration + enforcement in ~4 call sites + UI).
+**Shipped as:** migration 043 `allowed_risk_levels` on connections; enforced in
+`/api/execute`, chat tool builder, skill runner, playbook runner, and MCP
+(`lib/connector-access.ts`); checkboxes on the connector detail page.
 
-### 2. User-facing feedback tracker — *raised by two testers*
+### ~~2. User-facing feedback tracker~~ — ✅ SHIPPED 2026-06-21
 **Ask:** Let users see the feedback they submitted, with a status (Under
 consideration / In development / Implemented + release date).
 **Current state:** `feedback.status` exists (new/acknowledged/actioned) but is
@@ -51,9 +58,11 @@ admin-only; no user view.
 Reviewing → Done), add `GET /api/feedback/mine`, and a "My feedback" list on the
 Help/Guide page (or a small panel in the feedback widget). Optional `released_at`
 column for the "Implemented on" date.
-**Effort:** Small–Medium. **Most shovel-ready of these — good next build.**
+**Effort:** Small–Medium.
+**Shipped as:** "My feedback" tab in the feedback widget (`feedback-button.tsx`)
+with Received / Reviewing / Done labels, backed by `GET /api/feedback`.
 
-### 3. Drag-and-drop Playbook builder — *assessed 2026-06-21; recommend a dedicated build*
+### ~~3. Drag-and-drop Playbook builder~~ — ✅ SHIPPED 2026-06-21 (canvas view, now the default)
 **Ask:** A visual node/arrow editor for playbooks (drag steps, connect them).
 **Current state (verified):** `playbook-detail.tsx` edits an **ordered list** of
 step nodes (add, move up/down, remove); condition nodes branch by referencing
@@ -72,7 +81,7 @@ dedicated, supervised build** — not a rushed unsupervised push. High wow-facto
 **Why not built in this pass:** it needs a dependency decision and design choices
 worth doing with you in the loop; everything else in this list shipped.
 
-### 4. Connection-deletion behavior: per-user vs workspace setting
+### ~~4. Connection-deletion behavior: per-user vs workspace setting~~ — ✅ SHIPPED 2026-06-21
 **Ask:** A tester felt "delete vs trash" is a platform/admin policy, not a personal
 preference (an admin may want to *prevent* users changing it).
 **Current state:** It's a per-user profile preference (`connection_delete_preference`).
@@ -80,6 +89,8 @@ preference (an admin may want to *prevent* users changing it).
 "allow members to override" flag; fall back to per-user only when allowed. Small
 build once the policy is decided.
 **Effort:** Small, but **needs a product call first.**
+**Shipped as:** migration 044 — workspace default + "allow members to override"
+lock, falling back to the per-user preference only when allowed.
 
 ---
 
