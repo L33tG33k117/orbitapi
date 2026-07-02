@@ -129,10 +129,11 @@ export function AdminSidebar({ email, fullName, openReports = 0, newFeedback = 0
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — no right border; it blends into the deep-space shell
+          and the floating content panel provides the separation. */}
       <aside
         className="shrink-0 hidden lg:flex flex-col h-full"
-        style={{ background: 'var(--sidebar)', borderRight: '1px solid var(--sidebar-border)', width: '208px' }}
+        style={{ background: 'var(--sidebar)', width: '208px' }}
       >
         {inner}
       </aside>

@@ -22,7 +22,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    // Same floating-panel shell as the main dashboard: deep-space backdrop,
+    // content elevated as a rounded panel, sidebar blending into the space.
+    <div className="flex h-screen overflow-hidden bg-sidebar">
       <AdminSidebar
         email={profile?.email ?? user.email ?? ''}
         fullName={profile?.full_name ?? null}
@@ -30,16 +32,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         newFeedback={newFeedback ?? 0}
         pendingRequests={pendingRequests ?? 0}
       />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <TopBar
-          user={user}
-          role="owner"
-          workspaceId=""
-          adminInbox
-        />
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 lg:py-2 lg:pr-2">
+        <div className="app-ambiance flex-1 flex flex-col overflow-hidden min-w-0 lg:rounded-2xl lg:border lg:border-white/10 lg:shadow-[0_0_60px_-20px_oklch(0.5_0.2_280/40%)]">
+          <TopBar
+            user={user}
+            role="owner"
+            workspaceId=""
+            adminInbox
+          />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   )

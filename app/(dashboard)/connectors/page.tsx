@@ -9,6 +9,7 @@ import { ConnectionList } from './connection-list'
 import { CatalogGrid } from './catalog-grid'
 import { RequestConnectorForm } from './request-connector-form'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHero } from '@/components/page-hero'
 
 export default async function ConnectorsPage() {
   const supabase = await createClient()
@@ -85,13 +86,16 @@ export default async function ConnectorsPage() {
   )
 
   return (
-    <div className="p-8 space-y-10">
-      <div>
-        <h1 className="text-3xl font-bold">API Connectors</h1>
-        <p className="text-muted-foreground mt-1">
-          A connector is a ready-made link to an app&apos;s API. Browse {catalog.length}+ — connect your security tools, communication platforms, ERP systems, and more.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-10">
+      <PageHero
+        eyebrow="Connect"
+        title="API Connectors"
+        description={`A connector is a ready-made link to an app's API. Browse ${catalog.length}+ — connect your security tools, communication platforms, ERP systems, and more.`}
+        stats={[
+          { label: 'connected', value: realConnectionCount },
+          { label: 'in catalog', value: `${catalog.length}+` },
+        ]}
+      />
 
       <SectionIntro id="connectors" />
 

@@ -13,6 +13,7 @@ import { SkillTemplates } from './skill-templates'
 import { SkillDeleteButton } from './skill-delete-button'
 import { SkillToggle } from './skill-toggle'
 import { SectionIntro } from '@/components/section-intro'
+import { PageHero } from '@/components/page-hero'
 
 export default async function SkillsPage({ searchParams }: { searchParams: Promise<{ groupId?: string }> }) {
   const { groupId } = await searchParams
@@ -69,13 +70,16 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold">Skills</h1>
-        <p className="text-muted-foreground mt-1">
-          AI agents with a specific role. Each skill uses a group&apos;s connections and can run autonomously or in supervised mode.
-        </p>
-      </div>
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <PageHero
+        eyebrow="Automate"
+        title="Skills"
+        description="AI agents with a specific role. Each skill uses a group's connections and can run autonomously or in supervised mode."
+        stats={[
+          { label: 'skills', value: (skills ?? []).length },
+          { label: 'enabled', value: (skills ?? []).filter(s => s.enabled).length },
+        ]}
+      />
 
       <SectionIntro id="skills" />
 
