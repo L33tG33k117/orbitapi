@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Keyboard, X } from 'lucide-react'
 
@@ -80,7 +81,11 @@ export function NavHotkeys() {
 
   const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform)
 
-  return (
+  // Portal to <body>: this component lives inside the TopBar, whose
+  // backdrop-filter (.glass) makes it the containing block for fixed-position
+  // descendants — without the portal the "full-screen" overlay is confined to
+  // the TopBar's 56px strip (same reason FeedbackButton portals its dialog).
+  return createPortal(
     <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
       <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
       {/* Pinned to the viewport edges (top+bottom → definite height). On desktop
@@ -119,6 +124,7 @@ export function NavHotkeys() {
           </section>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   )
 }
