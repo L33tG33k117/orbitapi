@@ -23,6 +23,16 @@ import { quickbooksOnlineManifest } from './quickbooks-online'
 
 import { googleDriveManifest } from './google-drive'
 
+import { devopsConnectors } from './rest/devops'
+import { productivityConnectors } from './rest/productivity'
+import { financeConnectors } from './rest/finance'
+import { crmSupportConnectors } from './rest/crm-support'
+import { communicationConnectors } from './rest/communication'
+import { securityAConnectors } from './rest/security-a'
+import { securityBConnectors } from './rest/security-b'
+import { cloudDataConnectors } from './rest/cloud-data'
+import { opsStrHomeConnectors } from './rest/ops-str-home'
+
 export const connectors: ConnectorManifest[] = [
   lodgifyManifest,
   slackManifest,
@@ -42,6 +52,15 @@ export const connectors: ConnectorManifest[] = [
   eufySecurityManifest,
   quickbooksOnlineManifest,
   googleDriveManifest,
+  ...devopsConnectors,
+  ...productivityConnectors,
+  ...financeConnectors,
+  ...crmSupportConnectors,
+  ...communicationConnectors,
+  ...securityAConnectors,
+  ...securityBConnectors,
+  ...cloudDataConnectors,
+  ...opsStrHomeConnectors,
   simulatedLightsManifest,
   simulatedRingManifest,
 ]

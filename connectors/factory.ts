@@ -34,6 +34,8 @@ export interface RestActionSpec {
   params?: Record<string, ParamSpec>
   /** Fixed query-string params always sent (e.g. { limit: '50' }). */
   staticQuery?: Record<string, string>
+  /** Extra per-action headers (e.g. AWS X-Amz-Target). */
+  headers?: Record<string, string>
   /** Wrap the JSON body: (bodyParams) => actual body. Default: bodyParams as-is. */
   wrapBody?: (body: Record<string, unknown>) => unknown
 }
@@ -131,7 +133,7 @@ function buildAction(spec: RestConnectorSpec, a: RestActionSpec): ActionDef {
         for (const [k, v] of Object.entries(p)) {
           if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v))
         }
-        return restFetch(spec, creds, url.toString(), { method })
+        return restFetch(spec, creds, url.toString(), { method, headers: a.headers })
       }
 
       const body = a.wrapBody ? a.wrapBody(p) : p
@@ -141,10 +143,10 @@ function buildAction(spec: RestConnectorSpec, a: RestActionSpec): ActionDef {
           if (v !== undefined && v !== null) form.set(k, String(v))
         }
         return restFetch(spec, creds, url.toString(), {
-          method, body: form.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          method, body: form.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(a.headers ?? {}) },
         })
       }
-      return restFetch(spec, creds, url.toString(), { method, body: JSON.stringify(body) })
+      return restFetch(spec, creds, url.toString(), { method, body: JSON.stringify(body), headers: a.headers })
     },
   }
 }
