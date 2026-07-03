@@ -31,16 +31,18 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   const body = await req.json()
-  const { label, credentials, testFirst, allowedRiskLevels } = body as {
+  const { label, credentials, testFirst, allowedRiskLevels, allowApiExploration } = body as {
     label?: string
     credentials?: Record<string, string>
     testFirst?: boolean
     allowedRiskLevels?: string[]
+    allowApiExploration?: boolean
   }
 
   const updates: Record<string, unknown> = {}
   if (label) updates.label = label
   if (allowedRiskLevels !== undefined) updates.allowed_risk_levels = normalizeRiskLevels(allowedRiskLevels)
+  if (allowApiExploration !== undefined) updates.allow_api_exploration = !!allowApiExploration
 
   // If new credentials provided, store them
   if (credentials && Object.keys(credentials).length > 0) {

@@ -11,12 +11,33 @@ import { Input } from '@/components/ui/input'
 import { MessageSquarePlus, Trash2, Clock, ChevronLeft, Save, Plug, ArrowRight } from 'lucide-react'
 import { Markdown } from '@/components/markdown'
 import { AiPowerMeter, type AiPowerState } from '@/components/ai-power-meter'
+import { ResultExport } from '@/components/result-export'
+import { toTable } from '@/lib/export-data'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function labelFromToolName(name: string): string {
   const slug = name.split('__').pop() ?? name
   return slug.replace(/_/g, ' ')
+}
+
+// Collect the raw data an assistant message actually fetched, so the user can
+// export the real records (tickets, invoices…) rather than the AI's prose. When
+// several tools ran, keep the one with the most rows — that's the list the user
+// asked for.
+function exportableFromMessage(m: UIMessage): { data: unknown; name: string } | null {
+  let best: { data: unknown; rows: number; name: string } | null = null
+  for (const part of m.parts) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = part as any
+    if (p.type !== 'dynamic-tool' || p.state !== 'output-available') continue
+    const output = p.output
+    if (output == null || typeof output !== 'object') continue
+    if (isPendingOutput(output)) continue
+    const rows = toTable(output).rows.length
+    if (!best || rows > best.rows) best = { data: output, rows, name: labelFromToolName(p.toolName).replace(/\s+/g, '_') }
+  }
+  return best && best.rows > 0 ? { data: best.data, name: best.name } : null
 }
 
 // Turn a conversation into a reusable skill persona (the user's instructions
@@ -289,6 +310,17 @@ function ChatCore({
                 }
                 return null
               })}
+              {/* Export the real records this answer pulled — CSV/Excel/PDF/… */}
+              {m.role !== 'user' && (() => {
+                const ex = exportableFromMessage(m)
+                if (!ex) return null
+                return (
+                  <div className="pt-1.5 mt-1 border-t border-border/40 flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">Save this answer:</span>
+                    <ResultExport data={ex.data} baseName={ex.name} variant="compact" />
+                  </div>
+                )
+              })()}
             </div>
           </div>
         ))}

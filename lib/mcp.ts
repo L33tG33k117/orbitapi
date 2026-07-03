@@ -3,7 +3,7 @@ import { getConnector } from '@/connectors'
 import type { ActionDef } from '@/connectors/types'
 import { resolveCredentials } from '@/lib/credentials'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
-import { riskAllowed } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
 import { createNotification } from '@/lib/notify'
 
 // Core of the MCP surface: turn a workspace's active connections into MCP
@@ -64,7 +64,8 @@ export async function buildTools(workspaceId: string): Promise<{ tools: McpTool[
   const admin = createAdminClient()
   const { data: connections } = await admin
     .from('connections')
-    .select('id, label, is_simulated, allowed_risk_levels, connector:connectors(slug, name)')
+    // '*' so allow_api_exploration flows through even before migration 048.
+    .select('*, connector:connectors(slug, name)')
     .eq('workspace_id', workspaceId)
     .eq('status', 'active')
     .order('created_at')
@@ -81,6 +82,8 @@ export async function buildTools(workspaceId: string): Promise<{ tools: McpTool[
 
     const base = sanitize(conn.label || meta?.name || meta?.slug || 'connector')
     for (const action of manifest.actions) {
+      // Open API exploration can be turned off per connection
+      if (explorationBlocks(conn as { allow_api_exploration?: boolean | null }, action.slug)) continue
       let name = `${base}__${sanitize(action.slug)}`.slice(0, 64)
       // Two connections with the same label: disambiguate with the id prefix.
       if (usedNames.has(name)) name = `${base}_${conn.id.slice(0, 6)}__${sanitize(action.slug)}`.slice(0, 64)

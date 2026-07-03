@@ -9,7 +9,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
-import { riskAllowed } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
@@ -101,6 +101,7 @@ export async function POST(req: Request) {
   type ConnRow = {
     id: string; label: string; status: string; vault_secret_id: string | null;
     workspace_id: string; is_simulated: boolean; allowed_risk_levels: string[] | null;
+    allow_api_exploration?: boolean | null;
     connector: { slug: string; name: string }
   }
 
@@ -153,6 +154,9 @@ export async function POST(req: Request) {
 
       // Per-connector access controls: skip classes this connection has disabled
       if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
+
+      // Open API exploration can be disabled per connection (conn selected via '*')
+      if (explorationBlocks(conn, action.slug)) continue
 
       // Skill blocked actions are never exposed
       if (blockedSlugs.includes(action.slug)) continue

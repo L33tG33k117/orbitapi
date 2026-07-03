@@ -8,7 +8,7 @@ import { createNotification } from '@/lib/notify'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
-import { riskAllowed } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
 
 // ============================================================
 // Foundation A — Playbook execution engine
@@ -74,6 +74,7 @@ type Connection = {
   label: string
   vault_secret_id: string | null
   allowed_risk_levels: string[] | null
+  allow_api_exploration?: boolean | null
   connector: { slug: string; name: string }
 }
 
@@ -705,7 +706,8 @@ async function loadConnections(playbook: LoadedPlaybook): Promise<Connection[]> 
   const admin = createAdminClient()
   const { data } = await admin
     .from('connections')
-    .select('id, label, vault_secret_id, allowed_risk_levels, connector:connectors(slug, name)')
+    // '*' so allow_api_exploration flows through even before migration 048.
+    .select('*, connector:connectors(slug, name)')
     .in('id', ids)
     .eq('status', 'active')
   return (data ?? []) as unknown as Connection[]
@@ -722,6 +724,8 @@ async function buildActionIndex(
     for (const action of manifest.actions) {
       // Per-connector access controls: don't expose disabled action classes
       if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
+      // Open API exploration can be turned off per connection
+      if (explorationBlocks(conn, action.slug)) continue
       index[`${conn.id}__${action.slug}`] = { action, connection: conn }
     }
   }

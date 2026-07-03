@@ -20,3 +20,27 @@ export function normalizeRiskLevels(input: unknown): Risk[] {
   for (const r of arr) if (r === 'write' || r === 'destructive') set.add(r)
   return ALL_RISKS.filter(r => set.has(r))
 }
+
+// The universal "explore_api" action (added by the connector factory) is a
+// read-only escape hatch that can GET any endpoint of a vendor's API. It's
+// governed like every other action by risk class, but an admin may still want to
+// keep the curated shortcuts while disabling open-ended exploration on a
+// sensitive connection (a secrets manager, an identity provider). This flag
+// expresses that. Column absent (migration 048 not applied) or unset ⇒ allowed,
+// so enforcement never bricks a connection it has no policy for.
+export const EXPLORE_ACTION_SLUG = 'explore_api'
+
+export function explorationAllowed(
+  conn: { allow_api_exploration?: boolean | null } | null | undefined,
+): boolean {
+  return conn?.allow_api_exploration !== false
+}
+
+// True when an action should be skipped for a connection purely because open API
+// exploration is turned off. Curated actions are unaffected.
+export function explorationBlocks(
+  conn: { allow_api_exploration?: boolean | null } | null | undefined,
+  actionSlug: string,
+): boolean {
+  return actionSlug === EXPLORE_ACTION_SLUG && !explorationAllowed(conn)
+}

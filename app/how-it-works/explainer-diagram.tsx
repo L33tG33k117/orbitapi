@@ -213,7 +213,7 @@ export function ExplainerDiagram({ embedded = false }: { embedded?: boolean }) {
                     <ellipse cx="12" cy="12" rx="10" ry="4.5" />
                     <ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(60 12 12)" />
                   </svg>
-                  <span className="text-[11px] font-bold text-white leading-none mt-1">Orbit AI</span>
+                  <span className="text-[11px] font-bold text-white leading-none mt-1">OrbitAPI</span>
                 </div>
               </foreignObject>
 

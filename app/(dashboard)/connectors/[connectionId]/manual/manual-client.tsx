@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, Play, Trash2, Save, Download, Copy, Check, ChevronDown, ChevronRight,
-  Clock, BookMarked, AlertTriangle, Terminal, X, Plus,
+  ArrowLeft, Play, Save, Copy, Check, ChevronDown, ChevronRight,
+  AlertTriangle, Terminal, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ResultExport } from '@/components/result-export'
 
 interface ActionParam {
   key: string
@@ -106,27 +107,6 @@ function syntaxHighlight(json: string): string {
       if (/null/.test(match)) return `<span style="color:#94a3b8">${match}</span>`
       return `<span style="color:#fbbf24">${match}</span>`
     })
-}
-
-function toCSV(data: unknown): string | null {
-  if (!Array.isArray(data) || data.length === 0) return null
-  const keys = [...new Set(data.flatMap(r => typeof r === 'object' && r ? Object.keys(r) : []))]
-  const header = keys.map(k => `"${k}"`).join(',')
-  const rows = data.map(r =>
-    keys.map(k => {
-      const v = typeof r === 'object' && r ? (r as Record<string, unknown>)[k] : ''
-      return v === null || v === undefined ? '' : `"${String(v).replace(/"/g, '""')}"`
-    }).join(',')
-  )
-  return [header, ...rows].join('\n')
-}
-
-function downloadFile(content: string, filename: string, type: string) {
-  const blob = new Blob([content], { type })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = filename; a.click()
-  URL.revokeObjectURL(url)
 }
 
 interface Props {
@@ -246,20 +226,6 @@ export function ManualClient({ connectionId, connectionLabel, connectorSlug, con
     setTimeout(() => setCopied(false), 2000)
   }
 
-  function downloadJSON() {
-    if (!result) return
-    const action = result.action
-    downloadFile(JSON.stringify(result.raw, null, 2), `${connectorSlug}_${action}_${Date.now()}.json`, 'application/json')
-  }
-
-  function downloadCSV() {
-    if (!result) return
-    const data = (result.raw as Record<string, unknown>)?.data
-    const csv = toCSV(data)
-    if (!csv) return
-    downloadFile(csv, `${connectorSlug}_${result.action}_${Date.now()}.csv`, 'text/csv')
-  }
-
   function doSave() {
     const parsed = parseInput(input)
     if (!parsed) return
@@ -278,8 +244,6 @@ export function ManualClient({ connectionId, connectionLabel, connectorSlug, con
   }
 
   const resultJSON = result ? JSON.stringify(result.raw, null, 2) : ''
-  const resultData = result ? (result.raw as Record<string, unknown>)?.data : null
-  const canDownloadCSV = Array.isArray(resultData)
 
   const readActions = actions.filter(a => a.risk === 'read')
   const writeActions = actions.filter(a => a.risk === 'write')
@@ -539,7 +503,7 @@ export function ManualClient({ connectionId, connectionLabel, connectorSlug, con
                   <span className="text-[10px] text-[#8b949e]">{result.durationMs}ms</span>
                 )}
               </div>
-              {result && (
+              {result && result.ok && (
                 <div className="flex items-center gap-1">
                   <button
                     onClick={copyResult}
@@ -548,22 +512,7 @@ export function ManualClient({ connectionId, connectionLabel, connectorSlug, con
                     {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                     {copied ? 'Copied' : 'Copy'}
                   </button>
-                  <button
-                    onClick={downloadJSON}
-                    className="flex items-center gap-1 text-[11px] text-[#8b949e] hover:text-[#c9d1d9] px-1.5 py-0.5 rounded transition-colors"
-                  >
-                    <Download className="h-3 w-3" />
-                    JSON
-                  </button>
-                  {canDownloadCSV && (
-                    <button
-                      onClick={downloadCSV}
-                      className="flex items-center gap-1 text-[11px] text-[#8b949e] hover:text-[#c9d1d9] px-1.5 py-0.5 rounded transition-colors"
-                    >
-                      <Download className="h-3 w-3" />
-                      CSV
-                    </button>
-                  )}
+                  <ResultExport data={result.raw} baseName={`${connectorSlug}_${result.action}`} variant="compact" className="!text-[#8b949e] hover:!text-[#c9d1d9]" />
                 </div>
               )}
             </div>

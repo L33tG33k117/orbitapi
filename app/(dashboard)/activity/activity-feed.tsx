@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import {
   RotateCcw, ChevronDown, ChevronRight, MessageSquare, Zap, ShieldAlert, Wrench,
 } from 'lucide-react'
+import { ResultExport } from '@/components/result-export'
 
 export interface ActivityStep {
   step?: number
@@ -106,7 +107,7 @@ function cell(v: unknown): string {
 }
 
 // Friendly, non-technical rendering of an action's result.
-function ResultView({ response, summary }: { response: unknown; summary?: string | null }) {
+function ResultView({ response, summary, exportName }: { response: unknown; summary?: string | null; exportName: string }) {
   const [raw, setRaw] = useState(false)
 
   if (response == null) {
@@ -166,9 +167,12 @@ function ResultView({ response, summary }: { response: unknown; summary?: string
   return (
     <div className="space-y-2">
       {body}
-      <button onClick={() => setRaw(r => !r)} className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground">
-        {raw ? 'Hide raw' : 'View raw'}
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={() => setRaw(r => !r)} className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          {raw ? 'Hide raw' : 'View raw'}
+        </button>
+        <ResultExport data={response} baseName={exportName} variant="compact" />
+      </div>
       {raw && (
         <pre className="text-[10px] bg-background rounded p-2 overflow-x-auto max-h-60 border">{JSON.stringify(response, null, 2)}</pre>
       )}
@@ -259,7 +263,7 @@ function ActivityCard({ item, isAdmin }: { item: ActivityItem; isAdmin: boolean 
             </>
           ) : (
             <>
-              <ResultView response={item.response} summary={item.summary} />
+              <ResultView response={item.response} summary={item.summary} exportName={item.actionSlug ?? item.title ?? 'result'} />
               {item.params && Object.keys(item.params).length > 0 && (
                 <details className="text-xs">
                   <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Inputs</summary>

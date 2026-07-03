@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
-import { riskAllowed } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -47,6 +47,13 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!riskAllowed((conn as any).allowed_risk_levels, action.risk)) {
     return NextResponse.json({ error: `${action.risk} actions are disabled for this connection.` }, { status: 403 })
+  }
+
+  // Open API exploration can be turned off per connection (conn selected with '*',
+  // so the flag is present once migration 048 is applied; absent ⇒ allowed).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (explorationBlocks(conn as any, actionSlug)) {
+    return NextResponse.json({ error: 'Open API exploration is turned off for this connection.' }, { status: 403 })
   }
 
   // Members: check grants

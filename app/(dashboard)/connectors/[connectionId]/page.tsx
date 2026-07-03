@@ -191,6 +191,8 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         connectionId={connectionId}
         initial={(connection as { allowed_risk_levels?: string[] | null }).allowed_risk_levels ?? null}
         canManage={isAdmin}
+        hasExplore={manifest.actions.some(a => a.slug === 'explore_api')}
+        initialExploration={(connection as { allow_api_exploration?: boolean | null }).allow_api_exploration !== false}
       />
 
       <section className="space-y-3">
