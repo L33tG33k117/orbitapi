@@ -122,15 +122,28 @@ export default async function IntegrationPage({ params }: Params) {
       </section>
 
       {/* Actions from the real manifest */}
-      {manifest && manifest.actions.length > 0 && (
+      {manifest && manifest.actions.filter(a => a.slug !== 'explore_api').length > 0 && (
         <section className="pb-16 px-6">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-xl font-bold mb-1.5">{manifest.actions.length} built-in actions</h2>
-            <p className="text-sm text-white/45 mb-6">
-              Every action works in Simulated mode too — guarded actions always require approval before touching anything real.
-            </p>
+            {manifest.actions.some(a => a.slug === 'explore_api') ? (
+              <>
+                <h2 className="text-xl font-bold mb-1.5">{manifest.actions.filter(a => a.slug !== 'explore_api').length} one-click shortcuts — plus the full API</h2>
+                <p className="text-sm text-white/45 mb-6">
+                  These cover the common tasks. Beyond them, OrbitAPI can reach {entry.name}&apos;s <span className="text-white/70">entire API</span> on
+                  request — including all-time history and bulk data its own screens cap or hide. Every action works in Simulated
+                  mode too, and guarded actions always require approval before touching anything real.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold mb-1.5">{manifest.actions.length} built-in actions</h2>
+                <p className="text-sm text-white/45 mb-6">
+                  Every action works in Simulated mode too — guarded actions always require approval before touching anything real.
+                </p>
+              </>
+            )}
             <div className="grid sm:grid-cols-2 gap-2.5">
-              {manifest.actions.map(a => {
+              {manifest.actions.filter(a => a.slug !== 'explore_api').map(a => {
                 const meta = RISK_META[a.risk]
                 const Icon = meta.icon
                 return (

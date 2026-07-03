@@ -11,6 +11,7 @@ import {
   Orbit, Zap, Shield, ArrowRight, CheckCircle, Play, Bot,
   Plug, MessageSquare, Radio, Satellite, Globe2, Rocket,
   ShieldAlert, Package, Webhook, ScrollText, Clock, Gauge, ClipboardCheck,
+  Infinity as InfinityIcon, Database, History, Unlock,
 } from 'lucide-react'
 
 export default async function RootPage() {
@@ -295,6 +296,49 @@ export default async function RootPage() {
                   <span className="flex items-center gap-1.5"><ScrollText className="h-3.5 w-3.5 text-white/40" /> Complete audit trail</span>
                   <span className="flex items-center gap-1.5"><Satellite className="h-3.5 w-3.5 text-white/40" /> One-click replay & rollback</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Flagship differentiator — break past the app's own limits */}
+          <div className="mt-6 rounded-2xl border border-[oklch(0.46_0.19_264)]/30 bg-gradient-to-br from-[oklch(0.13_0.03_264)] to-[oklch(0.09_0.018_268)] p-6 sm:p-8">
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
+              <div className="flex-1 space-y-3">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[oklch(0.7_0.2_264)]/15 text-[oklch(0.78_0.16_264)]">
+                  <Unlock className="h-3 w-3" /> The OrbitAPI difference
+                </span>
+                <h3 className="text-2xl font-bold">See everything the app hides from you</h3>
+                <p className="text-sm text-white/55 leading-relaxed max-w-xl">
+                  An app&apos;s screens only show a slice — the last 90 days, the first 100 rows, this quarter.
+                  But its <span className="text-white font-medium">API holds all of it, from day one</span>. OrbitAPI speaks that
+                  full API for you, so a plain-English question like <span className="text-white/80 italic">&ldquo;pull every invoice
+                  since we started&rdquo;</span> returns the whole history — no exports, no dev, no limits.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {['All-time history, not a 90-day window', 'Bulk data past UI row caps', 'Cross-app joins the apps can’t do'].map(t => (
+                    <span key={t} className="inline-flex items-center gap-1.5 text-xs text-white/70 rounded-md bg-white/5 border border-white/8 px-2.5 py-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-[oklch(0.72_0.18_264)] shrink-0" /> {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="shrink-0 flex md:flex-col gap-3 md:w-44">
+                {[
+                  { icon: History, big: 'All time', small: 'not last 90 days' },
+                  { icon: Database, big: 'Every row', small: 'not the first 100' },
+                  { icon: InfinityIcon, big: 'Full API', small: 'not just the UI' },
+                ].map(s => {
+                  const I = s.icon
+                  return (
+                    <div key={s.big} className="flex-1 rounded-xl border border-white/8 bg-[oklch(0.11_0.02_268)] p-3 flex items-center gap-2.5">
+                      <I className="h-5 w-5 text-[oklch(0.72_0.18_264)] shrink-0" />
+                      <div className="leading-tight">
+                        <p className="text-sm font-semibold">{s.big}</p>
+                        <p className="text-[11px] text-white/45">{s.small}</p>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>

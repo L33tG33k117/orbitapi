@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronDown, ChevronRight, Globe, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 type Risk = 'read' | 'write' | 'destructive'
@@ -56,20 +57,25 @@ function ActionRow({ a }: { a: ActionItem }) {
   )
 }
 
-export function ActionsList({ actions }: { actions: ActionItem[] }) {
+export function ActionsList({ actions, connectorName, connectorSlug }: { actions: ActionItem[]; connectorName?: string; connectorSlug?: string }) {
   const [filter, setFilter] = useState<'all' | Risk>('all')
   const [query, setQuery] = useState('')
   const [openTopics, setOpenTopics] = useState<Record<string, boolean>>({})
 
+  // The universal "reach any endpoint" action is showcased separately as the
+  // headline capability, not buried as one row among the curated shortcuts.
+  const hasExplore = actions.some(a => a.slug === 'explore_api')
+  const curated = actions.filter(a => a.slug !== 'explore_api')
+
   const counts = useMemo(() => ({
-    all: actions.length,
-    read: actions.filter(a => a.risk === 'read').length,
-    write: actions.filter(a => a.risk === 'write').length,
-    destructive: actions.filter(a => a.risk === 'destructive').length,
-  }), [actions])
+    all: curated.length,
+    read: curated.filter(a => a.risk === 'read').length,
+    write: curated.filter(a => a.risk === 'write').length,
+    destructive: curated.filter(a => a.risk === 'destructive').length,
+  }), [curated])
 
   const q = query.trim().toLowerCase()
-  const visible = actions.filter(a =>
+  const visible = curated.filter(a =>
     (filter === 'all' || a.risk === filter) &&
     (!q || a.name.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q)),
   )
@@ -84,10 +90,27 @@ export function ActionsList({ actions }: { actions: ActionItem[] }) {
   }, [visible])
 
   // Short lists don't need the accordion; grouping earns its keep on big connectors.
-  const grouped = actions.length > 12 && !q
+  const grouped = curated.length > 12 && !q
 
   return (
     <div className="space-y-3">
+      {hasExplore && (
+        <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-4 space-y-1.5">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Globe className="h-4 w-4 text-primary" />
+            Full API access — not just the {counts.all} shortcuts below
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            The shortcuts are the common tasks made one-click. But {connectorName ?? 'this app'}&apos;s API can do
+            far more, and OrbitAPI can reach <span className="text-foreground font-medium">any of it</span> — just ask in plain
+            English. This is where OrbitAPI shines: an app&apos;s screens often cap what you see (last 90 days, first 100 rows),
+            while the API holds the full history. Ask for it and OrbitAPI pulls it.
+          </p>
+          <Link href="/chat" className="inline-flex items-center gap-1 text-xs text-primary hover:underline pt-0.5">
+            <Sparkles className="h-3 w-3" /> Try: &ldquo;pull every record since the beginning, not just recent ones&rdquo; →
+          </Link>
+        </div>
+      )}
       <input
         type="search"
         value={query}
@@ -141,6 +164,14 @@ export function ActionsList({ actions }: { actions: ActionItem[] }) {
           )}
         </div>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        Want one of these promoted to a one-click shortcut, or don&apos;t see what you need?{' '}
+        <Link href={`/connectors/requests?connector=${connectorSlug ?? ''}`} className="text-primary hover:underline">
+          Request an action
+        </Link>{' '}
+        — meanwhile, just ask for it in the assistant.
+      </p>
     </div>
   )
 }

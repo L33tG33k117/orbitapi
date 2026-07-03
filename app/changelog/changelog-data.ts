@@ -12,6 +12,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-07-02',
+    title: '100+ integrations, and full-API access on every one',
+    tag: 'New',
+    points: [
+      'The catalog jumped to 100+ connectable apps — GitHub, Stripe, Salesforce, HubSpot, Jira, Notion, Datadog, Okta, Snowflake, Guesty, and many more — each usable instantly in Simulated mode with no keys.',
+      'Every connector now includes full-API access: the built-in shortcuts cover common tasks, but OrbitAPI can reach the app’s entire API on request — so you can pull all-time history and bulk data that the app’s own screens cap or hide.',
+      'Curated actions are grouped by topic and searchable, so even big connectors stay easy to scan.',
+    ],
+  },
+  {
+    date: '2026-07-02',
     title: 'Connect your AI — OrbitAPI becomes an MCP server',
     tag: 'New',
     points: [

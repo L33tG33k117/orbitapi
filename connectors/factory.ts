@@ -174,6 +174,38 @@ export function apiKeyAuth(opts: {
   }
 }
 
+// Every factory connector gets this: read-only access to ANY endpoint of the
+// vendor's API, beyond the curated actions. This is the "unlock the app's full
+// potential" promise — the UI of a tool shows a window (last 90 days, first
+// 100 rows); the API usually has everything, and this action reaches all of it.
+function exploreApiAction(spec: RestConnectorSpec): ActionDef {
+  return {
+    slug: 'explore_api',
+    name: `Advanced: any ${spec.name} data`,
+    risk: 'read',
+    description:
+      `Escape hatch for reads the dedicated actions don't cover: performs a GET against any ` +
+      `${spec.name} API endpoint. Use your knowledge of the ${spec.name} API. ` +
+      `endpoint_path: the path after the API base URL, without a leading slash ` +
+      `(query string allowed, e.g. "scans/123/history?limit=200"). ` +
+      `Prefer the dedicated actions when one fits; use this for historical/bulk data, ` +
+      `pagination beyond defaults, or endpoints not yet wrapped.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        endpoint_path: { type: 'string', description: 'API path after the base URL (no leading slash), e.g. "scans/123/history?limit=200"' },
+      },
+      required: ['endpoint_path'],
+    },
+    execute: async (creds, params) => {
+      const raw = String(params?.endpoint_path ?? '').replace(/^\/+/, '')
+      if (!raw) return { ok: false, error: 'Missing required parameter "endpoint_path".' }
+      if (raw.includes('..') || /^https?:/i.test(raw)) return { ok: false, error: 'endpoint_path must be a relative API path.' }
+      return restFetch(spec, creds, `${baseUrlOf(spec, creds)}/${raw}`, { method: 'GET' })
+    },
+  }
+}
+
 export function defineRestConnector(spec: RestConnectorSpec): ConnectorManifest {
   return {
     slug: spec.slug,
@@ -191,6 +223,6 @@ export function defineRestConnector(spec: RestConnectorSpec): ConnectorManifest 
       const result = await restFetch(spec, creds, url, init)
       return result.ok ? { ok: true, label: spec.testLabel } : { ok: false, error: result.error }
     },
-    actions: spec.actions.map(a => buildAction(spec, a)),
+    actions: [...spec.actions.map(a => buildAction(spec, a)), exploreApiAction(spec)],
   }
 }

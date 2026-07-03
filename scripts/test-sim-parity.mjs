@@ -40,11 +40,14 @@ for (const m of connectors) {
     continue
   }
   checkedConnectors++
-  const missing = m.actions.filter(a => !hasSimulatedData(m.slug, a.slug)).map(a => a.slug)
-  checkedActions += m.actions.length
+  // explore_api is the generic "reach any endpoint" escape hatch — it has no
+  // fixed shape by design, so it's exempt from the shape-hint advisory.
+  const scored = m.actions.filter(a => a.slug !== 'explore_api')
+  const missing = scored.filter(a => !hasSimulatedData(m.slug, a.slug)).map(a => a.slug)
+  checkedActions += scored.length
   if (missing.length) {
     failures += missing.length
-    console.log(`gaps  ${m.slug.padEnd(20)} ${m.actions.length - missing.length}/${m.actions.length} have a curated shape hint`)
+    console.log(`gaps  ${m.slug.padEnd(20)} ${scored.length - missing.length}/${scored.length} have a curated shape hint`)
     for (const slug of missing) {
       console.log(`        • ${slug} — no shape hint (engine still answers via AI generation; add one for sharper realism)`)
     }

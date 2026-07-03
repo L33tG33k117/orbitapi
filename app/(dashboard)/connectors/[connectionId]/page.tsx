@@ -194,8 +194,19 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
       />
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Available actions</h2>
-        <ActionsList actions={manifest.actions.map(a => ({ slug: a.slug, name: a.name, risk: a.risk }))} />
+        <div>
+          <h2 className="text-lg font-semibold">What you can do with {connector.name}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {manifest.actions.some(a => a.slug === 'explore_api')
+              ? <>These are ready-made shortcuts for the most common tasks. They&apos;re not the limit — OrbitAPI can reach {connector.name}&apos;s <span className="text-foreground font-medium">entire API</span>, including historical and bulk data the app&apos;s own screens cap or hide.</>
+              : <>Ready-made shortcuts for {connector.name} — each one a common task made one-click. Ask the assistant in plain English to combine or filter them.</>}
+          </p>
+        </div>
+        <ActionsList
+          actions={manifest.actions.map(a => ({ slug: a.slug, name: a.name, risk: a.risk }))}
+          connectorName={connector.name}
+          connectorSlug={connector.slug}
+        />
       </section>
 
       {/* Widgets (incl. the Widget Wizard) rely on a real backend; the wizard's
