@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
-import { ManualClient } from './manual-client'
+import { RunnerShell } from './runner-shell'
 
 export default async function ManualPage({ params }: { params: Promise<{ connectionId: string }> }) {
   const { connectionId } = await params
@@ -68,7 +68,7 @@ export default async function ManualPage({ params }: { params: Promise<{ connect
     }))
 
   return (
-    <ManualClient
+    <RunnerShell
       connectionId={connectionId}
       connectionLabel={connection.label}
       connectorSlug={meta?.slug ?? ''}

@@ -117,9 +117,10 @@ interface Props {
   connectorCategory: string
   status: string
   actions: ActionDef[]
+  onSimple?: () => void
 }
 
-export function ManualClient({ connectionId, connectionLabel, connectorSlug, connectorName, connectorCategory, status, actions }: Props) {
+export function ManualClient({ connectionId, connectionLabel, connectorSlug, connectorName, connectorCategory, status, actions, onSimple }: Props) {
   const historyKey = `orbit_hist_${connectionId}`
   const savedKey = `orbit_saved_${connectionId}`
 
@@ -263,8 +264,14 @@ export function ManualClient({ connectionId, connectionLabel, connectorSlug, con
           <span className="font-semibold text-sm">{connectionLabel}</span>
           <span className="text-xs text-muted-foreground">{connectorName} · {connectorCategory}</span>
         </div>
+        {onSimple && (
+          <button onClick={onSimple} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-md border px-2 py-1 transition-colors">
+            ← Simple mode
+          </button>
+        )}
         <div className={cn(
-          'flex items-center gap-1.5 ml-auto text-xs font-medium px-2 py-0.5 rounded-full',
+          'flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full',
+          !onSimple && 'ml-auto',
           status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-muted text-muted-foreground'
         )}>
           <div className={cn('h-1.5 w-1.5 rounded-full', status === 'active' ? 'bg-emerald-400' : 'bg-muted-foreground')} />

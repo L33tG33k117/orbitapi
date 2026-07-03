@@ -127,7 +127,7 @@ const SECTIONS: Section[] = [
     example: 'Create an endpoint, copy its URL + signing secret into the source app, and send a test payload to confirm it works.',
   },
   {
-    id: 'reference', title: 'API Reference', icon: BookOpen, href: '/reference',
+    id: 'reference', title: 'Connector Actions', icon: BookOpen, href: '/reference',
     what: 'A live list of every command available across your connected apps, with the parameters each takes — runnable right from the page.',
     use: 'When you want to see (or test) exactly what an app can do.',
     example: 'Find "Slack → send_message", fill in the channel and text, and run it in place.',
