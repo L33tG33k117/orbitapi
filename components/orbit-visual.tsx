@@ -50,7 +50,7 @@ function Satellite({ c }: { c: OrbitConnection }) {
       href={`/connectors/${c.id}`}
       title={`${c.label} — ${c.status} · open`}
       aria-label={`Open ${c.label}`}
-      className="group/sat relative flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[11px] font-bold text-white/90 shadow-[0_0_14px_-2px_oklch(0.6_0.2_280/50%)] transition-transform hover:scale-125 hover:border-white/40 hover:z-10"
+      className="group/sat pointer-events-auto relative flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[11px] font-bold text-white/90 shadow-[0_0_14px_-2px_oklch(0.6_0.2_280/50%)] transition-transform hover:scale-125 hover:border-white/40 hover:z-10"
     >
       {c.slug && imgOk ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -89,7 +89,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
         <div
           key={r}
           aria-hidden
-          className={`absolute rounded-full border ${connections.length === 0 && i === 1 ? 'border-dashed border-white/20' : 'border-white/10'}`}
+          className={`pointer-events-none absolute rounded-full border ${connections.length === 0 && i === 1 ? 'border-dashed border-white/20' : 'border-white/10'}`}
           style={{ inset: CENTER - r }}
         />
       ))}
@@ -103,7 +103,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
         return (
           <div
             key={`ring-${ringIdx}`}
-            className="orbit-ring-spin absolute inset-0"
+            className="orbit-ring-spin pointer-events-none absolute inset-0"
             style={{ '--orbit-duration': `${duration}s` } as React.CSSProperties}
           >
             {members.map((c, i) => {
@@ -133,7 +133,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
                       href="/connectors"
                       title={`${overflow} more — see all connectors`}
                       aria-label={`${overflow} more connectors`}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[10px] font-bold text-white/70 transition-transform hover:scale-125 hover:text-white hover:border-white/40"
+                      className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[10px] font-bold text-white/70 transition-transform hover:scale-125 hover:text-white hover:border-white/40"
                     >
                       +{overflow}
                     </Link>
@@ -146,7 +146,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
       })}
 
       {/* Workspace core */}
-      <div aria-hidden className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <div className="animate-glow-pulse flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)]">
           <Orbit className="h-7 w-7 text-white" />
         </div>

@@ -132,6 +132,23 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         </Badge>
       </div>
 
+      {/* Needs-setup banner — a real connection with no stored credentials can't
+          pull live data yet. This is where you land when you click a "needs setup"
+          app from the dashboard orbit, so make finishing obvious. */}
+      {!connection.is_simulated && !connection.vault_secret_id && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 flex items-start gap-3">
+          <span className="text-lg leading-none">⚙️</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">Finish setting up {connector.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isAdmin
+                ? <>This connection doesn&apos;t have an API key yet, so it can&apos;t pull real data. Add one in <a href="#credentials" className="text-primary hover:underline">Credentials</a> just below.</>
+                : 'This connection still needs an API key before it can pull real data. Ask a workspace admin to finish setting it up.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Convert to Real — shown only for simulated connections */}
       {connection.is_simulated && isAdmin && (
         <ConvertToRealPanel
@@ -144,7 +161,7 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
       )}
 
       {isAdmin && !connection.is_simulated && (
-        <section className="space-y-3">
+        <section id="credentials" className="space-y-3 scroll-mt-6">
           <div>
             <h2 className="text-lg font-semibold">Credentials</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
