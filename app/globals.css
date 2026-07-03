@@ -254,6 +254,10 @@
      labels stay upright. Duration set per-ring via --orbit-duration. */
   .orbit-ring-spin { animation: orbit-spin var(--orbit-duration, 60s) linear infinite; }
   .orbit-counter-spin { animation: orbit-spin var(--orbit-duration, 60s) linear infinite reverse; }
+  /* Freeze the whole system while the user hovers, so moving satellites are
+     easy to aim at and click. */
+  .orbit-system:hover .orbit-ring-spin,
+  .orbit-system:hover .orbit-counter-spin { animation-play-state: paused; }
 }
 
 @keyframes orbit-spin {

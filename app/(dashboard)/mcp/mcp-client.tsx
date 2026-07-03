@@ -82,7 +82,7 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {/* Endpoint control */}
-      <div className="rounded-xl border bg-card p-5 space-y-4">
+      <div data-tour="mcp-endpoint" className="rounded-xl border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
           <h2 className="font-semibold text-sm">Your MCP server URL</h2>

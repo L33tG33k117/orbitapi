@@ -81,7 +81,8 @@ export default async function DashboardPage() {
     admin.from('conversations').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
     admin.from('skill_runs').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId ?? ''),
     // Feeds the orbital visual in the hero — each connection is a satellite.
-    supabase.from('connections').select('id, label, status')
+    // Include the connector slug so each satellite can show the app's real logo.
+    supabase.from('connections').select('id, label, status, connector:connectors(slug)')
       .eq('workspace_id', wsId ?? '').neq('status', 'trashed')
       .order('created_at').limit(20),
   ])
@@ -99,7 +100,14 @@ export default async function DashboardPage() {
   const runs = (recentRuns ?? []) as any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const audit = (recentAudit ?? []) as any[]
-  const orbitConnections = (orbitConnectionsData ?? []) as { id: string; label: string; status: string }[]
+  // Flatten the joined connector slug onto each satellite for the orbital visual.
+  const orbitConnections = (orbitConnectionsData ?? []).map(c => ({
+    id: c.id,
+    label: c.label,
+    status: c.status,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    slug: ((c as any).connector as { slug?: string } | null)?.slug ?? null,
+  })) as { id: string; label: string; status: string; slug: string | null }[]
   const isEmpty = (connectionCount ?? 0) === 0
   const needsAttention = orbitConnections.filter(c => /error|fail|expired|invalid|revoked/i.test(c.status)).length
 

@@ -63,7 +63,7 @@ export function AiPowerClient({
   return (
     <div className="space-y-8">
       {/* Power meter */}
-      <div className={`rounded-2xl border p-5 ${out ? 'border-red-500/40 bg-red-500/5' : low ? 'border-amber-500/30 bg-amber-500/5' : 'border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent'}`}>
+      <div data-tour="aipower-meter" className={`rounded-2xl border p-5 ${out ? 'border-red-500/40 bg-red-500/5' : low ? 'border-amber-500/30 bg-amber-500/5' : 'border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent'}`}>
         <div className="flex items-end justify-between mb-3">
           <div>
             <p className="text-xs text-muted-foreground">{power.isTrial ? 'Free trial AI Power remaining' : 'AI Power remaining this cycle'}</p>

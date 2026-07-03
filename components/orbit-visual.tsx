@@ -1,10 +1,15 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
 import { Orbit } from 'lucide-react'
 
 // The Overview "mission control" visual: the workspace as a glowing core with
 // each connected API rendered as a satellite on a slowly spinning orbit ring.
-// Pure CSS animation (no canvas, no JS) — rings spin via .orbit-ring-spin and
-// each satellite counter-spins so its label stays upright. Reduced-motion users
-// get a static (but still complete) orbital map.
+// Pure CSS animation (no canvas) — rings spin via .orbit-ring-spin and each
+// satellite counter-spins so its logo stays upright. Hovering the system pauses
+// every orbit so a moving satellite is easy to click. Each satellite is a link
+// into that connector's page. Reduced-motion users get a static orbital map.
 //
 // Satellites are placed with three nested transforms:
 //   1. placement — rotate(angle) translateX(radius) puts the chip on the ring
@@ -16,6 +21,7 @@ interface OrbitConnection {
   id: string
   label: string
   status: string
+  slug?: string | null
 }
 
 const SIZE = 320
@@ -35,21 +41,37 @@ function statusDot(status: string) {
   return 'bg-emerald-400'
 }
 
-function Satellite({ label, status }: { label: string; status: string }) {
+// The chip: the connector's real logo (so you can tell at a glance which app it
+// is), falling back to the first letter if the logo is missing.
+function Satellite({ c }: { c: OrbitConnection }) {
+  const [imgOk, setImgOk] = useState(true)
   return (
-    <div
-      title={`${label} — ${status}`}
-      className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[11px] font-bold text-white/90 shadow-[0_0_14px_-2px_oklch(0.6_0.2_280/50%)]"
+    <Link
+      href={`/connectors/${c.id}`}
+      title={`${c.label} — ${c.status} · open`}
+      aria-label={`Open ${c.label}`}
+      className="group/sat relative flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[11px] font-bold text-white/90 shadow-[0_0_14px_-2px_oklch(0.6_0.2_280/50%)] transition-transform hover:scale-125 hover:border-white/40 hover:z-10"
     >
-      {label.charAt(0).toUpperCase() || '?'}
-      <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[oklch(0.13_0.026_276)] ${statusDot(status)}`} />
-    </div>
+      {c.slug && imgOk ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/logos/${c.slug}.svg`}
+          alt=""
+          className="h-6 w-6 rounded-full object-cover"
+          onError={() => setImgOk(false)}
+        />
+      ) : (
+        c.label.charAt(0).toUpperCase() || '?'
+      )}
+      <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[oklch(0.13_0.026_276)] ${statusDot(c.status)}`} />
+    </Link>
   )
 }
 
 export function OrbitVisual({ connections }: { connections: OrbitConnection[] }) {
   // Split connections across rings by capacity; anything beyond the total
-  // capacity collapses into a "+N" satellite on the outer ring.
+  // capacity collapses into a "+N" satellite on the outer ring — so 100 apps
+  // stays the same size, it doesn't grow the visual.
   const totalCapacity = RING_CAPACITY.reduce((a, b) => a + b, 0)
   const shown = connections.slice(0, totalCapacity)
   const overflow = connections.length - shown.length
@@ -61,11 +83,12 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
   }
 
   return (
-    <div aria-hidden className="relative shrink-0 max-sm:scale-[0.78]" style={{ width: SIZE, height: SIZE }}>
+    <div className="orbit-system relative shrink-0 max-sm:scale-[0.78]" style={{ width: SIZE, height: SIZE }}>
       {/* Orbit paths */}
       {RINGS.map(([r], i) => (
         <div
           key={r}
+          aria-hidden
           className={`absolute rounded-full border ${connections.length === 0 && i === 1 ? 'border-dashed border-white/20' : 'border-white/10'}`}
           style={{ inset: CENTER - r }}
         />
@@ -93,7 +116,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
                 >
                   <div style={{ transform: `rotate(${-angle}deg)` }}>
                     <div className="orbit-counter-spin -translate-x-1/2 -translate-y-1/2" style={{ '--orbit-duration': `${duration}s` } as React.CSSProperties}>
-                      <Satellite label={c.label} status={c.status} />
+                      <Satellite c={c} />
                     </div>
                   </div>
                 </div>
@@ -106,9 +129,14 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
               >
                 <div style={{ transform: `rotate(${-(offset + ((slots - 1) / slots) * 360)}deg)` }}>
                   <div className="orbit-counter-spin -translate-x-1/2 -translate-y-1/2" style={{ '--orbit-duration': `${duration}s` } as React.CSSProperties}>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[10px] font-bold text-white/70">
+                    <Link
+                      href="/connectors"
+                      title={`${overflow} more — see all connectors`}
+                      aria-label={`${overflow} more connectors`}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] backdrop-blur-sm text-[10px] font-bold text-white/70 transition-transform hover:scale-125 hover:text-white hover:border-white/40"
+                    >
                       +{overflow}
-                    </div>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -118,7 +146,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
       })}
 
       {/* Workspace core */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div aria-hidden className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <div className="animate-glow-pulse flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-from)] to-[var(--brand-to)]">
           <Orbit className="h-7 w-7 text-white" />
         </div>

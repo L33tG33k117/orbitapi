@@ -310,7 +310,7 @@ export function ActivityFeed({ items, isAdmin }: { items: ActivityItem[]; isAdmi
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 items-center">
+      <div data-tour="activity-filters" className="flex flex-wrap gap-2 items-center">
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
           className="h-8 rounded-md border border-input bg-background px-3 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-ring" />
         <select value={source} onChange={e => setSource(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
@@ -337,7 +337,7 @@ export function ActivityFeed({ items, isAdmin }: { items: ActivityItem[]; isAdmi
       {filtered.length === 0 ? (
         <div className="py-12 text-center border rounded-lg text-muted-foreground"><p className="text-sm">Nothing matches your filters.</p></div>
       ) : (
-        <div className="border rounded-lg overflow-hidden divide-y">
+        <div data-tour="activity-list" className="border rounded-lg overflow-hidden divide-y">
           {filtered.map(it => <ActivityCard key={`${it.source}-${it.id}`} item={it} isAdmin={isAdmin} />)}
         </div>
       )}

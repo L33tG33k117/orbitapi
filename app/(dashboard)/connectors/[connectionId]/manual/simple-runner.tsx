@@ -159,7 +159,7 @@ export function SimpleActionRunner({ connectionId, connectionLabel, connectorNam
           <h1 className="text-lg font-bold truncate">Use {connectionLabel}</h1>
           <p className="text-xs text-muted-foreground">{connectorName}{status !== 'active' ? ` · ${status}` : ''}</p>
         </div>
-        <button onClick={onAdvanced} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg border px-2.5 py-1.5 transition-colors">
+        <button data-tour="run-advanced" onClick={onAdvanced} className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg border px-2.5 py-1.5 transition-colors">
           <Terminal className="h-3.5 w-3.5" /> Advanced (code)
         </button>
       </div>
@@ -174,7 +174,7 @@ export function SimpleActionRunner({ connectionId, connectionLabel, connectorNam
 
       <div className="grid md:grid-cols-[280px_1fr] gap-5 items-start">
         {/* Action picker */}
-        <div className="rounded-xl border bg-card overflow-hidden">
+        <div data-tour="run-picker" className="rounded-xl border bg-card overflow-hidden">
           <div className="p-2.5 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -218,7 +218,7 @@ export function SimpleActionRunner({ connectionId, connectionLabel, connectorNam
         </div>
 
         {/* Form + result */}
-        <div className="space-y-4">
+        <div data-tour="run-form" className="space-y-4">
           {!selected ? (
             <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
               <Play className="h-8 w-8 mx-auto mb-2 opacity-40" />

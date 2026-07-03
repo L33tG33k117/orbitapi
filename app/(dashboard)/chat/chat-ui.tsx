@@ -259,7 +259,7 @@ function ChatCore({
               <p className="font-semibold text-foreground text-lg">Ask Orbit anything</p>
               <p className="text-sm mt-1">It has access to all your connected APIs.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 max-w-lg w-full">
+            <div data-tour="chat-suggestions" className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 max-w-lg w-full">
               {suggestions.map(s => (
                 <button
                   key={s}
@@ -349,7 +349,7 @@ function ChatCore({
       </div>
 
       {messages.length >= 2 && !isLoading && (
-        <div className="px-4 pt-2 flex justify-end">
+        <div data-tour="chat-saveskill" className="px-4 pt-2 flex justify-end">
           <button
             type="button"
             onClick={saveAsSkill}
@@ -363,7 +363,7 @@ function ChatCore({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2 bg-background shrink-0">
+      <form data-tour="chat-input" onSubmit={handleSubmit} className="p-4 border-t flex gap-2 bg-background shrink-0">
         <Input
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -597,7 +597,7 @@ export function ChatUI({ skills = [], hasConnections = true, connectorSuggestion
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* AI Power meter — shows remaining power and how much each chat uses */}
         {aiPower && (
-          <div className="px-4 py-2 border-b flex items-center justify-end shrink-0 bg-background/60">
+          <div data-tour="chat-aipower" className="px-4 py-2 border-b flex items-center justify-end shrink-0 bg-background/60">
             <AiPowerMeter initial={aiPower} />
           </div>
         )}
@@ -621,7 +621,7 @@ export function ChatUI({ skills = [], hasConnections = true, connectorSuggestion
 
         {/* Skill context picker */}
         {skills.length > 0 && (
-          <div className="px-4 py-2 border-b bg-muted/30 flex items-center gap-3 shrink-0 flex-wrap">
+          <div data-tour="chat-context" className="px-4 py-2 border-b bg-muted/30 flex items-center gap-3 shrink-0 flex-wrap">
             <span
               className="text-xs text-muted-foreground font-medium cursor-help"
               title="Context scopes the assistant to one of your Skills — it uses that skill's instructions and its connected apps. Pick 'General' to chat across everything you've connected."

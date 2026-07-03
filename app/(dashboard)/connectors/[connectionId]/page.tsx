@@ -160,7 +160,7 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
       )}
 
       {/* The "how do I actually use this?" answer, up top where new users look. */}
-      <section className="grid sm:grid-cols-3 gap-3">
+      <section data-tour="conn-use" className="grid sm:grid-cols-3 gap-3">
         <Link href={`/connectors/${connectionId}/manual`} className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-1 hover:border-primary/60 hover:bg-primary/10 transition-colors">
           <p className="text-sm font-semibold flex items-center gap-1.5">▶ Use it now</p>
           <p className="text-xs text-muted-foreground leading-relaxed">Pick an action, fill in a field or two, and see the answer immediately — like using {connector.name} without logging in.</p>
@@ -179,7 +179,7 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         <SimulatedLightsPanel connectionId={connectionId} initialDevices={devices as never[]} />
       )}
 
-      <section className="space-y-3">
+      <section data-tour="conn-livedata" className="space-y-3">
         <h2 className="text-lg font-semibold">Live data</h2>
         <p className="text-xs text-muted-foreground">
           Read-only actions run server-side on page load. This is your connection working.
@@ -187,15 +187,17 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
         <ActionDebugPanel data={debugData} />
       </section>
 
-      <AccessControls
-        connectionId={connectionId}
-        initial={(connection as { allowed_risk_levels?: string[] | null }).allowed_risk_levels ?? null}
-        canManage={isAdmin}
-        hasExplore={manifest.actions.some(a => a.slug === 'explore_api')}
-        initialExploration={(connection as { allow_api_exploration?: boolean | null }).allow_api_exploration !== false}
-      />
+      <div data-tour="conn-access">
+        <AccessControls
+          connectionId={connectionId}
+          initial={(connection as { allowed_risk_levels?: string[] | null }).allowed_risk_levels ?? null}
+          canManage={isAdmin}
+          hasExplore={manifest.actions.some(a => a.slug === 'explore_api')}
+          initialExploration={(connection as { allow_api_exploration?: boolean | null }).allow_api_exploration !== false}
+        />
+      </div>
 
-      <section className="space-y-3">
+      <section data-tour="conn-actions" className="space-y-3">
         <div>
           <h2 className="text-lg font-semibold">What you can do with {connector.name}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
