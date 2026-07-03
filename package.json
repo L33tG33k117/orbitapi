@@ -8,7 +8,10 @@
     "start": "next start",
     "test:sim-parity": "node --no-warnings scripts/test-sim-parity.mjs",
     "check:connectors": "node --no-warnings scripts/check-connectors.mjs",
-    "check:bundles": "node --no-warnings scripts/check-bundles.mjs"
+    "check:bundles": "node --no-warnings scripts/check-bundles.mjs",
+    "db:status": "node --no-warnings scripts/db-migrate.mjs status",
+    "db:up": "node --no-warnings scripts/db-migrate.mjs up",
+    "db:migrate": "node --no-warnings scripts/db-migrate.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.83",
