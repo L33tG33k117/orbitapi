@@ -83,7 +83,7 @@ export function OrbitVisual({ connections }: { connections: OrbitConnection[] })
   }
 
   return (
-    <div className="orbit-system relative shrink-0 max-sm:scale-[0.78]" style={{ width: SIZE, height: SIZE }}>
+    <div data-tour="dash-orbit" className="orbit-system relative shrink-0 max-sm:scale-[0.78]" style={{ width: SIZE, height: SIZE }}>
       {/* Orbit paths */}
       {RINGS.map(([r], i) => (
         <div

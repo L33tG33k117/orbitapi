@@ -42,6 +42,14 @@ export function PageTour() {
 
   function runTour() {
     if (!tour || runningRef.current) return
+    // Keep intro/outro cards (no element) and only those element-steps whose
+    // target is actually on the page right now. This prevents describing
+    // something that isn't visible — e.g. the get-started checklist, which
+    // correctly hides once a workspace is set up. Applies to every tour, so any
+    // conditional element (empty-state pickers, admin-only controls, etc.) is
+    // shown only when present.
+    const steps = tour.steps.filter(s => !s.element || document.querySelector(s.element))
+    if (steps.length === 0) return
     runningRef.current = true
     markOffered()
     const d = driver({
@@ -52,7 +60,7 @@ export function PageTour() {
       nextBtnText: 'Next',
       prevBtnText: 'Back',
       doneBtnText: 'Done',
-      steps: tour.steps,
+      steps,
       onDestroyed: () => { runningRef.current = false },
     })
     d.drive()
