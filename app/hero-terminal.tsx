@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Banknote, ShieldAlert, Headset, Lightbulb } from 'lucide-react'
+import { Banknote, ShieldAlert, Headset, Lightbulb, Orbit, ArrowRight, ScrollText } from 'lucide-react'
 
 // Interactive hero terminal: the visitor picks a mission and watches the
 // conversation play out. Scripted (zero backend cost) but every scenario
@@ -152,53 +152,102 @@ export function HeroTerminal() {
         })}
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-2xl shadow-black/60 animate-float">
-        <div className="flex items-center gap-1.5 px-5 py-3.5 border-b border-white/8 bg-[oklch(0.11_0.02_268)]">
-          <span className="h-3 w-3 rounded-full bg-red-500/60" />
-          <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
-          <span className="h-3 w-3 rounded-full bg-green-500/60" />
-          <span className="ml-4 text-xs text-white/30 font-mono">Orbit Assistant — Mission Control</span>
-        </div>
-        {/* Fixed min height so switching tabs doesn't jump the page */}
-        <div className="p-4 sm:p-6 space-y-5 text-xs sm:text-sm font-mono min-h-[290px] sm:min-h-[260px]">
-          <div className="flex gap-3 items-start">
-            <span className="text-[oklch(0.7_0.2_264)] shrink-0 mt-0.5">you</span>
-            <span className="text-[oklch(0.7_0.2_264)] shrink-0 mt-0.5">→</span>
-            <span className="text-white/80">{scenario.prompt}</span>
-          </div>
-          <div className="flex gap-3 items-start">
-            <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5 font-semibold">orbit</span>
-            <span className="text-[oklch(0.78_0.12_200)] shrink-0 mt-0.5">→</span>
-            <div className="text-white/70 space-y-2.5 flex-1">
-              {scenario.events.slice(0, shown).map((ev, i) => {
-                if (ev.kind === 'chips') {
-                  return (
-                    <div key={i} className="flex flex-wrap items-center gap-2 text-xs animate-in fade-in slide-in-from-bottom-1 duration-500">
-                      {ev.chips.map(c => (
-                        <span key={c.label} className={`inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-md border ${CHIP_TONES[c.tone]}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full animate-pulse inline-block shrink-0 ${DOT_TONES[c.tone]}`} />
-                          {c.label}
-                        </span>
-                      ))}
-                    </div>
-                  )
-                }
-                if (ev.kind === 'text') {
-                  return (
-                    <p key={i} className="text-white/75 animate-in fade-in slide-in-from-bottom-1 duration-500"
-                      dangerouslySetInnerHTML={{ __html: ev.html }} />
-                  )
-                }
-                return (
-                  <p key={i} className="text-[oklch(0.78_0.12_200)] animate-in fade-in slide-in-from-bottom-1 duration-500">{ev.text}</p>
-                )
-              })}
-              {!finished && (
-                <span className="inline-block h-4 w-2 bg-[oklch(0.78_0.12_200)]/70 animate-pulse align-middle" aria-hidden />
-              )}
+      {/* The actual app on a laptop — same friendly chat you'll really use */}
+      <div className="relative animate-float">
+        <div className="rounded-t-2xl border border-white/12 border-b-0 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-2xl shadow-black/60">
+          {/* Browser chrome */}
+          <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-white/8 bg-[oklch(0.12_0.02_268)]">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-500/50" />
+            <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/50" />
+            <span className="h-2.5 w-2.5 rounded-full bg-green-500/50" />
+            <div className="ml-3 flex-1 flex justify-center">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-md bg-white/[0.06] text-[10px] text-white/40">
+                <span className="text-emerald-400/70">🔒</span> app.orbitapi.com/chat
+              </div>
             </div>
           </div>
+
+          <div className="flex min-h-[300px]">
+            {/* Mini sidebar — outlines the real OrbitAPI shell */}
+            <div className="hidden sm:flex flex-col items-center gap-1 w-11 py-3 border-r border-white/8 bg-[oklch(0.075_0.016_268)]">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[oklch(0.46_0.19_264)] to-[oklch(0.4_0.2_290)] flex items-center justify-center mb-2">
+                <Orbit className="h-3.5 w-3.5 text-white" />
+              </div>
+              {[false, true, false, false].map((on, i) => (
+                <div key={i} className={`h-6 w-6 rounded-md flex items-center justify-center ${on ? 'bg-[oklch(0.46_0.19_264)]/25' : ''}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${on ? 'bg-[oklch(0.72_0.18_264)]' : 'bg-white/20'}`} />
+                </div>
+              ))}
+            </div>
+
+            {/* Chat column */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8">
+                <span className="text-sm font-semibold flex items-center gap-2"><span className="text-[oklch(0.72_0.18_264)]">✦</span> Orbit Assistant</span>
+                <span className="text-[10px] text-white/30 flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> AI Power ready</span>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 p-4 space-y-2.5 text-sm">
+                <div className="flex justify-end">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-br from-[oklch(0.46_0.19_264)] to-[oklch(0.42_0.2_278)] px-3.5 py-2 text-white shadow-lg">
+                    {scenario.prompt}
+                  </div>
+                </div>
+                {scenario.events.slice(0, shown).map((ev, i) => {
+                  if (ev.kind === 'chips') {
+                    return (
+                      <div key={i} className="flex justify-start">
+                        <div className="max-w-[90%] flex flex-wrap gap-1.5 animate-in fade-in slide-in-from-bottom-1 duration-500">
+                          {ev.chips.map(c => (
+                            <span key={c.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs ${CHIP_TONES[c.tone]}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full animate-pulse inline-block shrink-0 ${DOT_TONES[c.tone]}`} />
+                              {c.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                  if (ev.kind === 'text') {
+                    return (
+                      <div key={i} className="flex justify-start animate-in fade-in slide-in-from-bottom-1 duration-500">
+                        <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white/[0.06] border border-white/8 px-3.5 py-2 text-white/80" dangerouslySetInnerHTML={{ __html: ev.html }} />
+                      </div>
+                    )
+                  }
+                  return (
+                    <div key={i} className="flex justify-start animate-in fade-in slide-in-from-bottom-1 duration-500">
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-emerald-500/10 border border-emerald-500/25 px-3.5 py-2 text-emerald-200/90">{ev.text}</div>
+                    </div>
+                  )
+                })}
+                {!finished && (
+                  <div className="flex justify-start">
+                    <div className="rounded-2xl rounded-bl-sm bg-white/[0.06] border border-white/8 px-3 py-2.5 flex gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse" style={{ animationDelay: '0.15s' }} />
+                      <span className="h-1.5 w-1.5 rounded-full bg-white/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input bar */}
+              <div className="p-3 border-t border-white/8 flex items-center gap-2">
+                <div className="flex-1 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-sm text-white/30">Ask anything about your connected apps…</div>
+                <div className="h-9 w-9 rounded-xl bg-[oklch(0.46_0.19_264)] text-white flex items-center justify-center shrink-0"><ArrowRight className="h-4 w-4" /></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 py-2 border-t border-white/8 bg-[oklch(0.07_0.016_268)] flex items-center gap-2 text-[10px] text-white/35">
+            <ScrollText className="h-3 w-3" /> every action lands in a searchable, replayable audit trail
+          </div>
         </div>
+        {/* Laptop base */}
+        <div className="h-2.5 rounded-b-md bg-gradient-to-b from-[oklch(0.17_0.02_268)] to-[oklch(0.1_0.018_268)] border-x border-b border-white/12" />
+        <div className="mx-auto h-1.5 w-2/5 rounded-b-xl bg-[oklch(0.13_0.02_268)] shadow-lg" />
       </div>
 
       <p className="mt-5 text-center text-xs text-white/35">

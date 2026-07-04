@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule, scheduleLabel } from '@/lib/schedules'
 import {
   Play, Trash2, Plus, ChevronDown, ChevronUp, ArrowLeft, Gauge, GitBranch,
   Bot, Bell, Clock, ShieldCheck, Wrench, X, List, Network,
@@ -57,7 +58,12 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
   const router = useRouter()
   const [persona, setPersona] = useState<string>(playbook.persona ?? '')
   const [triggerType, setTriggerType] = useState<string>(playbook.trigger_type ?? 'manual')
-  const [schedule, setSchedule] = useState<string>(playbook.schedule ?? '')
+  // Schedule is stored as "DOW:HOUR" (same as skills) and evaluated by the cron
+  // via isDue() — so present it as plain-language day + hour pickers, never raw cron.
+  const initSched = parseSchedule(playbook.schedule || '*:8')
+  const [scheduleDow, setScheduleDow] = useState<string>(initSched.dow)
+  const [scheduleHour, setScheduleHour] = useState<string>(initSched.hour)
+  const schedule = triggerType === 'schedule' ? buildSchedule(scheduleDow, scheduleHour) : (playbook.schedule ?? '')
   const [enabled, setEnabled] = useState<boolean>(playbook.enabled ?? false)
   const [steps, setSteps] = useState<PlaybookNode[]>(playbook.definition?.steps ?? [])
   const [thresholds, setThresholds] = useState<Threshold[]>(
@@ -167,8 +173,20 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
               </div>
               {triggerType === 'schedule' && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="sched">Cron schedule</Label>
-                  <Input id="sched" value={schedule} onChange={e => setSchedule(e.target.value)} placeholder="0 * * * *" />
+                  <Label>Run this playbook…</Label>
+                  <div className="flex gap-2">
+                    <select value={scheduleDow} onChange={e => setScheduleDow(e.target.value)}
+                      className="h-9 flex-1 rounded-md border border-input bg-background px-2.5 text-sm">
+                      {DOW_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    <select value={scheduleHour} onChange={e => setScheduleHour(e.target.value)}
+                      className="h-9 flex-1 rounded-md border border-input bg-background px-2.5 text-sm">
+                      {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {scheduleLabel(buildSchedule(scheduleDow, scheduleHour))}. Times are UTC.
+                  </p>
                 </div>
               )}
             </div>
