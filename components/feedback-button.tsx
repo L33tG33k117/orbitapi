@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
-import { MessageSquarePlus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface CapturedError { message: string; source?: string; at: string }
@@ -73,6 +73,13 @@ export function FeedbackButton() {
   const [mine, setMine] = useState<MyFeedback[] | null>(null)
   useEffect(() => { setMounted(true); installErrorCapture() }, [])
 
+  // Opened from the Help (?) menu — keeps the top bar to consistent icons.
+  useEffect(() => {
+    const openFeedback = () => setOpen(true)
+    window.addEventListener('orbit:open-feedback', openFeedback)
+    return () => window.removeEventListener('orbit:open-feedback', openFeedback)
+  }, [])
+
   async function loadMine() {
     setMine(null)
     try {
@@ -114,15 +121,6 @@ export function FeedbackButton() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        title="Share feedback"
-      >
-        <MessageSquarePlus className="h-3.5 w-3.5" />
-        Feedback
-      </button>
-
       {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-black/40 p-4"

@@ -40,6 +40,14 @@ export function PageTour() {
     setShowNudge(false)
   }
 
+  // Triggered from the Help (?) menu — "Take a tour of this page".
+  useEffect(() => {
+    const run = () => runTour()
+    window.addEventListener('orbit:run-tour', run)
+    return () => window.removeEventListener('orbit:run-tour', run)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tour])
+
   function runTour() {
     if (!tour || runningRef.current) return
     // Keep intro/outro cards (no element) and only those element-steps whose
@@ -92,15 +100,6 @@ export function PageTour() {
         .driver-popover.orbit-tour .driver-popover-close-btn { color: var(--muted-foreground); }
         .driver-popover.orbit-tour .driver-popover-arrow { border-color: var(--popover); }
       `}</style>
-
-      <button
-        onClick={runTour}
-        className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        title="Take a guided tour of this page"
-      >
-        <Compass className="h-3.5 w-3.5" />
-        Show me around
-      </button>
 
       {/* First-visit nudge — portaled to body so the .glass TopBar (backdrop-filter)
           doesn't become its containing block and mis-position the fixed card. */}

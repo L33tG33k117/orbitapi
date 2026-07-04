@@ -16,6 +16,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { FeedbackButton } from '@/components/feedback-button'
 import { PageTour } from '@/components/page-tour'
 import { LaunchTray } from '@/components/launch-tray'
+import { HelpMenu } from '@/components/help-menu'
 import { LogOut, User as UserIcon, Settings, ChevronDown, Menu } from 'lucide-react'
 
 interface TopBarProps {
@@ -77,13 +78,19 @@ export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: T
       )}
 
       <NavHotkeys />
+      {/* Logic-only: PageTour renders its first-visit nudge + tour; FeedbackButton
+          renders its modal. Both are triggered from the Help menu now, so the top
+          bar stays a consistent row of icons. */}
       <PageTour />
-      <LaunchTray />
       <FeedbackButton />
-      <ThemeToggle />
+
+      {/* Consistent icon utilities: launches, notifications, help, theme, account. */}
+      <LaunchTray />
       {adminInbox
         ? <AdminNotificationBell />
         : workspaceId && <NotificationBell workspaceId={workspaceId} />}
+      <HelpMenu />
+      <ThemeToggle />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted transition-colors outline-none">
