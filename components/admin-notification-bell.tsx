@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Bell, MessageSquarePlus, Plug, Flag } from 'lucide-react'
 
@@ -36,7 +37,9 @@ export function AdminNotificationBell() {
   const [open, setOpen] = useState(false)
   // Read the "last seen" marker after mount only — avoids SSR hydration mismatch.
   const [lastSeen, setLastSeen] = useState<number>(() => 0)
+  const btnRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const router = useRouter()
 
   const load = useCallback(() => {
@@ -56,7 +59,9 @@ export function AdminNotificationBell() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return
+      setOpen(false)
     }
     if (open) document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -66,13 +71,15 @@ export function AdminNotificationBell() {
 
   function toggle() {
     const next = !open
-    setOpen(next)
-    if (next) {
+    if (next && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) })
       // Opening clears the "new" badge — mark everything seen as of now.
       const now = Date.now()
       window.localStorage.setItem(SEEN_KEY, String(now))
       setLastSeen(now)
     }
+    setOpen(next)
   }
 
   function go(item: InboxItem) {
@@ -81,8 +88,9 @@ export function AdminNotificationBell() {
   }
 
   return (
-    <div className="relative" ref={panelRef}>
+    <>
       <button
+        ref={btnRef}
         type="button"
         onClick={toggle}
         className="relative flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -96,8 +104,12 @@ export function AdminNotificationBell() {
         )}
       </button>
 
-      {open && (
-        <div className="absolute top-full right-0 mt-2 z-50 w-80 max-w-[calc(100vw-1rem)] rounded-xl border bg-popover shadow-lg overflow-hidden">
+      {open && pos && createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[200] w-80 max-w-[calc(100vw-1rem)] rounded-xl border bg-popover shadow-xl overflow-hidden"
+          style={{ top: pos.top, right: pos.right }}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <p className="text-sm font-semibold">Admin inbox</p>
             <span className="text-xs text-muted-foreground">Recent submissions</span>
@@ -129,8 +141,9 @@ export function AdminNotificationBell() {
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   )
 }

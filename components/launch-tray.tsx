@@ -52,7 +52,6 @@ export function LaunchTray() {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
 
   const running = launches.filter(l => l.status === 'running').length
-  const active = launches.length > 0
 
   useEffect(() => {
     if (!open) return
@@ -60,9 +59,6 @@ export function LaunchTray() {
     window.addEventListener('mousedown', onDown)
     return () => window.removeEventListener('mousedown', onDown)
   }, [open])
-
-  // Nothing has launched yet → keep the top bar clean.
-  if (!active) return null
 
   function toggle() {
     if (!open && btnRef.current) {
@@ -77,7 +73,8 @@ export function LaunchTray() {
       <button
         ref={btnRef}
         onClick={toggle}
-        title={running > 0 ? `${running} running…` : 'Launches'}
+        title={running > 0 ? `${running} running…` : 'Launches — run a skill, playbook, or app'}
+        aria-label="Launches"
         className="relative inline-flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
       >
         <Rocket className={`h-4 w-4 ${running > 0 ? 'text-primary launch-wiggle' : ''}`} />
@@ -99,7 +96,17 @@ export function LaunchTray() {
             <Link href="/starlab" onClick={() => setOpen(false)} className="text-[11px] text-primary hover:underline">Open Starlab →</Link>
           </div>
           <div className="max-h-80 overflow-y-auto divide-y">
-            {launches.map(l => <LaunchRow key={l.id} l={l} onClose={() => setOpen(false)} />)}
+            {launches.length === 0 ? (
+              <div className="px-3 py-6 text-center space-y-1.5">
+                <Rocket className="h-6 w-6 mx-auto text-muted-foreground/40" />
+                <p className="text-xs text-muted-foreground">Nothing running yet.</p>
+                <Link href="/starlab" onClick={() => setOpen(false)} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                  Launch something in Starlab <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            ) : (
+              launches.map(l => <LaunchRow key={l.id} l={l} onClose={() => setOpen(false)} />)
+            )}
           </div>
           {launches.some(l => l.status !== 'running') && (
             <button onClick={clearFinishedLaunches} className="w-full py-2 text-[11px] text-muted-foreground hover:text-foreground border-t transition-colors">
