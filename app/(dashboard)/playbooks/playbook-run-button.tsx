@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Play } from 'lucide-react'
 import { trackLaunch } from '@/lib/launch-store'
+import { isNotSetUp, offerSimulateAndRerun } from '@/lib/not-set-up'
 
 // Run a playbook from anywhere; progress shows in the top-bar launch tray, with
 // a click-through to the result in Starlab — no jump to the edit page.
@@ -21,6 +22,12 @@ export function PlaybookRunButton({
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'live' }),
       })
       const d = await res.json().catch(() => ({}))
+      // Refused before running: some apps were never set up. Offer to switch
+      // them to Simulation and re-run — no "failed" rocket for this case.
+      if (isNotSetUp(res.status, d)) {
+        offerSimulateAndRerun({ name: playbookName, body: d, rerun: run })
+        return { ok: false, discard: true }
+      }
       return { ok: res.ok, error: d.error }
     })
     router.refresh()

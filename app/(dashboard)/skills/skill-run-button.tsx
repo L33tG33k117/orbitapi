@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Play } from 'lucide-react'
 import { trackLaunch } from '@/lib/launch-store'
+import { isNotSetUp, offerSimulateAndRerun } from '@/lib/not-set-up'
 
 // Run a skill from anywhere. Instead of dumping you into the skill's edit page,
 // it registers a "launch" that shows live in the top-bar rocket tray — you watch
@@ -29,6 +30,12 @@ export function SkillRunButton({
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }),
       })
       const d = await res.json().catch(() => ({}))
+      // Refused before running: some apps were never set up. Offer to switch
+      // them to Simulation and re-run — no "failed" rocket for this case.
+      if (isNotSetUp(res.status, d)) {
+        offerSimulateAndRerun({ name: skillName, body: d, rerun: run })
+        return { ok: false, discard: true }
+      }
       return { ok: res.ok, error: d.error }
     })
     // Refresh so on-page result feeds (Starlab, skill page) pick up the new run.

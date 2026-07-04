@@ -33,6 +33,7 @@ interface Action {
   name: string
   risk: string
   connection: string
+  connectionId: string
 }
 
 interface Group { id: string; name: string; color: string }
@@ -531,7 +532,7 @@ export function SkillEditor({
               const isBlocked = form.blocked_slugs.includes(a.slug)
               return (
                 <label
-                  key={a.slug}
+                  key={`${a.connectionId}__${a.slug}`}
                   className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/50"
                 >
                   <input

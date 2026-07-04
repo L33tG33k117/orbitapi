@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runSkill } from '@/lib/skill-runner'
 import { OUT_OF_AI_POWER } from '@/lib/ai-power'
+import { parseUnreadyConnections } from '@/lib/connection-readiness'
 import { capabilityGuard } from '@/lib/workspace-features'
 import { rateLimit } from '@/lib/rate-limit'
 
@@ -56,6 +57,14 @@ export async function POST(req: Request, { params }: Params) {
   } catch (err) {
     if (String(err).includes(OUT_OF_AI_POWER)) {
       return NextResponse.json({ error: 'out_of_ai_power', message: "You're out of AI Power for this cycle. Upgrade your plan or add a Power Pack." }, { status: 402 })
+    }
+    const unready = parseUnreadyConnections(err)
+    if (unready) {
+      return NextResponse.json({
+        error: 'connections_not_set_up',
+        message: 'Some apps this skill uses were never set up. Finish their setup, or switch them to Simulation to test with sample data.',
+        connections: unready,
+      }, { status: 409 })
     }
     console.error('[skill run]', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })

@@ -9,6 +9,7 @@ import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
 import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
+import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
 
 // ============================================================
 // Foundation A — Playbook execution engine
@@ -73,6 +74,7 @@ type Connection = {
   id: string
   label: string
   vault_secret_id: string | null
+  is_simulated: boolean
   allowed_risk_levels: string[] | null
   allow_api_exploration?: boolean | null
   connector: { slug: string; name: string }
@@ -107,6 +109,14 @@ export async function runPlaybook(opts: {
   // Enforce AI Power on new runs (resumes are exempt — already approved).
   const power = await getAiPower(opts.workspaceId)
   if (power.remaining <= 0) throw new Error(OUT_OF_AI_POWER)
+
+  // Fail-safe: refuse to run against connections that were never set up
+  // (real mode, no credentials — e.g. a fresh bundle install). The run route
+  // turns this into a "finish setup or switch to Simulation" prompt.
+  const unready = (await loadConnections(playbook))
+    .filter(isUnready)
+    .map(c => ({ id: c.id, label: c.label, connector: c.connector.name }))
+  if (unready.length) throw new UnreadyConnectionsError(unready)
 
   const { data: run } = await admin
     .from('playbook_runs')

@@ -8,6 +8,7 @@ import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
+import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
 import { SAFETY_SYSTEM_RULES } from '@/lib/prompt-safety'
 
 export type RunStep = {
@@ -90,6 +91,14 @@ export async function runSkill({
   if (connections.length === 0) {
     throw new Error('No connectors are available to this skill. Add a connection (or choose a group that has connections) before running.')
   }
+
+  // Fail-safe: real-mode connections with no saved credentials were never set
+  // up (bundle installs create these). Refuse before creating a run — the UI
+  // offers "finish setup" or a one-click switch to Simulation instead.
+  const unready = connections
+    .filter(isUnready)
+    .map(c => ({ id: c.id, label: c.label, connector: c.connector.name }))
+  if (unready.length) throw new UnreadyConnectionsError(unready)
 
   const blockedSlugs: string[] = skill.blocked_slugs ?? []
 

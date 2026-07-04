@@ -47,9 +47,12 @@ export function clearFinishedLaunches() {
 
 // Register a launch as running, execute the work, and update it on completion.
 // `doRun` returns whether it succeeded (and an optional error message).
+// `discard: true` removes the entry entirely — for runs that were refused
+// before doing anything (e.g. connections not set up), where the caller shows
+// its own guidance and a "failed" rocket would just be noise.
 export async function trackLaunch(
   meta: { name: string; kind: LaunchKind; href?: string },
-  doRun: () => Promise<{ ok: boolean; error?: string }>,
+  doRun: () => Promise<{ ok: boolean; error?: string; discard?: boolean }>,
 ): Promise<{ ok: boolean }> {
   const id = (globalThis.crypto?.randomUUID?.() ?? String(Math.random())) as string
   const entry: Launch = {
@@ -60,6 +63,11 @@ export async function trackLaunch(
   emit()
   try {
     const r = await doRun()
+    if (r.discard) {
+      launches = launches.filter(l => l.id !== id)
+      emit()
+      return { ok: r.ok }
+    }
     launches = launches.map(l => l.id === id
       ? { ...l, status: r.ok ? 'done' : 'failed', endedAt: Date.now(), error: r.ok ? undefined : (r.error ?? 'Failed') }
       : l)

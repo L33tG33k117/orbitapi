@@ -46,7 +46,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
     ? (group.group_connections ?? []).map((gc: { connection_id: string }) => gc.connection_id)
     : []
 
-  let availableActions: { slug: string; name: string; risk: string; connection: string }[] = []
+  let availableActions: { slug: string; name: string; risk: string; connection: string; connectionId: string }[] = []
   if (connectionIds.length > 0) {
     const { data: connections } = await admin
       .from('connections')
@@ -63,6 +63,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
           name: action.name,
           risk: action.risk,
           connection: conn.label,
+          connectionId: conn.id,
         })
       }
     }
