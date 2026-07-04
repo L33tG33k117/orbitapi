@@ -110,7 +110,8 @@ const TOURS: Record<string, Tour> = {
     key: 'starlab',
     steps: [
       { popover: { title: 'Starlab — your lab to run & discover', description: 'Everything you’ve set up lives in its own section; Starlab is the one place to actually run any of it and grab the result. Experiment freely — Simulated apps can’t break anything.' } },
-      { element: '[data-tour="starlab-run"]', popover: { title: 'Launch anything', description: '“Use now” on an app opens the point-and-click runner. “Run” on a skill or playbook fires it — and it shows up in the 🚀 launch tray at the top so you can watch it work.', side: 'bottom' } },
+      { element: '[data-tour="starlab-pad"]', popover: { title: 'Mission Control', description: 'This is the launch pad. Every run you fire lifts off from here and climbs toward the orbit line — reaching orbit means it finished, and the result lands in “Latest results” below. Failed launches stay on the pad in red.', side: 'bottom' } },
+      { element: '[data-tour="starlab-run"]', popover: { title: 'Launch anything', description: '“Use now” on an app opens the point-and-click runner. “Run” on a skill or playbook fires it — you’ll see it lift off above, and it also shows in the 🚀 launch tray at the top so you can leave the page.', side: 'bottom' } },
       { element: '[data-tour="starlab-results"]', popover: { title: 'See & export the output', description: 'When something finishes it appears here with its result and an Export button — save it as Excel, CSV, PDF, or Word. This is your answer to “where did that result go?”', side: 'top' } },
       outro('Try it: hit “Use now” on an app or “Run” on a skill, watch the launch tray, then export the result here.'),
     ],

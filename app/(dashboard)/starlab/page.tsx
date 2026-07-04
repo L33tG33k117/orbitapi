@@ -8,6 +8,7 @@ import { ResultExport } from '@/components/result-export'
 import { bestResult } from '@/lib/export-data'
 import { SkillRunButton } from '../skills/skill-run-button'
 import { PlaybookRunButton } from '../playbooks/playbook-run-button'
+import { StarlabMissionControl } from '@/components/starlab-mission-control'
 
 // Starlab — your lab to run, experiment, and discover. One place to launch
 // anything you've set up (apps, skills, playbooks), watch it in the launch tray,
@@ -87,7 +88,7 @@ export default async function StarlabPage() {
               Star<span className="text-gradient">lab</span>
             </h1>
             <p className="mt-1.5 text-sm text-white/60 max-w-lg">
-              Your lab to run anything you&apos;ve set up and watch it work — apps, skills, and playbooks, all launchable from one place. Fire one off and follow it in the 🚀 launch tray up top.
+              Your lab to run anything you&apos;ve set up and watch it work — apps, skills, and playbooks, all launchable from one place. Fire one off and watch it climb to orbit below.
             </p>
           </div>
           <div className="hidden lg:flex gap-4 shrink-0 pr-2">
@@ -98,6 +99,10 @@ export default async function StarlabPage() {
               </div>
             ))}
           </div>
+        </div>
+        {/* Mission Control — live launch pad; rockets = actual runs in flight. */}
+        <div className="relative z-10">
+          <StarlabMissionControl />
         </div>
       </section>
 

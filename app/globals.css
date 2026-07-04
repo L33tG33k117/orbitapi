@@ -275,6 +275,17 @@
   50% { transform: translateY(-1.5px) rotate(-8deg); }
 }
 .launch-wiggle { animation: launch-wiggle 1.4s ease-in-out infinite; }
+/* Starlab Mission Control — rocket exhaust flicker + "in orbit" ring pulse. */
+@keyframes mc-flame {
+  from { transform: scaleY(1); opacity: 0.95; }
+  to { transform: scaleY(0.55); opacity: 0.6; }
+}
+.mc-flame { transform-origin: top; animation: mc-flame 0.22s ease-in-out infinite alternate; }
+@keyframes mc-orbit-pulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(2); opacity: 0; }
+}
+.mc-orbit-pulse { animation: mc-orbit-pulse 1.8s ease-out infinite; }
 @keyframes gradient-pan {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -295,6 +306,8 @@
   .animate-glow-pulse { animation: none; }
   .orbit-ring-spin { animation: none; }
   .orbit-counter-spin { animation: none; }
+  .mc-flame { animation: none; }
+  .mc-orbit-pulse { animation: none; opacity: 0; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
 
