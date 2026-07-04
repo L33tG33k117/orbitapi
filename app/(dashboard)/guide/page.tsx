@@ -115,6 +115,19 @@ const SECTIONS: Section[] = [
     example: 'Publish your "Daily Threat Briefing" playbook — credentials are never included, only the recipe.',
   },
   {
+    id: 'playground', title: 'Playground', icon: Sparkles, href: '/playground',
+    what: 'One place to run everything you\'ve set up — your apps, skills, and playbooks — and see & export the results without hopping between sections.',
+    use: 'When you just want to run something and get the answer. Hit "Use now" on an app, or "Run" on a skill or playbook, and the result appears right there.',
+    example: 'Run your "Property Manager" skill, then export the bookings it pulled to Excel — all from the same screen.',
+    preview: (
+      <Preview>
+        <Row label="QuickBooks" tag="Use now" tagColor="bg-primary/15 text-primary" />
+        <Row label="Property Manager (skill)" tag="Run" tagColor="bg-emerald-500/15 text-emerald-500" />
+        <Row label="Latest result — 24 records" tag="Export" tagColor="bg-violet-500/15 text-violet-400" />
+      </Preview>
+    ),
+  },
+  {
     id: 'approvals', title: 'Approvals', icon: ClipboardCheck, href: '/approvals',
     what: 'A queue of actions waiting for your sign-off. Before approving something destructive, you see an AI impact preview and write a quick rollback plan.',
     use: 'This is your safety net — supervised skills and mid-severity playbook steps land here instead of running blindly.',

@@ -106,6 +106,16 @@ const TOURS: Record<string, Tour> = {
     ],
   },
 
+  '/playground': {
+    key: 'playground',
+    steps: [
+      { popover: { title: 'Playground — run everything in one place', description: 'Your apps, skills, and playbooks are each set up in their own section — this is the one spot to actually run any of them and grab the result, without hopping around.' } },
+      { element: '[data-tour="playground-run"]', popover: { title: 'Run anything', description: '“Use now” on an app opens the point-and-click runner. “Run” on a skill or playbook fires it right here. Everything you’ve set up is listed, ready to go.', side: 'bottom' } },
+      { element: '[data-tour="playground-results"]', popover: { title: 'See & export the output', description: 'The moment something finishes, it appears here with its result — and an Export button to save the data as Excel, CSV, PDF, or Word. This is your answer to “where did that number go?”', side: 'top' } },
+      outro('Try it: hit “Use now” on an app or “Run” on a skill, then export the result from here.'),
+    ],
+  },
+
   '/approvals': {
     key: 'approvals',
     steps: [

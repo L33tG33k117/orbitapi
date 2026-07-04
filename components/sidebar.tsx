@@ -9,7 +9,7 @@ import { hasCapability, type Capability } from '@/lib/entitlements'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot,
+  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket,
 } from 'lucide-react'
 
 interface NavItem {
@@ -70,6 +70,7 @@ const sections: NavSection[] = [
   {
     label: 'Operate',
     items: [
+      { href: '/playground', label: 'Playground', icon: Rocket },
       { href: '/approvals', label: 'Approvals', icon: ClipboardCheck },
       { href: '/mcp', label: 'Connect your AI', icon: Bot },
       { href: '/webhooks', label: 'Webhooks', icon: Webhook, capability: 'webhooks' },

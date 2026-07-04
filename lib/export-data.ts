@@ -192,6 +192,24 @@ export function openPrintable(html: string) {
   return true
 }
 
+// A run can have several successful read steps. Pick the single result that
+// yields the richest table (the main list the user wanted) so exports come out
+// as proper rows — never wrap the results in an array, which would make toTable
+// treat the wrapper as the table and stringify the real rows into one cell.
+export function bestResult(candidates: unknown[]): unknown | null {
+  const valid = candidates.filter(
+    r => r != null && typeof r === 'object' && !('error' in (r as object)),
+  )
+  if (valid.length === 0) return null
+  let best = valid[0]
+  let bestRows = toTable(best).rows.length
+  for (let i = 1; i < valid.length; i++) {
+    const rows = toTable(valid[i]).rows.length
+    if (rows > bestRows) { best = valid[i]; bestRows = rows }
+  }
+  return best
+}
+
 export type ExportFormat = 'csv' | 'excel' | 'pdf' | 'word' | 'text' | 'json'
 
 export function exportAs(format: ExportFormat, data: unknown, baseName: string) {
