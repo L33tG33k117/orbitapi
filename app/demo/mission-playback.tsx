@@ -47,14 +47,14 @@ const MISSIONS: Mission[] = [
     id: 'finance',
     label: 'Finance patrol',
     steps: [
-      { type: 'type', text: 'Show open critical invoices over $50k, email me a summary, and post it to Teams.' },
+      { type: 'type', text: 'Let me know when a NetSuite invoice ages past 10 days overdue so collections can reach out — email me and post to Teams.' },
       { type: 'chips', chips: [{ label: 'NetSuite → list_open_invoices', tone: 'violet' }], nodes: ['netsuite'] },
-      { type: 'text', html: '<strong class="text-white">3 invoices</strong> — $247,800 total. Acme Corp is 14 days overdue.' },
+      { type: 'text', html: '<strong class="text-white">3 invoices</strong> just crossed 10 days past due — Acme Corp ($120k, 14d), TechVentures ($89k, 12d), GlobalSystems ($38.8k, 11d). Time for collections to reach out.' },
       { type: 'chips', chips: [
         { label: 'SendGrid → send_alert_email', tone: 'blue' },
         { label: 'Teams → send_alert', tone: 'purple' },
       ], nodes: ['sendgrid', 'teams'] },
-      { type: 'done', text: '✓ Summary emailed · channel notified · 3 APIs, one sentence, 2.3s' },
+      { type: 'done', text: '✓ Email sent · Teams channel notified · 3 actions across 3 APIs in 2.3s' },
     ],
   },
   {
