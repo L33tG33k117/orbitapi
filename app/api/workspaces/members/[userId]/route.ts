@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAuditEvent } from '@/lib/audit'
 import { z } from 'zod'
+
+// Look up a member's email for a human-readable governance summary.
+async function memberEmail(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<string> {
+  const { data } = await admin.from('profiles').select('email').eq('id', userId).single()
+  return (data as { email?: string } | null)?.email ?? 'a member'
+}
 
 const patchSchema = z.union([
   z.object({
@@ -55,6 +62,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
       .neq('role', 'owner')
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const email = await memberEmail(admin, userId)
+    await logAuditEvent({ workspaceId, userId: user.id, actorEmail: user.email, category: 'members',
+      action: suspend ? 'member.suspended' : 'member.unsuspended', target: email,
+      summary: `${suspend ? 'Suspended' : 'Un-suspended'} ${email}${suspend && suspensionReason ? ` — ${suspensionReason}` : ''}` })
     return NextResponse.json({ ok: true })
   }
 
@@ -72,6 +83,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
     .neq('role', 'owner')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const email = await memberEmail(admin, userId)
+  await logAuditEvent({ workspaceId, userId: user.id, actorEmail: user.email, category: 'members',
+    action: 'member.role_changed', target: email, summary: `Changed ${email}'s role to ${role}`, metadata: { role } })
   return NextResponse.json({ ok: true })
 }
 
@@ -95,6 +109,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
   if (caller?.role !== 'owner') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const admin = createAdminClient()
+  const email = await memberEmail(admin, userId)
   const { error } = await admin
     .from('memberships')
     .delete()
@@ -103,5 +118,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
     .neq('role', 'owner')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await logAuditEvent({ workspaceId, userId: user.id, actorEmail: user.email, category: 'members',
+    action: 'member.removed', target: email, summary: `Removed ${email} from the workspace` })
   return NextResponse.json({ ok: true })
 }

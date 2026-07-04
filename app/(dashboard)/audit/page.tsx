@@ -16,34 +16,46 @@ export default async function AuditPage() {
   const isAdmin = membership.role !== 'member'
 
   const admin = createAdminClient()
-  const { data: entries } = await admin
-    .from('audit_log')
-    .select('id, actor_type, actor_label, action_slug, risk, result_status, result_summary, response, duration_ms, params, connection_id, replay_of, created_at, connection:connections(label)')
-    .eq('workspace_id', membership.workspace_id)
-    .order('created_at', { ascending: false })
-    .limit(500)
+  const [actionsRes, changesRes] = await Promise.all([
+    admin.from('audit_log')
+      .select('id, actor_type, actor_label, action_slug, risk, result_status, result_summary, response, duration_ms, params, connection_id, replay_of, created_at, connection:connections(label)')
+      .eq('workspace_id', membership.workspace_id)
+      .order('created_at', { ascending: false })
+      .limit(500),
+    // Governance events (migration 049). Tolerate the table being absent.
+    admin.from('audit_events')
+      .select('id, actor_email, category, action, target, summary, metadata, created_at')
+      .eq('workspace_id', membership.workspace_id)
+      .order('created_at', { ascending: false })
+      .limit(500),
+  ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = (entries ?? []) as any[]
+  const actions = (actionsRes.data ?? []) as any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const changes = (changesRes.data ?? []) as any[]
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <PageHero
         eyebrow="Insights"
         title="Audit Log"
-        description="Every action executed through OrbitAPI — who ran it, what happened, and when."
-        stats={[{ label: 'recent entries', value: rows.length }]}
+        description="The governance record — who changed what (settings, members, connectors, access) and every action run, for compliance and troubleshooting."
+        stats={[
+          { label: 'changes', value: changes.length },
+          { label: 'actions', value: actions.length },
+        ]}
       />
 
       <InsightsTabs />
 
-      {rows.length === 0 ? (
+      {changes.length === 0 && actions.length === 0 ? (
         <div className="py-16 text-center border rounded-lg text-muted-foreground">
-          <p className="font-medium">No actions yet.</p>
-          <p className="text-sm mt-1">Actions appear here as you use Orbit Assistant or run skills.</p>
+          <p className="font-medium">Nothing recorded yet.</p>
+          <p className="text-sm mt-1">Configuration changes and actions show up here as you use the workspace.</p>
         </div>
       ) : (
-        <AuditTable rows={rows} isAdmin={isAdmin} />
+        <AuditTable changes={changes} actions={actions} isAdmin={isAdmin} />
       )}
     </div>
   )

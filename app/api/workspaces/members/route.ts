@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAuditEvent } from '@/lib/audit'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -56,5 +57,7 @@ export async function POST(request: Request) {
     )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await logAuditEvent({ workspaceId, userId: user.id, actorEmail: user.email, category: 'members',
+    action: 'member.added', target: email, summary: `Added ${email} to the workspace as ${role}`, metadata: { role } })
   return NextResponse.json({ ok: true })
 }

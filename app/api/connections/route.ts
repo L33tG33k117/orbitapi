@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { getWorkspaceFeatures } from '@/lib/workspace-features'
 import { connectorLimit } from '@/lib/entitlements'
+import { logAuditEvent } from '@/lib/audit'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -104,6 +105,10 @@ export async function POST(request: Request) {
     .single()
 
   if (connErr) return NextResponse.json({ error: connErr.message }, { status: 500 })
+
+  await logAuditEvent({ workspaceId: membership.workspace_id, userId: user.id, actorEmail: user.email,
+    category: 'connector', action: 'connector.connected', target: label,
+    summary: `Connected ${manifest.name}${isSimulated ? ' (simulated)' : ''} as “${label}”`, metadata: { connectorSlug, isSimulated } })
 
   // For simulated lights: create an initial device
   if (connectorSlug === 'simulated-lights') {

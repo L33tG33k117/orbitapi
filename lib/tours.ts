@@ -177,9 +177,10 @@ const TOURS: Record<string, Tour> = {
   '/audit': {
     key: 'audit',
     steps: [
-      { popover: { title: 'Audit Log — the full record', description: 'A complete, tamper-evident record of every action: who or what ran it, the exact inputs, the full response, and how long it took. It’s the detailed sibling of the Activity page — built for troubleshooting and compliance.' } },
-      { popover: { title: 'Replay anything', description: 'Expand any entry to see its full response, then “Replay with fresh data” to run the same thing again and compare. Nothing is ever hidden — this is your source of truth.' } },
-      outro('You rarely need this day-to-day — it’s here the moment you want to prove exactly what happened.'),
+      { popover: { title: 'Audit Log — the governance record', description: 'This is your compliance trail. Two tabs: “Changes” = who changed what (settings, members, connectors, access), and “Actions” = the detailed log of everything that ran. Activity is the friendly “what happened” view; this is the source-of-truth detail.' } },
+      { popover: { title: 'Who changed what', description: 'The Changes tab answers questions like “who turned off approvals?” or “who added that member?” — each entry names the person, the change, and when.' } },
+      { popover: { title: 'Replay an action', description: 'On the Actions tab, expand any entry for its full inputs and response, then “Replay with fresh data” to run it again and compare.' } },
+      outro('You rarely need this day-to-day — it’s here the moment you need to prove exactly who did what.'),
     ],
   },
 

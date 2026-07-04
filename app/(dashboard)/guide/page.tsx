@@ -159,9 +159,9 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'audit', title: 'Audit Log', icon: ScrollText, href: '/audit',
-    what: 'A complete record of every action — who or what ran it, the inputs, the response, and how long it took. Any action can be replayed.',
-    use: 'For troubleshooting and compliance — and to re-run something with fresh data.',
-    example: 'Expand an entry to see its full response, then click "Replay with fresh data".',
+    what: 'The governance record. "Changes" shows who changed what — settings, members, connectors, access. "Actions" is the detailed log of everything that ran, with inputs, response, and replay. (Activity is the friendlier "what ran + outputs" view; Audit is the compliance-grade detail.)',
+    use: 'For compliance and troubleshooting — proving who did what, and re-running an action with fresh data.',
+    example: 'Under Changes: "Alex turned open API exploration off for QuickBooks." Under Actions: expand an entry to see its full response, then "Replay with fresh data".',
   },
   {
     id: 'plans', title: 'Plans & what\'s included', icon: Gauge, href: '/upgrade',

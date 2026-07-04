@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAuditEvent } from '@/lib/audit'
 
 type Params = { params: Promise<{ workspaceId: string }> }
 
@@ -53,6 +54,17 @@ export async function PATCH(req: Request, { params }: Params) {
   const { error } = await admin.from('workspaces').update(updates).eq('id', workspaceId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Governance trail — record the specific workspace settings that changed.
+  const ctx = { workspaceId, userId: user.id, actorEmail: user.email, category: 'workspace' as const }
+  if (updates.name !== undefined) {
+    await logAuditEvent({ ...ctx, action: 'workspace.renamed', summary: `Renamed the workspace to “${updates.name}”` })
+  }
+  if (updates.connection_delete_default !== undefined || updates.connection_delete_locked !== undefined) {
+    await logAuditEvent({ ...ctx, action: 'workspace.delete_policy_changed',
+      summary: `Updated the connection-deletion policy${updates.connection_delete_default ? ` (default: ${updates.connection_delete_default})` : ''}${updates.connection_delete_locked !== undefined ? `, ${updates.connection_delete_locked ? 'locked' : 'unlocked'}` : ''}`,
+      metadata: { connection_delete_default: updates.connection_delete_default, connection_delete_locked: updates.connection_delete_locked } })
+  }
   return NextResponse.json({ ok: true })
 }
 
