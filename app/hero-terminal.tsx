@@ -43,12 +43,12 @@ const SCENARIOS: Scenario[] = [
     id: 'finance',
     tab: 'Finance',
     icon: Banknote,
-    prompt: 'Show open critical invoices in NetSuite over $50k, then email me a summary and post to Teams',
+    prompt: 'Let me know when a NetSuite invoice ages past 10 days overdue so collections can reach out — email me and post to Teams',
     events: [
       { kind: 'chips', chips: [{ label: 'Querying NetSuite → list_open_invoices', tone: 'violet' }] },
-      { kind: 'text', html: 'Found <strong class="text-white">3 invoices</strong> — $247,800 total. Acme Corp ($120k, 14d overdue), TechVentures ($89k, 7d), GlobalSystems ($38.8k, 3d).' },
+      { kind: 'text', html: '<strong class="text-white">3 invoices</strong> just crossed 10 days past due — Acme Corp ($120k, 14d overdue), TechVentures ($89k, 12d), GlobalSystems ($38.8k, 11d). Time for collections to reach out.' },
       { kind: 'chips', chips: [
-        { label: 'Sending via SendGrid → send_alert_email', tone: 'blue' },
+        { label: 'Emailing collections → send_alert_email', tone: 'blue' },
         { label: 'Posting to Teams → send_alert', tone: 'purple' },
       ] },
       { kind: 'done', text: '✓ Email sent · Teams channel notified · 3 actions across 3 APIs in 2.3s' },

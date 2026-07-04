@@ -135,7 +135,7 @@ export default async function DashboardPage() {
                   ? 'Your orbit is empty — connect your first app and watch it come alive.'
                   : needsAttention > 0
                     ? `${connectionCount} ${connectionCount === 1 ? 'app' : 'apps'} in orbit · ${needsAttention} need${needsAttention === 1 ? 's' : ''} attention`
-                    : `${connectionCount} ${connectionCount === 1 ? 'app' : 'apps'} in orbit · all systems nominal`}
+                    : `${connectionCount} ${connectionCount === 1 ? 'app' : 'apps'} in orbit · all systems a-go`}
               </p>
             </div>
 

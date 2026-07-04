@@ -145,14 +145,15 @@ export function MissionPlayback() {
     const step = steps[stepIdx]
 
     if (step.type === 'type') {
-      setFeed([{ kind: 'prompt', text: '' }])
+      // Type into the chat input bar; when finished, it "sends" and jumps up as
+      // a user message bubble — so it reads like using the real chat, not a CLI.
       let i = 0
       const iv = setInterval(() => {
         i++
         setTyped(i)
         if (i >= step.text.length) {
           clearInterval(iv)
-          later(() => { setTyped(0); setStepIdx(s => s + 1) }, 500)
+          later(() => { setFeed([{ kind: 'prompt', text: step.text }]); setTyped(0); setStepIdx(s => s + 1) }, 450)
         }
       }, TYPE_MS)
       timers.current.push(iv as unknown as ReturnType<typeof setTimeout>)
@@ -323,62 +324,130 @@ export function MissionPlayback() {
             )}
           </div>
 
-          {/* Terminal feed */}
+          {/* The app on a laptop — this is what you'll actually see and use */}
           <div className="w-full max-w-xl">
-            <div className="rounded-2xl border border-white/10 bg-[oklch(0.09_0.018_268)]/90 backdrop-blur overflow-hidden shadow-2xl shadow-black/60">
-              <div className="flex items-center gap-1.5 px-5 py-3 border-b border-white/8 bg-[oklch(0.11_0.02_268)]">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
-                <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-[11px] text-white/30 font-mono">Orbit Assistant — {mission.label}</span>
-              </div>
-              <div className="p-5 space-y-3.5 font-mono text-xs sm:text-sm min-h-[300px]">
-                {feed.map((item, i) => {
-                  if (item.kind === 'prompt') {
-                    return (
-                      <div key={i} className="flex gap-2.5 items-start">
-                        <span className="text-[oklch(0.7_0.2_264)] shrink-0">you →</span>
-                        <span className="text-white/80">
-                          {typingText ?? item.text}
-                          {typingText !== null && <span className="inline-block w-2 h-4 bg-white/60 animate-pulse align-middle ml-0.5" />}
-                        </span>
+            <div className="relative">
+              {/* Screen */}
+              <div className="rounded-t-2xl border border-white/12 border-b-0 bg-[oklch(0.09_0.018_268)] overflow-hidden shadow-2xl shadow-black/60">
+                {/* Browser chrome — grounds it as "this is the real app in your browser" */}
+                <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-white/8 bg-[oklch(0.12_0.02_268)]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-500/50" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/50" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-500/50" />
+                  <div className="ml-3 flex-1 flex justify-center">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-md bg-white/[0.06] text-[10px] text-white/40">
+                      <span className="text-emerald-400/70">🔒</span> app.orbitapi.com/chat
+                    </div>
+                  </div>
+                </div>
+
+                {/* App body: a hint of the sidebar + the Orbit Assistant chat */}
+                <div className="flex min-h-[340px]">
+                  {/* Mini sidebar — outlines the real OrbitAPI shell */}
+                  <div className="hidden sm:flex flex-col items-center gap-1 w-12 py-3 border-r border-white/8 bg-[oklch(0.075_0.016_268)]">
+                    <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[oklch(0.46_0.19_264)] to-[oklch(0.4_0.2_290)] flex items-center justify-center mb-2">
+                      <Orbit className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    {[false, true, false, false, false].map((activeDot, i) => (
+                      <div key={i} className={`h-6 w-6 rounded-md flex items-center justify-center ${activeDot ? 'bg-[oklch(0.46_0.19_264)]/25' : ''}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${activeDot ? 'bg-[oklch(0.72_0.18_264)]' : 'bg-white/20'}`} />
                       </div>
-                    )
-                  }
-                  if (item.kind === 'chips') {
-                    return (
-                      <div key={i} className="flex flex-wrap gap-2 pl-1 animate-in fade-in slide-in-from-bottom-1 duration-400">
-                        {item.chips.map(c => (
-                          <span key={c.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs ${CHIP_TONES[c.tone]}`}>
-                            <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse inline-block shrink-0 opacity-70" />
-                            {c.label}
-                          </span>
-                        ))}
+                    ))}
+                  </div>
+
+                  {/* Chat column */}
+                  <div className="flex-1 flex flex-col min-w-0">
+                    {/* Chat header */}
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[oklch(0.72_0.18_264)]">✦</span>
+                        <span className="text-sm font-semibold">Orbit Assistant</span>
                       </div>
-                    )
-                  }
-                  if (item.kind === 'text') {
-                    return <p key={i} className="text-white/70 pl-1 animate-in fade-in slide-in-from-bottom-1 duration-400" dangerouslySetInnerHTML={{ __html: item.html }} />
-                  }
-                  if (item.kind === 'approval-note') {
-                    return (
-                      <p key={i} className="text-amber-300/90 pl-1 animate-in fade-in duration-400">
-                        ⏸ paused — waiting for human approval (that&apos;s you)
-                      </p>
-                    )
-                  }
-                  return <p key={i} className="text-[oklch(0.78_0.12_200)] pl-1 animate-in fade-in slide-in-from-bottom-1 duration-400">{item.text}</p>
-                })}
+                      <span className="text-[10px] text-white/30 flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> AI Power ready
+                      </span>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="flex-1 p-4 space-y-2.5 text-sm overflow-hidden">
+                      {feed.map((item, i) => {
+                        if (item.kind === 'prompt') {
+                          return (
+                            <div key={i} className="flex justify-end animate-in fade-in slide-in-from-bottom-1 duration-300">
+                              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-br from-[oklch(0.46_0.19_264)] to-[oklch(0.42_0.2_278)] px-3.5 py-2 text-white shadow-lg">
+                                {item.text}
+                              </div>
+                            </div>
+                          )
+                        }
+                        if (item.kind === 'chips') {
+                          return (
+                            <div key={i} className="flex justify-start">
+                              <div className="max-w-[90%] flex flex-wrap gap-1.5 animate-in fade-in slide-in-from-bottom-1 duration-400">
+                                {item.chips.map(c => (
+                                  <span key={c.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs ${CHIP_TONES[c.tone]}`}>
+                                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse inline-block shrink-0 opacity-70" />
+                                    {c.label}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        }
+                        if (item.kind === 'text') {
+                          return (
+                            <div key={i} className="flex justify-start animate-in fade-in slide-in-from-bottom-1 duration-400">
+                              <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white/[0.06] border border-white/8 px-3.5 py-2 text-white/80" dangerouslySetInnerHTML={{ __html: item.html }} />
+                            </div>
+                          )
+                        }
+                        if (item.kind === 'approval-note') {
+                          return (
+                            <div key={i} className="flex justify-start animate-in fade-in duration-400">
+                              <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-amber-500/10 border border-amber-500/25 px-3.5 py-2 text-amber-300/90 text-xs flex items-center gap-1.5">
+                                ⏸ Paused — waiting for your approval (that&apos;s you)
+                              </div>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div key={i} className="flex justify-start animate-in fade-in slide-in-from-bottom-1 duration-400">
+                            <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-emerald-500/10 border border-emerald-500/25 px-3.5 py-2 text-emerald-200/90">
+                              {item.text}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Input bar — the prompt types here, like you're using it */}
+                    <div className="p-3 border-t border-white/8 flex items-center gap-2">
+                      <div className="flex-1 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-sm min-h-[38px] flex items-center">
+                        {typingText
+                          ? <span className="text-white/85">{typingText}<span className="inline-block w-1.5 h-4 bg-white/60 animate-pulse align-middle ml-0.5" /></span>
+                          : <span className="text-white/30">Ask anything about your connected apps…</span>}
+                      </div>
+                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${typingText ? 'bg-[oklch(0.46_0.19_264)] text-white' : 'bg-white/10 text-white/40'}`}>
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Governance strip */}
+                <div className="px-4 py-2 border-t border-white/8 bg-[oklch(0.07_0.016_268)] flex items-center gap-2 text-[10px] text-white/35">
+                  <ScrollText className="h-3 w-3" /> every action lands in a searchable, replayable audit trail
+                </div>
               </div>
-              {/* Governance strip */}
-              <div className="px-5 py-2.5 border-t border-white/8 bg-[oklch(0.08_0.016_268)] flex items-center gap-2 text-[10px] text-white/35">
-                <ScrollText className="h-3 w-3" /> every action above lands in a searchable, replayable audit trail
-              </div>
+
+              {/* Laptop base / hinge */}
+              <div className="h-2.5 rounded-b-md bg-gradient-to-b from-[oklch(0.17_0.02_268)] to-[oklch(0.1_0.018_268)] border-x border-b border-white/12" />
+              <div className="mx-auto h-1.5 w-2/5 rounded-b-xl bg-[oklch(0.13_0.02_268)] shadow-lg" />
             </div>
 
-            {/* Prompt-typing text under the terminal keeps first paint honest */}
-            <p className="mt-4 text-center text-xs text-white/35">
-              This is the product, not a video — Simulated mode runs these exact missions the minute you sign up.
+            {/* Keep first paint honest */}
+            <p className="mt-5 text-center text-xs text-white/35">
+              This is the actual app, not a video — Simulated mode runs these exact missions the minute you sign up.
             </p>
             <div className="mt-4 flex items-center justify-center gap-3">
               <Link
