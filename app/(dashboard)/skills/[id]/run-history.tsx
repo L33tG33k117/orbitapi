@@ -185,7 +185,7 @@ export function RunHistory({
 
   // Supervised = always dry-run; manual and autonomous = live
   const mode: 'dry_run' | 'live' = autonomy === 'supervised' ? 'dry_run' : 'live'
-  const buttonLabel = autonomy === 'supervised' ? 'Test run (dry)' : 'Run now'
+  const buttonLabel = 'Run now'
 
   async function triggerRun() {
     setRunning(true)
@@ -228,14 +228,14 @@ export function RunHistory({
       )}
       {isAdmin && autonomy === 'supervised' && (
         <p className="text-xs text-muted-foreground -mt-2">
-          A test run is a safe rehearsal: it reads real data but only <em>shows</em> what it would change
-          (marked &ldquo;Would&rdquo;), without changing anything.
+          For a supervised skill, Run is a safe rehearsal: it reads real data but only <em>shows</em> what it
+          would change (marked &ldquo;Would&rdquo;), without changing anything.
         </p>
       )}
 
       {runs.length === 0 ? (
         <p className="text-sm text-muted-foreground py-4 text-center border rounded-lg">
-          No runs yet. Trigger a test run above.
+          No runs yet. Hit Run above.
         </p>
       ) : (
         <div className="space-y-2">

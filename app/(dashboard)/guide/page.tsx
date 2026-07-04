@@ -115,10 +115,10 @@ const SECTIONS: Section[] = [
     example: 'Publish your "Daily Threat Briefing" playbook — credentials are never included, only the recipe.',
   },
   {
-    id: 'playground', title: 'Playground', icon: Sparkles, href: '/playground',
-    what: 'One place to run everything you\'ve set up — your apps, skills, and playbooks — and see & export the results without hopping between sections.',
-    use: 'When you just want to run something and get the answer. Hit "Use now" on an app, or "Run" on a skill or playbook, and the result appears right there.',
-    example: 'Run your "Property Manager" skill, then export the bookings it pulled to Excel — all from the same screen.',
+    id: 'starlab', title: 'Starlab', icon: Sparkles, href: '/starlab',
+    what: 'Your lab to run everything you\'ve set up — apps, skills, and playbooks — experiment freely, and see & export the results, all in one place.',
+    use: 'When you just want to run something and get the answer. Hit "Use now" on an app, or "Run" on a skill or playbook; it appears in the 🚀 launch tray up top and the result lands here.',
+    example: 'Run your "Property Manager" skill, watch it in the launch tray, then export the bookings it pulled to Excel — all without leaving.',
     preview: (
       <Preview>
         <Row label="QuickBooks" tag="Use now" tagColor="bg-primary/15 text-primary" />

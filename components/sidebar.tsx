@@ -70,7 +70,7 @@ const sections: NavSection[] = [
   {
     label: 'Operate',
     items: [
-      { href: '/playground', label: 'Playground', icon: Rocket },
+      { href: '/starlab', label: 'Starlab', icon: Rocket },
       { href: '/approvals', label: 'Approvals', icon: ClipboardCheck },
       { href: '/mcp', label: 'Connect your AI', icon: Bot },
       { href: '/webhooks', label: 'Webhooks', icon: Webhook, capability: 'webhooks' },

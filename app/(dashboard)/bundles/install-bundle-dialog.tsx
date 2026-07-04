@@ -115,7 +115,7 @@ export function InstallBundleDialog({ slug, bundleName, source, connectors, exis
   if (outcome) {
     const { created, needsSetup } = outcome
     const rows: { count: number; label: string; where: string; path: string; cta: string }[] = [
-      { count: created.skills.length, label: 'skill', where: 'They live in your Skills tab — open one and hit "Test run" to see it work.', path: '/skills', cta: 'Go to Skills' },
+      { count: created.skills.length, label: 'skill', where: 'They live in your Skills tab — open one and hit "Run" to see it work.', path: '/skills', cta: 'Go to Skills' },
       { count: created.playbooks.length, label: 'playbook', where: 'Multi-step flows, now in your Playbooks tab.', path: '/playbooks', cta: 'Go to Playbooks' },
       { count: created.connections.length, label: 'connection', where: 'Added to API Connectors.', path: '/connectors', cta: 'View connectors' },
       { count: created.groups.length, label: 'group', where: 'A group that scopes this bundle\'s skills to its connections.', path: '/groups', cta: 'View groups' },

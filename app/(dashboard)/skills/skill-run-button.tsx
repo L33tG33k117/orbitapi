@@ -1,59 +1,47 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { Play } from 'lucide-react'
+import { trackLaunch } from '@/lib/launch-store'
 
-// Run a skill straight from the list, then jump to its result. Supervised skills
-// run as a safe dry run; manual/autonomous run live.
+// Run a skill from anywhere. Instead of dumping you into the skill's edit page,
+// it registers a "launch" that shows live in the top-bar rocket tray — you watch
+// it run there and click through to the result in Starlab when it's done.
 export function SkillRunButton({
-  skillId, autonomy, runnable, afterRun = 'navigate',
+  skillId, skillName, autonomy, runnable,
 }: {
   skillId: string
+  skillName: string
   autonomy: 'supervised' | 'manual' | 'autonomous'
   runnable: boolean
-  /** 'navigate' → jump to the skill's results; 'refresh' → stay put and refresh
-   *  (used on the Playground so results appear in place). */
-  afterRun?: 'navigate' | 'refresh'
 }) {
   const router = useRouter()
-  const [running, setRunning] = useState(false)
   const mode = autonomy === 'supervised' ? 'dry_run' : 'live'
-  const label = autonomy === 'supervised' ? 'Test run' : 'Run'
 
   async function run() {
-    if (!runnable) { toast.error('Give this skill a persona and verify it before running.'); return }
-    setRunning(true)
-    try {
+    if (!runnable) {
+      const { toast } = await import('sonner')
+      toast.error('Give this skill a persona and verify it before running.')
+      return
+    }
+    await trackLaunch({ name: skillName, kind: 'skill', href: '/starlab' }, async () => {
       const res = await fetch(`/api/skills/${skillId}/run`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }),
       })
       const d = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(d.error ?? 'Run failed'); return }
-      if (afterRun === 'refresh') {
-        toast.success('Done — see the result below.')
-        router.refresh()
-      } else {
-        toast.success('Done — opening the result…')
-        router.push(`/skills/${skillId}#run-history`)
-        router.refresh()
-      }
-    } catch {
-      toast.error('Run failed — check your connection and try again.')
-    } finally {
-      setRunning(false)
-    }
+      return { ok: res.ok, error: d.error }
+    })
+    // Refresh so on-page result feeds (Starlab, skill page) pick up the new run.
+    router.refresh()
   }
 
   return (
     <button
       onClick={run}
-      disabled={running}
-      title={runnable ? 'Run this skill and see the result' : 'Give it a persona and verify it first'}
-      className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50 transition-colors"
+      title={runnable ? 'Run this skill — watch it in the launch tray' : 'Give it a persona and verify it first'}
+      className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors"
     >
-      <Play className="h-3 w-3" /> {running ? 'Running…' : label}
+      <Play className="h-3 w-3" /> Run
     </button>
   )
 }

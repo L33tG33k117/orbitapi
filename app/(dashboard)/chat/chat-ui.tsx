@@ -666,7 +666,7 @@ export function ChatUI({ skills = [], hasConnections = true, connectorSuggestion
                   disabled={skillRunStatus === 'running'}
                   className="text-xs px-3 py-1 rounded-full border border-border bg-background hover:bg-muted transition-colors disabled:opacity-50"
                 >
-                  {skillRunStatus === 'running' ? 'Running…' : activeSkill.autonomy === 'supervised' ? '▷ Test run' : '▷ Run now'}
+                  {skillRunStatus === 'running' ? 'Running…' : '▷ Run'}
                 </button>
               </div>
             )}

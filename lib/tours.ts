@@ -106,13 +106,13 @@ const TOURS: Record<string, Tour> = {
     ],
   },
 
-  '/playground': {
-    key: 'playground',
+  '/starlab': {
+    key: 'starlab',
     steps: [
-      { popover: { title: 'Playground — run everything in one place', description: 'Your apps, skills, and playbooks are each set up in their own section — this is the one spot to actually run any of them and grab the result, without hopping around.' } },
-      { element: '[data-tour="playground-run"]', popover: { title: 'Run anything', description: '“Use now” on an app opens the point-and-click runner. “Run” on a skill or playbook fires it right here. Everything you’ve set up is listed, ready to go.', side: 'bottom' } },
-      { element: '[data-tour="playground-results"]', popover: { title: 'See & export the output', description: 'The moment something finishes, it appears here with its result — and an Export button to save the data as Excel, CSV, PDF, or Word. This is your answer to “where did that number go?”', side: 'top' } },
-      outro('Try it: hit “Use now” on an app or “Run” on a skill, then export the result from here.'),
+      { popover: { title: 'Starlab — your lab to run & discover', description: 'Everything you’ve set up lives in its own section; Starlab is the one place to actually run any of it and grab the result. Experiment freely — Simulated apps can’t break anything.' } },
+      { element: '[data-tour="starlab-run"]', popover: { title: 'Launch anything', description: '“Use now” on an app opens the point-and-click runner. “Run” on a skill or playbook fires it — and it shows up in the 🚀 launch tray at the top so you can watch it work.', side: 'bottom' } },
+      { element: '[data-tour="starlab-results"]', popover: { title: 'See & export the output', description: 'When something finishes it appears here with its result and an Export button — save it as Excel, CSV, PDF, or Word. This is your answer to “where did that result go?”', side: 'top' } },
+      outro('Try it: hit “Use now” on an app or “Run” on a skill, watch the launch tray, then export the result here.'),
     ],
   },
 

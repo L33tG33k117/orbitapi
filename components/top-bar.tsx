@@ -15,6 +15,7 @@ import { NavHotkeys } from '@/components/nav-hotkeys'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FeedbackButton } from '@/components/feedback-button'
 import { PageTour } from '@/components/page-tour'
+import { LaunchTray } from '@/components/launch-tray'
 import { LogOut, User as UserIcon, Settings, ChevronDown, Menu } from 'lucide-react'
 
 interface TopBarProps {
@@ -77,6 +78,7 @@ export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: T
 
       <NavHotkeys />
       <PageTour />
+      <LaunchTray />
       <FeedbackButton />
       <ThemeToggle />
       {adminInbox

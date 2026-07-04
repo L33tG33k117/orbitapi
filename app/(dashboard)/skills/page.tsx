@@ -195,6 +195,7 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
                 {isAdmin && (
                   <SkillRunButton
                     skillId={s.id}
+                    skillName={s.name}
                     autonomy={s.autonomy as 'supervised' | 'manual' | 'autonomous'}
                     runnable={!!(s.persona && String(s.persona).trim())}
                   />
