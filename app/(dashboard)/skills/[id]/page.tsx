@@ -145,10 +145,11 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
         connections={builderConnections}
       />
 
-      <section className="space-y-3 max-w-3xl">
-        <h2 className="text-lg font-semibold">Run history</h2>
+      <section id="run-history" className="space-y-3 max-w-3xl scroll-mt-6">
+        <h2 className="text-lg font-semibold">Run &amp; results</h2>
         <RunHistory
           skillId={id}
+          skillName={skill.name}
           initialRuns={(runs ?? []) as Parameters<typeof RunHistory>[0]['initialRuns']}
           isAdmin={isAdmin}
           autonomy={skill.autonomy as 'supervised' | 'manual' | 'autonomous'}

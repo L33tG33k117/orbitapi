@@ -4,6 +4,28 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { RunStep } from '@/lib/skill-runner'
+import { ResultExport } from '@/components/result-export'
+import { toTable } from '@/lib/export-data'
+
+// The data a run gathered, ready to export. A run may have several read steps;
+// we pick the single result that yields the richest table (the main list the
+// user wanted) and hand that whole result to the exporter — which already knows
+// how to find and flatten the records inside a real API response. Passing an
+// array of results instead would make the exporter treat the wrapper as the
+// table and stringify the real rows into one cell.
+function runData(steps: RunStep[]): unknown | null {
+  const results = steps
+    .filter(s => s.status === 'success' && s.result != null && typeof s.result === 'object' && !('error' in (s.result as object)))
+    .map(s => s.result)
+  if (results.length === 0) return null
+  let best = results[0]
+  let bestRows = toTable(best).rows.length
+  for (let i = 1; i < results.length; i++) {
+    const rows = toTable(results[i]).rows.length
+    if (rows > bestRows) { best = results[i]; bestRows = rows }
+  }
+  return best
+}
 
 interface Run {
   id: string
@@ -53,11 +75,14 @@ function StepRow({ s }: { s: RunStep }) {
   )
 }
 
-function RunCard({ run }: { run: Run }) {
+function RunCard({ run, skillName }: { run: Run; skillName: string }) {
   const [expanded, setExpanded] = useState(false)
   const duration = run.completed_at
     ? Math.round((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000)
     : null
+
+  const data = runData(run.steps)
+  const recordCount = data != null ? toTable(data).rows.length : 0
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -93,6 +118,28 @@ function RunCard({ run }: { run: Run }) {
         </button>
       </div>
 
+      {/* The answer + export — always visible, so a run's output is right here. */}
+      {(run.prompt || data != null) && (
+        <div className="border-t bg-muted/10 px-4 py-3 space-y-2">
+          {run.prompt && (
+            <div>
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Result</p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{run.prompt}</p>
+            </div>
+          )}
+          {data != null && (
+            <div className="flex items-center gap-3 flex-wrap pt-0.5">
+              <ResultExport data={data} baseName={`${skillName || 'skill'}_run`} variant="ghost" />
+              <span className="text-[11px] text-muted-foreground">
+                {recordCount > 0
+                  ? <>Export the <span className="font-medium text-foreground">{recordCount}</span> record{recordCount !== 1 ? 's' : ''} this run gathered — Excel, CSV, PDF…</>
+                  : 'Export what this run gathered — Excel, CSV, PDF…'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {expanded && (
         <div className="border-t bg-muted/20 px-4 py-2">
           {run.steps.length === 0 ? (
@@ -111,12 +158,6 @@ function RunCard({ run }: { run: Run }) {
               </ul>
             </div>
           )}
-          {run.prompt && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-muted-foreground font-medium mb-1">AI summary</p>
-              <p className="text-xs whitespace-pre-wrap">{run.prompt}</p>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -125,12 +166,14 @@ function RunCard({ run }: { run: Run }) {
 
 export function RunHistory({
   skillId,
+  skillName = '',
   initialRuns,
   isAdmin,
   autonomy = 'supervised',
   runnable = true,
 }: {
   skillId: string
+  skillName?: string
   initialRuns: Run[]
   isAdmin: boolean
   autonomy?: 'supervised' | 'manual' | 'autonomous'
@@ -196,7 +239,7 @@ export function RunHistory({
         </p>
       ) : (
         <div className="space-y-2">
-          {runs.map(r => <RunCard key={r.id} run={r} />)}
+          {runs.map(r => <RunCard key={r.id} run={r} skillName={skillName} />)}
         </div>
       )}
     </div>

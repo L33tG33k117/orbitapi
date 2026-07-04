@@ -12,6 +12,7 @@ import { CreateSkillForm } from './create-skill-form'
 import { SkillTemplates } from './skill-templates'
 import { SkillDeleteButton } from './skill-delete-button'
 import { SkillToggle } from './skill-toggle'
+import { SkillRunButton } from './skill-run-button'
 import { SectionIntro } from '@/components/section-intro'
 import { PageHero } from '@/components/page-hero'
 import { getBuiltinBundle } from '@/lib/bundle-registry'
@@ -190,6 +191,13 @@ export default async function SkillsPage({ searchParams }: { searchParams: Promi
                   }`}>
                     {s.enabled ? 'Enabled' : 'Disabled'}
                   </span>
+                )}
+                {isAdmin && (
+                  <SkillRunButton
+                    skillId={s.id}
+                    autonomy={s.autonomy as 'supervised' | 'manual' | 'autonomous'}
+                    runnable={!!(s.persona && String(s.persona).trim())}
+                  />
                 )}
                 <Link
                   href={`/skills/${s.id}`}

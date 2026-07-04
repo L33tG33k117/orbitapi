@@ -19,7 +19,7 @@ export default async function McpPage() {
       <PageHero
         eyebrow="Operate"
         title="Connect your AI"
-        description="Use your Orbit connectors from Claude, ChatGPT, or Cursor. Your assistant gets the tools; Orbit keeps the credentials, the approval gates, and the audit log."
+        description="Use your Orbit connectors from Claude, ChatGPT, GitHub Copilot, or Cursor. Your assistant gets the tools; Orbit keeps the credentials, the approval gates, and the audit log."
       />
       <McpClient isAdmin={isAdmin} />
     </div>

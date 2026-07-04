@@ -8,6 +8,7 @@ import {
   RotateCcw, ChevronDown, ChevronRight, MessageSquare, Zap, ShieldAlert, Wrench,
 } from 'lucide-react'
 import { ResultExport } from '@/components/result-export'
+import { toTable } from '@/lib/export-data'
 
 export interface ActivityStep {
   step?: number
@@ -16,6 +17,25 @@ export interface ActivityStep {
   params?: Record<string, unknown>
   note?: string
   risk?: string
+  result?: unknown
+}
+
+// The data an automation run gathered — so its output is exportable
+// (spreadsheet/PDF/…), not just a step list. Picks the single richest step
+// result and hands that whole result to the exporter (which finds & flattens
+// the records inside); passing an array would make it stringify the rows.
+function runData(steps: ActivityStep[]): unknown | null {
+  const results = steps
+    .filter(s => s.status === 'success' && s.result != null && typeof s.result === 'object' && !('error' in (s.result as object)))
+    .map(s => s.result)
+  if (results.length === 0) return null
+  let best = results[0]
+  let bestRows = toTable(best).rows.length
+  for (let i = 1; i < results.length; i++) {
+    const rows = toTable(results[i]).rows.length
+    if (rows > bestRows) { best = results[i]; bestRows = rows }
+  }
+  return best
 }
 
 export interface ActivityItem {
@@ -254,6 +274,16 @@ function ActivityCard({ item, isAdmin }: { item: ActivityItem; isAdmin: boolean 
                 ? <p className="text-sm whitespace-pre-wrap">{item.summary}</p>
                 : <p className="text-sm text-muted-foreground">No summary recorded for this run.</p>}
               {item.error && <p className="text-xs text-destructive">Error: {item.error}</p>}
+              {(() => {
+                const data = runData(item.steps ?? [])
+                if (data == null) return null
+                return (
+                  <div className="flex items-center gap-2.5">
+                    <ResultExport data={data} baseName={`${prettyTitle(item.title).replace(/\s+/g, '_')}_run`} variant="compact" />
+                    <span className="text-[11px] text-muted-foreground">Export the data this run gathered</span>
+                  </div>
+                )
+              })()}
               {!!item.steps?.length && (
                 <details className="text-xs">
                   <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{item.steps.length} step{item.steps.length !== 1 ? 's' : ''}</summary>

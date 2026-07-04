@@ -361,7 +361,7 @@ export default async function RootPage() {
               {
                 icon: Bot,
                 title: 'Connect your AI',
-                desc: 'Already live in Claude, ChatGPT, or Cursor? Plug OrbitAPI in as an MCP server and your assistant can operate your connected tools — reads run instantly, risky actions wait for your approval.',
+                desc: 'Already live in Claude, ChatGPT, GitHub Copilot, or Cursor? Plug OrbitAPI in as an MCP server and your assistant can operate your connected tools — reads run instantly, risky actions wait for your approval.',
                 tag: 'New',
               },
             ].map(f => {

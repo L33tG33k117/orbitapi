@@ -140,6 +140,10 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
             Settings → Connectors (requires developer mode) → <span className="font-medium">Add connector</span> → paste the URL.
           </li>
           <li>
+            <p className="font-medium text-foreground">GitHub Copilot</p>
+            In VS Code, open the Copilot Chat <span className="font-medium">Agent mode</span> tool picker → <span className="font-medium">Add MCP Server</span> → choose <span className="font-mono text-xs">HTTP</span> and paste the URL above (or add it under <span className="font-mono text-xs">mcpServers</span> in <span className="font-mono text-xs">.vscode/mcp.json</span>).
+          </li>
+          <li>
             <p className="font-medium text-foreground">Cursor / other MCP clients</p>
             Add a server of type <span className="font-mono text-xs">streamable-http</span> with the URL above.
           </li>
