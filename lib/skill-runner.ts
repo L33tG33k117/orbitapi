@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification, emailSkillRunOutcome } from '@/lib/notify'
-import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks, actionPolicy, hasApprovePolicy } from '@/lib/connector-access'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
@@ -72,7 +72,7 @@ export async function runSkill({
   }
 
   // Load connections (scoped as resolved above, or all active workspace connections).
-  let connections: { id: string; label: string; vault_secret_id: string | null; allowed_risk_levels: string[] | null; allow_api_exploration?: boolean | null; is_simulated: boolean; connector: { slug: string; name: string } }[] = []
+  let connections: { id: string; label: string; vault_secret_id: string | null; allowed_risk_levels: string[] | null; allow_api_exploration?: boolean | null; action_policies?: Record<string, string> | null; is_simulated: boolean; connector: { slug: string; name: string } }[] = []
   {
     let q = admin
       .from('connections')
@@ -106,8 +106,11 @@ export async function runSkill({
   // are staged into the Approvals inbox instead of executing. Resolve an approver
   // (workspace owner, else any admin) to attribute the pending action to.
   const requireApproval = !!skill.require_approval && mode === 'live'
+  // Per-action 'approve' policies also need an approver, even when the
+  // skill-level gate is off.
+  const anyApprovePolicy = mode === 'live' && connections.some(hasApprovePolicy)
   let approverId: string | null = null
-  if (requireApproval) {
+  if (requireApproval || anyApprovePolicy) {
     const { data: appr } = await admin
       .from('memberships')
       .select('user_id, role')
@@ -153,8 +156,17 @@ export async function runSkill({
         if (explorationBlocks(conn, action.slug)) continue
         if (blockedSlugs.includes(action.slug)) continue
 
+        // Per-action policy: 'never' actions aren't exposed as tools at all.
+        const policy = actionPolicy(conn, action.slug)
+        if (policy === 'never') continue
+
         const toolName = `${conn.id.replaceAll('-', '_')}__${action.slug}`
         const isWrite = action.risk !== 'read'
+        // Approval staging: skill-level gate covers writes ('auto' policy opts an
+        // action out of it); an 'approve' policy gates the action — reads included —
+        // even when the skill-level gate is off. Simulated connections skip it.
+        const needsApproval = mode === 'live' && !conn.is_simulated &&
+          (policy === 'approve' || (isWrite && requireApproval && policy !== 'auto'))
 
         tools[toolName] = dynamicTool({
           description: `[${conn.label}] ${action.description}`,
@@ -179,9 +191,9 @@ export async function runSkill({
               return { __dry_run: true, would_execute: action.slug, params: p }
             }
 
-            // Approval gate — stage the write instead of executing it. Skipped for
+            // Approval gate — stage the action instead of executing it. Skipped for
             // simulated connections (a sandbox write has no real-world impact).
-            if (isWrite && requireApproval && !conn.is_simulated) {
+            if (needsApproval) {
               if (!approverId) {
                 steps.push({
                   step: myStep, type: 'tool_call', tool_name: action.name, params: p,

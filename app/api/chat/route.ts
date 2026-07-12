@@ -9,7 +9,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
-import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks, actionPolicy } from '@/lib/connector-access'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
@@ -102,6 +102,7 @@ export async function POST(req: Request) {
     id: string; label: string; status: string; vault_secret_id: string | null;
     workspace_id: string; is_simulated: boolean; allowed_risk_levels: string[] | null;
     allow_api_exploration?: boolean | null;
+    action_policies?: Record<string, string> | null;
     connector: { slug: string; name: string }
   }
 
@@ -161,8 +162,16 @@ export async function POST(req: Request) {
       // Skill blocked actions are never exposed
       if (blockedSlugs.includes(action.slug)) continue
 
+      // Per-action policy: 'never' actions aren't exposed as tools at all.
+      const policy = actionPolicy(conn, action.slug)
+      if (policy === 'never') continue
+
       const toolName = `${conn.id.replaceAll('-', '_')}__${action.slug}`
       const isWrite = action.risk !== 'read'
+      // Confirmation bubble: default for real writes; 'approve' extends it to
+      // reads; 'auto' removes it. Simulated connections never confirm (no
+      // real-world impact) — matches the skill approval gate's precedent.
+      const needsConfirm = !conn.is_simulated && (policy === 'approve' || (isWrite && policy !== 'auto'))
 
       tools[toolName] = dynamicTool({
         description: `[${conn.label} — ${conn.connector.name}] ${action.description}`,
@@ -195,8 +204,8 @@ export async function POST(req: Request) {
             return simResult.data as Record<string, unknown>
           }
 
-          if (isWrite) {
-            // Stage the write — create a pending_actions row, do not execute yet
+          if (needsConfirm) {
+            // Stage the action — create a pending_actions row, do not execute yet
             const { data: pending, error: pendingErr } = await admin
               .from('pending_actions')
               .insert({
@@ -235,7 +244,7 @@ export async function POST(req: Request) {
             }
           }
 
-          // Read action — execute immediately (route simulated through engine)
+          // Read or 'auto'-policy action — execute immediately (route simulated through engine)
           const result = conn.is_simulated
             ? await resolveSimulatedAction({
                 workspaceId: membership.workspace_id,

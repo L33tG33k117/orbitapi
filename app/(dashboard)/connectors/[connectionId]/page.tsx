@@ -227,6 +227,9 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
           actions={manifest.actions.map(a => ({ slug: a.slug, name: a.name, risk: a.risk }))}
           connectorName={connector.name}
           connectorSlug={connector.slug}
+          connectionId={connectionId}
+          canManage={isAdmin}
+          initialPolicies={(connection as { action_policies?: Record<string, string> | null }).action_policies ?? null}
         />
       </section>
 

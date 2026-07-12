@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
+import { policyBlocks } from '@/lib/connector-access'
 import { RunnerShell } from './runner-shell'
 
 export default async function ManualPage({ params }: { params: Promise<{ connectionId: string }> }) {
@@ -21,7 +22,8 @@ export default async function ManualPage({ params }: { params: Promise<{ connect
   const admin = createAdminClient()
   const { data: connection } = await admin
     .from('connections')
-    .select('id, label, status, workspace_id, connector:connectors(slug, name, category)')
+    // '*' so action_policies flows through for per-action policy filtering
+    .select('*, connector:connectors(slug, name, category)')
     .eq('id', connectionId)
     .single()
 
@@ -50,6 +52,8 @@ export default async function ManualPage({ params }: { params: Promise<{ connect
 
   const actions = manifest.actions
     .filter(a => allowedActions === null || allowedActions.includes(a.slug))
+    // 'never'-policy actions are disabled on this connection entirely
+    .filter(a => !policyBlocks(connection as { action_policies?: Record<string, string> | null }, a.slug))
     .map(a => ({
       slug: a.slug,
       name: a.name,

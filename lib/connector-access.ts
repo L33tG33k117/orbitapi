@@ -44,3 +44,33 @@ export function explorationBlocks(
 ): boolean {
   return actionSlug === EXPLORE_ACTION_SLUG && !explorationAllowed(conn)
 }
+
+// Per-action permission policies (migration 051). A connection may pin any
+// action to one of three policies:
+//   'auto'    — runs with no approval step, even where the default would ask
+//               (chat write confirmation, skill approval gate, MCP queue)
+//   'approve' — every automated invocation queues for human approval, reads
+//               included (running it yourself from the manual form still counts
+//               as the approval — a human is present and clicking Run)
+//   'never'   — the action cannot be executed through OrbitAPI at all
+// Absent slug / absent column ⇒ null ⇒ default behavior, so enforcement never
+// bricks a connection it has no policy for.
+export type ActionPolicy = 'auto' | 'approve' | 'never'
+export const ACTION_POLICIES: ActionPolicy[] = ['auto', 'approve', 'never']
+
+type PolicyConn = { action_policies?: Record<string, string> | null } | null | undefined
+
+export function actionPolicy(conn: PolicyConn, actionSlug: string): ActionPolicy | null {
+  const p = conn?.action_policies?.[actionSlug]
+  return p === 'auto' || p === 'approve' || p === 'never' ? p : null
+}
+
+export function policyBlocks(conn: PolicyConn, actionSlug: string): boolean {
+  return actionPolicy(conn, actionSlug) === 'never'
+}
+
+// True when this connection has at least one action pinned to 'approve' —
+// used by runners to decide whether an approver must be resolved up front.
+export function hasApprovePolicy(conn: PolicyConn): boolean {
+  return Object.values(conn?.action_policies ?? {}).includes('approve')
+}

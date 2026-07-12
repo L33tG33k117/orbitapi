@@ -12,6 +12,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-07-12',
+    title: 'Per-action permissions on every connection',
+    tag: 'New',
+    points: [
+      'Admins can now set a permission on each individual action of a connection: Automatic (runs with no approval step), Manual approve (every automated use — assistant, skills, playbooks, external AI — queues for human approval), or Never (the action is disabled entirely).',
+      'Set it right on the connector page, next to each action. Unset actions keep the standard behavior.',
+      'Every policy change is recorded in the Audit trail.',
+    ],
+  },
+  {
+    date: '2026-07-12',
     title: 'Batch delete for connections',
     tag: 'Improved',
     points: [

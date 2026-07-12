@@ -8,7 +8,7 @@ import { createNotification } from '@/lib/notify'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
-import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks, actionPolicy, policyBlocks } from '@/lib/connector-access'
 import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
 
 // ============================================================
@@ -77,6 +77,7 @@ type Connection = {
   is_simulated: boolean
   allowed_risk_levels: string[] | null
   allow_api_exploration?: boolean | null
+  action_policies?: Record<string, string> | null
   connector: { slug: string; name: string }
 }
 
@@ -329,7 +330,12 @@ async function executeFrom(
 
         const params = interpolateParams(node.params ?? {}, state)
         const isWrite = entry.action.risk !== 'read'
-        const decision = isWrite ? resolveMode(severity, playbook.autonomy_policy) : 'auto'
+        // Per-action policy overrides the severity-band autonomy decision:
+        // 'approve' always parks for approval (reads included), 'auto' always runs.
+        const policy = actionPolicy(entry.connection, entry.action.slug)
+        const decision = policy === 'approve' ? 'approval'
+          : policy === 'auto' ? 'auto'
+          : isWrite ? resolveMode(severity, playbook.autonomy_policy) : 'auto'
         const justApproved = resume?.approvedNode === node.id
 
         // Dry-run never writes.
@@ -345,7 +351,9 @@ async function executeFrom(
         }
 
         // Autonomy gate (skipped if this node was just approved on resume).
-        if (isWrite && !justApproved) {
+        // 'approve'-policy reads go through it too — but never in a dry run,
+        // which must not park or stage anything.
+        if ((isWrite || policy === 'approve') && !justApproved && mode !== 'dry_run') {
           if (decision === 'notify') {
             await createNotification({
               workspaceId: playbook.workspace_id, type: 'info',
@@ -736,6 +744,8 @@ async function buildActionIndex(
       if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
       // Open API exploration can be turned off per connection
       if (explorationBlocks(conn, action.slug)) continue
+      // Per-action policy: 'never' actions aren't exposed at all
+      if (policyBlocks(conn, action.slug)) continue
       index[`${conn.id}__${action.slug}`] = { action, connection: conn }
     }
   }

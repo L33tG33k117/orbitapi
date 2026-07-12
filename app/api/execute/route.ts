@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
-import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks, policyBlocks } from '@/lib/connector-access'
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -54,6 +54,13 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (explorationBlocks(conn as any, actionSlug)) {
     return NextResponse.json({ error: 'Open API exploration is turned off for this connection.' }, { status: 403 })
+  }
+
+  // Per-action policy: 'never' blocks everywhere. ('approve' is satisfied here —
+  // a human is present and clicking Run, which IS the manual approval.)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (policyBlocks(conn as any, actionSlug)) {
+    return NextResponse.json({ error: `“${action.name}” is set to Never on this connection — a workspace admin has disabled it.` }, { status: 403 })
   }
 
   // Members: check grants

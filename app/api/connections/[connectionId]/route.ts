@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
-import { normalizeRiskLevels } from '@/lib/connector-access'
+import { normalizeRiskLevels, ACTION_POLICIES, type ActionPolicy } from '@/lib/connector-access'
 import { logAuditEvent } from '@/lib/audit'
 
 type Params = { params: Promise<{ connectionId: string }> }
@@ -23,7 +23,8 @@ export async function PATCH(req: Request, { params }: Params) {
   const admin = createAdminClient()
   const { data: connection } = await admin
     .from('connections')
-    .select('id, label, workspace_id, vault_secret_id, connector:connectors(slug)')
+    // '*' so action_policies flows through (and stays graceful if 051 is unapplied)
+    .select('*, connector:connectors(slug)')
     .eq('id', connectionId)
     .single()
 
@@ -32,18 +33,32 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   const body = await req.json()
-  const { label, credentials, testFirst, allowedRiskLevels, allowApiExploration } = body as {
+  const { label, credentials, testFirst, allowedRiskLevels, allowApiExploration, actionPolicy } = body as {
     label?: string
     credentials?: Record<string, string>
     testFirst?: boolean
     allowedRiskLevels?: string[]
     allowApiExploration?: boolean
+    actionPolicy?: { slug: string; policy: ActionPolicy | null }
   }
 
   const updates: Record<string, unknown> = {}
   if (label) updates.label = label
   if (allowedRiskLevels !== undefined) updates.allowed_risk_levels = normalizeRiskLevels(allowedRiskLevels)
   if (allowApiExploration !== undefined) updates.allow_api_exploration = !!allowApiExploration
+
+  // Per-action permission policy — merge one slug into the map (null clears
+  // back to default). Sent one at a time by the connector page's dropdowns.
+  if (actionPolicy !== undefined) {
+    if (!actionPolicy?.slug || (actionPolicy.policy !== null && !ACTION_POLICIES.includes(actionPolicy.policy))) {
+      return NextResponse.json({ error: 'Invalid action policy' }, { status: 400 })
+    }
+    const current = ((connection as { action_policies?: Record<string, string> | null }).action_policies ?? {}) as Record<string, string>
+    const next = { ...current }
+    if (actionPolicy.policy === null) delete next[actionPolicy.slug]
+    else next[actionPolicy.slug] = actionPolicy.policy
+    updates.action_policies = next
+  }
 
   // If new credentials provided, store them
   if (credentials && Object.keys(credentials).length > 0) {
@@ -91,6 +106,14 @@ export async function PATCH(req: Request, { params }: Params) {
   if (allowApiExploration !== undefined) {
     await logAuditEvent({ ...ctx, category: 'access', action: 'connector.exploration_toggled',
       summary: `Turned open API exploration ${allowApiExploration ? 'on' : 'off'} for “${connLabel}”` })
+  }
+  if (actionPolicy !== undefined) {
+    const friendly = actionPolicy.policy === 'auto' ? 'Automatic'
+      : actionPolicy.policy === 'approve' ? 'Manual approve'
+      : actionPolicy.policy === 'never' ? 'Never' : 'Default'
+    await logAuditEvent({ ...ctx, category: 'access', action: 'connector.action_policy_changed',
+      summary: `Set “${actionPolicy.slug}” on “${connLabel}” to ${friendly}`,
+      metadata: { slug: actionPolicy.slug, policy: actionPolicy.policy } })
   }
   if (credentials && Object.keys(credentials).length > 0) {
     await logAuditEvent({ ...ctx, category: 'connector', action: 'connector.credentials_updated',

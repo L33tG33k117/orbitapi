@@ -3,7 +3,7 @@ import { getConnector } from '@/connectors'
 import type { ActionDef } from '@/connectors/types'
 import { resolveCredentials } from '@/lib/credentials'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
-import { riskAllowed, explorationBlocks } from '@/lib/connector-access'
+import { riskAllowed, explorationBlocks, actionPolicy } from '@/lib/connector-access'
 import { createNotification } from '@/lib/notify'
 
 // Core of the MCP surface: turn a workspace's active connections into MCP
@@ -51,6 +51,7 @@ interface ToolBinding {
   connectorSlug: string
   isSimulated: boolean
   allowedRiskLevels: string[] | null
+  policy: 'auto' | 'approve' | 'never' | null
   action: ActionDef
 }
 
@@ -84,6 +85,9 @@ export async function buildTools(workspaceId: string): Promise<{ tools: McpTool[
     for (const action of manifest.actions) {
       // Open API exploration can be turned off per connection
       if (explorationBlocks(conn as { allow_api_exploration?: boolean | null }, action.slug)) continue
+      // Per-action policy: 'never' actions aren't exposed as tools at all
+      const policy = actionPolicy(conn, action.slug)
+      if (policy === 'never') continue
       let name = `${base}__${sanitize(action.slug)}`.slice(0, 64)
       // Two connections with the same label: disambiguate with the id prefix.
       if (usedNames.has(name)) name = `${base}_${conn.id.slice(0, 6)}__${sanitize(action.slug)}`.slice(0, 64)
@@ -94,7 +98,9 @@ export async function buildTools(workspaceId: string): Promise<{ tools: McpTool[
         description:
           `[${meta?.name ?? meta?.slug} · ${conn.label}${conn.is_simulated ? ' · simulated' : ''} · risk: ${action.risk}] ` +
           `${action.description}` +
-          (action.risk !== 'read' ? ' NOTE: this action requires human approval in OrbitAPI — calling it queues an approval request and returns immediately.' : ''),
+          (policy === 'approve' || (action.risk !== 'read' && policy !== 'auto')
+            ? ' NOTE: this action requires human approval in OrbitAPI — calling it queues an approval request and returns immediately.'
+            : ''),
         inputSchema: (action.inputSchema ?? { type: 'object', properties: {} }) as Record<string, unknown>,
       })
       bindings.set(name, {
@@ -104,6 +110,7 @@ export async function buildTools(workspaceId: string): Promise<{ tools: McpTool[
         connectorSlug: meta?.slug ?? '',
         isSimulated: !!conn.is_simulated,
         allowedRiskLevels: (conn as { allowed_risk_levels?: string[] | null }).allowed_risk_levels ?? null,
+        policy,
         action,
       })
     }
@@ -124,9 +131,16 @@ export async function executeTool(
     return { text: `${action.risk} actions are disabled for the "${binding.connectionLabel}" connection.`, isError: true }
   }
 
-  // Write/destructive: queue for human approval — never execute directly from
-  // an external assistant. Same flow as skill approvals.
-  if (action.risk !== 'read') {
+  // Per-action policy: 'never' blocks outright (belt-and-braces — such tools
+  // aren't listed, but a stale client may still call one).
+  if (binding.policy === 'never') {
+    return { text: `“${action.name}” is set to Never on the "${binding.connectionLabel}" connection — a workspace admin has disabled it.`, isError: true }
+  }
+
+  // Write/destructive queue for human approval — never execute directly from
+  // an external assistant — unless the admin pinned this action to 'auto'.
+  // An 'approve' policy queues reads too. Same flow as skill approvals.
+  if (binding.policy === 'approve' || (action.risk !== 'read' && binding.policy !== 'auto')) {
     const { error } = await admin.from('pending_actions').insert({
       workspace_id: endpoint.workspace_id,
       user_id: endpoint.created_by,
@@ -153,7 +167,7 @@ export async function executeTool(
     }
   }
 
-  // Read: execute directly, exactly like /api/execute.
+  // Read (or 'auto'-policy action): execute directly, exactly like /api/execute.
   const { data: conn } = await admin
     .from('connections')
     .select('*')
