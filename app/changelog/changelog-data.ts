@@ -12,6 +12,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-07-12',
+    title: 'The assistant now respects — and explains — disabled actions',
+    tag: 'Improved',
+    points: [
+      'When an admin disables an action (Never, or a whole action type), Orbit Assistant and Skills no longer quietly reach for a similar action instead — they tell you which permission is missing and where an admin can change it.',
+      'Slack rich messages are validated before sending, so malformed cards fail with a clear explanation instead of Slack\'s bare "invalid_blocks".',
+    ],
+  },
+  {
+    date: '2026-07-12',
     title: 'Starlab history, smarter Slack errors, and fixes',
     tag: 'Improved',
     points: [

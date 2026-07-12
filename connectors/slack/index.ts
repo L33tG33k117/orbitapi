@@ -259,7 +259,9 @@ export const slackManifest: ConnectorManifest = {
       name: 'Post Rich Message',
       description:
         'Post a Block Kit message with a bold header, body text, optional context line, and optional button link. ' +
-        'Ideal for formatted notifications. button_label and button_url must be provided together.',
+        'Ideal for formatted notifications. button_label and button_url must be provided together. ' +
+        'Only for content that genuinely has a header AND a body — for a plain message, use Send Message; ' +
+        'never pad the user\'s words with invented body text.',
       risk: 'write',
       inputSchema: {
         type: 'object',
@@ -274,27 +276,38 @@ export const slackManifest: ConnectorManifest = {
         },
       },
       execute: async (creds, params) => {
-        const blocks: unknown[] = [
-          { type: 'header', text: { type: 'plain_text', text: params.header as string, emoji: true } },
-          { type: 'section', text: { type: 'mrkdwn', text: params.body as string } },
-        ]
-        if (params.context) {
-          blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: params.context as string }] })
+        // Sanitize up front — Slack answers any malformed block with a bare
+        // "invalid_blocks", so prevent the known causes: empty text, header
+        // over 150 chars, blank context, or a button without a real URL.
+        const header = String(params.header ?? '').trim().slice(0, 150)
+        const body = String(params.body ?? '').trim().slice(0, 3000)
+        if (!header || !body) {
+          return { ok: false, error: 'header and body are both required and must be non-empty. For a simple message without a header, use Send Message instead.' }
         }
-        if (params.button_label && params.button_url) {
+        const blocks: unknown[] = [
+          { type: 'header', text: { type: 'plain_text', text: header, emoji: true } },
+          { type: 'section', text: { type: 'mrkdwn', text: body } },
+        ]
+        const context = String(params.context ?? '').trim()
+        if (context) {
+          blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: context.slice(0, 3000) }] })
+        }
+        const buttonLabel = String(params.button_label ?? '').trim()
+        const buttonUrl = String(params.button_url ?? '').trim()
+        if (buttonLabel && /^https?:\/\//i.test(buttonUrl)) {
           blocks.push({
             type: 'actions',
             elements: [{
               type: 'button',
-              text: { type: 'plain_text', text: params.button_label as string },
-              url: params.button_url as string,
+              text: { type: 'plain_text', text: buttonLabel.slice(0, 75) },
+              url: buttonUrl,
             }],
           })
         }
         return slackPost(creds.api_key, '/chat.postMessage', {
           channel: params.channel,
           blocks,
-          text: params.header as string,
+          text: header,
         })
       },
     },

@@ -142,6 +142,9 @@ export async function runSkill({
   try {
     const tools: Record<string, ReturnType<typeof dynamicTool>> = {}
     const credCache: Record<string, Record<string, string>> = {}
+    // Actions hidden by permission policy — the model must know, or it will
+    // silently substitute a similar tool for the one an admin turned off.
+    const disabledActions: string[] = []
 
     for (const conn of connections) {
       const manifest = getConnector(conn.connector.slug)
@@ -151,14 +154,20 @@ export async function runSkill({
 
       for (const action of manifest.actions) {
         // Per-connector access controls: skip classes this connection has disabled
-        if (!riskAllowed(conn.allowed_risk_levels, action.risk)) continue
+        if (!riskAllowed(conn.allowed_risk_levels, action.risk)) {
+          disabledActions.push(`"${action.name}" on ${conn.label} (${action.risk} actions are turned off)`)
+          continue
+        }
         // Open API exploration can be turned off per connection
         if (explorationBlocks(conn, action.slug)) continue
         if (blockedSlugs.includes(action.slug)) continue
 
         // Per-action policy: 'never' actions aren't exposed as tools at all.
         const policy = actionPolicy(conn, action.slug)
-        if (policy === 'never') continue
+        if (policy === 'never') {
+          disabledActions.push(`"${action.name}" on ${conn.label} (set to Never)`)
+          continue
+        }
 
         const toolName = `${conn.id.replaceAll('-', '_')}__${action.slug}`
         const isWrite = action.risk !== 'read'
@@ -323,6 +332,10 @@ ${triggerPrompt}
 IMPORTANT: Start by reading current data to evaluate whether the trigger condition is met.
 - If the condition IS met → proceed with your full workflow.
 - If the condition is NOT met → respond with a brief explanation of why you are not acting (e.g. "No check-in today — skipping arrival workflow") and stop. Do not call any write tools.
+` : ''}
+${disabledActions.length ? `
+Disabled actions (critical): these actions are DISABLED by workspace permission settings — do NOT substitute a similar action to achieve the same effect; note the missing permission in your summary instead:
+${[...new Set(disabledActions)].map(a => `- ${a}`).join('\n')}
 ` : ''}
 Guidelines:
 - Use tools to gather current data before making decisions
