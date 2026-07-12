@@ -1,8 +1,12 @@
 'use client'
 
 import { useSyncExternalStore, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Rocket, Check, X } from 'lucide-react'
-import { subscribeLaunches, getLaunches, getLaunchesServer, type Launch } from '@/lib/launch-store'
+import {
+  subscribeLaunches, getLaunches, getLaunchesServer,
+  getLaunchHistory, getLaunchHistoryServer, type Launch,
+} from '@/lib/launch-store'
 
 // Mission Control — the live launch strip in the Starlab hero. Every launch
 // (skill / playbook / app run) lifts off from the pad and climbs toward the
@@ -10,8 +14,10 @@ import { subscribeLaunches, getLaunches, getLaunchesServer, type Launch } from '
 // pad in red = failed. It's a costume over the same launch-store data the
 // top-bar rocket tray uses — the climb is time-eased (runs don't report a
 // real %), then snaps to orbit the moment the run finishes.
-
-const MAX_ROCKETS = 5
+//
+// Finished launches stay on the strip for 7 days (localStorage history) and
+// click through to Activity for the full results. The strip scrolls
+// horizontally when there are more flights than fit — newest on the left.
 
 // Eased "altitude" (0–100) for a launch. Running rockets climb fast at first
 // and approach ~88% asymptotically so they never stall visibly at the top.
@@ -25,12 +31,88 @@ function seconds(l: Launch, now: number): number {
   return Math.max(1, Math.round(((l.endedAt ?? now) - l.startedAt) / 1000))
 }
 
+function agoLabel(ts: number, now: number): string {
+  const m = Math.round((now - ts) / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.round(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.round(h / 24)}d ago`
+}
+
+function Marker({ l, now }: { l: Launch; now: number }) {
+  const alt = altitude(l, now)
+  const finished = l.status !== 'running'
+
+  const rocket = (
+    // The "sky" — rockets fly between the pad (bottom) and orbit (top); the
+    // bottom 28px of each slot is reserved for the name plate.
+    <div className="absolute inset-x-0 top-0 bottom-7">
+      <div
+        className="absolute left-1/2 -translate-x-1/2 transition-[bottom] duration-500 ease-out"
+        style={{ bottom: `${alt}%` }}
+      >
+      {l.status === 'done' ? (
+        <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-400/40">
+          <span className="mc-orbit-pulse absolute inset-0 rounded-full border border-emerald-400/50" />
+          <Check className="h-3.5 w-3.5 text-emerald-400" />
+        </div>
+      ) : l.status === 'failed' ? (
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/15 border border-red-400/40">
+          <X className="h-3.5 w-3.5 text-red-400" />
+        </div>
+      ) : (
+        <div className="relative flex flex-col items-center">
+          <Rocket className="h-6 w-6 -rotate-45 text-white drop-shadow-[0_0_6px_oklch(0.7_0.18_274/60%)]" />
+          <span className="mc-flame mt-0.5 h-3.5 w-1.5 rounded-full bg-gradient-to-b from-amber-300 via-orange-400 to-transparent" />
+        </div>
+      )}
+      </div>
+    </div>
+  )
+
+  const plate = (
+    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full text-center">
+      <p className="text-[10px] font-medium text-white/70 truncate">{l.name}</p>
+      <p className="text-[9px] text-white/35 tabular-nums">
+        {l.status === 'running' ? `${seconds(l, now)}s · climbing`
+          : l.status === 'done' ? `in orbit · ${agoLabel(l.endedAt ?? l.startedAt, now)}`
+          : `failed · ${agoLabel(l.endedAt ?? l.startedAt, now)}`}
+      </p>
+    </div>
+  )
+
+  // Finished flights click through to Activity for the full results.
+  if (finished) {
+    return (
+      <Link
+        href="/activity"
+        title={`${l.name} — ${l.status === 'done' ? 'succeeded' : `failed${l.error ? `: ${l.error}` : ''}`}. Click to see the results in Activity.`}
+        className="relative block h-full w-24 shrink-0 rounded-lg hover:bg-white/[0.05] transition-colors"
+      >
+        {rocket}
+        {plate}
+      </Link>
+    )
+  }
+  return (
+    <div className="relative h-full w-24 shrink-0" title={`${l.name} — running`}>
+      {rocket}
+      {plate}
+    </div>
+  )
+}
+
 export function StarlabMissionControl() {
   const launches = useSyncExternalStore(subscribeLaunches, getLaunches, getLaunchesServer)
+  const history = useSyncExternalStore(subscribeLaunches, getLaunchHistory, getLaunchHistoryServer)
   const [now, setNow] = useState(() => Date.now())
 
-  const flights = launches.slice(0, MAX_ROCKETS)
-  const anyRunning = flights.some(l => l.status === 'running')
+  // Running flights live in the session store; finished ones come from the
+  // 7-day history (which also contains this session's finishers — dedupe).
+  const running = launches.filter(l => l.status === 'running')
+  const flights = [...running, ...history]
+  const anyRunning = running.length > 0
 
   // Tick while anything is in flight so altitude + elapsed keep moving.
   useEffect(() => {
@@ -59,44 +141,11 @@ export function StarlabMissionControl() {
           </p>
         </div>
       ) : (
-        <div className="absolute inset-x-0 top-9 bottom-7 flex justify-around px-2">
-          {flights.map(l => {
-            const alt = altitude(l, now)
-            return (
-              <div key={l.id} className="relative w-24 max-w-[25%]">
-                {/* Rocket (or its fate) — bottom offset is the altitude */}
-                <div
-                  className="absolute left-1/2 -translate-x-1/2 transition-[bottom] duration-500 ease-out"
-                  style={{ bottom: `${alt}%` }}
-                >
-                  {l.status === 'done' ? (
-                    <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-400/40">
-                      <span className="mc-orbit-pulse absolute inset-0 rounded-full border border-emerald-400/50" />
-                      <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    </div>
-                  ) : l.status === 'failed' ? (
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/15 border border-red-400/40">
-                      <X className="h-3.5 w-3.5 text-red-400" />
-                    </div>
-                  ) : (
-                    <div className="relative flex flex-col items-center">
-                      <Rocket className="h-6 w-6 -rotate-45 text-white drop-shadow-[0_0_6px_oklch(0.7_0.18_274/60%)]" />
-                      <span className="mc-flame mt-0.5 h-3.5 w-1.5 rounded-full bg-gradient-to-b from-amber-300 via-orange-400 to-transparent" />
-                    </div>
-                  )}
-                </div>
-                {/* Name plate stays on the pad */}
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-full text-center">
-                  <p className="text-[10px] font-medium text-white/70 truncate">{l.name}</p>
-                  <p className="text-[9px] text-white/35 tabular-nums">
-                    {l.status === 'running' ? `${seconds(l, now)}s · climbing`
-                      : l.status === 'done' ? `in orbit · ${seconds(l, now)}s`
-                      : 'launch failed'}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
+        // Scrolls horizontally when flights outgrow the strip; last 7 days kept.
+        <div className="absolute inset-x-0 top-9 bottom-0 overflow-x-auto px-2">
+          <div className="flex h-full min-w-full w-max justify-around gap-1">
+            {flights.map(l => <Marker key={l.id} l={l} now={now} />)}
+          </div>
         </div>
       )}
     </div>

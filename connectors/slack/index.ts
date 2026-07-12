@@ -2,6 +2,34 @@ import type { ConnectorManifest, ActionResult } from '@/connectors/types'
 
 const SLACK_API = 'https://slack.com/api'
 
+// Slack's error codes are terse and often misleading (a name passed where an ID
+// is required comes back as "channel_not_found"). Translate the common ones into
+// something the user can actually act on — beta feedback 2026-07-12.
+function friendlySlackError(data: { error?: string; needed?: string }): string {
+  const code = data.error ?? 'Slack API error'
+  switch (code) {
+    case 'missing_scope':
+      return `Slack refused (missing_scope): the bot token is missing the "${data.needed ?? 'required'}" OAuth scope. Add it under OAuth & Permissions in your Slack app, reinstall the app to your workspace, and update the token on this connection.`
+    case 'not_in_channel':
+      return 'Slack refused (not_in_channel): the bot isn’t a member of that channel. Invite it in Slack with /invite @YourApp and try again.'
+    case 'channel_not_found':
+      return 'Slack couldn’t find that channel (channel_not_found). Check the name, or use the channel ID from List Channels — and note the bot can only see channels it has been invited to (/invite @YourApp).'
+    case 'message_not_found':
+      return 'Slack couldn’t find that message (message_not_found). Use the exact "ts" timestamp returned when the message was sent (e.g. 1512085950.000216) — not a sequence number.'
+    case 'already_reacted':
+      return 'That emoji reaction is already on the message.'
+    case 'invalid_name':
+      return 'Slack rejected the emoji name (invalid_name). Use the emoji’s short name without colons, e.g. "sunny", "white_check_mark", "thumbsup".'
+    case 'invalid_auth':
+    case 'not_authed':
+    case 'token_revoked':
+    case 'account_inactive':
+      return `Slack rejected the token (${code}). Reconnect this Slack connection with a valid Bot User OAuth Token (starts with xoxb-).`
+    default:
+      return code
+  }
+}
+
 async function slackPost(apiKey: string, path: string, body: Record<string, unknown>): Promise<ActionResult> {
   const res = await fetch(`${SLACK_API}${path}`, {
     method: 'POST',
@@ -10,7 +38,7 @@ async function slackPost(apiKey: string, path: string, body: Record<string, unkn
   })
   if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
   const data = await res.json()
-  if (!data.ok) return { ok: false, error: data.error ?? 'Slack API error' }
+  if (!data.ok) return { ok: false, error: friendlySlackError(data) }
   return { ok: true, data }
 }
 
@@ -20,8 +48,28 @@ async function slackGet(apiKey: string, path: string): Promise<ActionResult> {
   })
   if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
   const data = await res.json()
-  if (!data.ok) return { ok: false, error: data.error ?? 'Slack API error' }
+  if (!data.ok) return { ok: false, error: friendlySlackError(data) }
   return { ok: true, data }
+}
+
+// Endpoints like reactions.add and conversations.history require a channel ID,
+// but users (and the assistant) naturally say "#dev". chat.postMessage happens
+// to accept names, which trained everyone that names work — so resolve names to
+// IDs here instead of letting Slack answer "channel_not_found".
+const CHANNEL_ID_RE = /^[CDG][A-Z0-9]{6,}$/
+async function resolveChannelId(apiKey: string, channel: unknown): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const raw = String(channel ?? '').trim()
+  if (CHANNEL_ID_RE.test(raw)) return { ok: true, id: raw }
+  const name = raw.replace(/^#/, '').toLowerCase()
+  if (!name) return { ok: false, error: 'No channel provided.' }
+  const res = await slackGet(apiKey, '/conversations.list?limit=200&types=public_channel,private_channel')
+  if (!res.ok) return { ok: false, error: `Could not look up channel "#${name}": ${res.error}` }
+  const channels = ((res.data as { channels?: { id: string; name: string }[] }).channels ?? [])
+  const hit = channels.find(c => c.name.toLowerCase() === name)
+  if (!hit) {
+    return { ok: false, error: `No channel named "#${name}" is visible to the bot. It can only see channels it has been invited to — run /invite @YourApp in the channel, or pass a channel ID from List Channels.` }
+  }
+  return { ok: true, id: hit.id }
 }
 
 export const slackManifest: ConnectorManifest = {
@@ -155,21 +203,23 @@ export const slackManifest: ConnectorManifest = {
       slug: 'get_channel_history',
       name: 'Get Channel History',
       description:
-        'Retrieve recent messages from a Slack channel. channel must be a channel ID. ' +
+        'Retrieve recent messages from a Slack channel (ID or #name). ' +
         'Returns message text, author user ID, and timestamps. limit defaults to 20.',
       risk: 'read',
       inputSchema: {
         type: 'object',
         required: ['channel'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID (e.g. C01234ABCDE)' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name' },
           limit: { type: 'number', description: 'Max messages to return (default 20, max 100)' },
           oldest: { type: 'string', description: 'Only return messages after this Unix timestamp (optional)' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         const limit = Math.min((params.limit as number | undefined) ?? 20, 100)
-        const qs: string[] = [`channel=${params.channel}`, `limit=${limit}`]
+        const qs: string[] = [`channel=${ch.id}`, `limit=${limit}`]
         if (params.oldest) qs.push(`oldest=${params.oldest}`)
         return slackGet(creds.api_key, `/conversations.history?${qs.join('&')}`)
       },
@@ -253,21 +303,24 @@ export const slackManifest: ConnectorManifest = {
       name: 'Add Reaction',
       description:
         'Add an emoji reaction to a Slack message. ' +
-        'Requires the channel ID, message timestamp (ts from message), and emoji name without colons ' +
-        '(e.g. "white_check_mark", "thumbsup", "eyes").',
+        'timestamp must be the exact "ts" value of an existing message (returned by Send Message ' +
+        'or Get Channel History, e.g. 1512085950.000216) — do not invent one. ' +
+        'emoji is the name without colons (e.g. "white_check_mark", "thumbsup", "eyes").',
       risk: 'write',
       inputSchema: {
         type: 'object',
         required: ['channel', 'timestamp', 'emoji'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID where the message is' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name where the message is' },
           timestamp: { type: 'string', description: 'Message ts field (e.g. 1512085950.000216)' },
           emoji: { type: 'string', description: 'Emoji name without colons (e.g. white_check_mark, thumbsup)' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/reactions.add', {
-          channel: params.channel,
+          channel: ch.id,
           timestamp: params.timestamp,
           name: params.emoji,
         })
@@ -306,11 +359,13 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID to archive (e.g. C01234ABCDE)' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name to archive' },
         },
       },
       execute: async (creds, params) => {
-        return slackPost(creds.api_key, '/conversations.archive', { channel: params.channel })
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
+        return slackPost(creds.api_key, '/conversations.archive', { channel: ch.id })
       },
     },
     {
@@ -322,13 +377,15 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel', 'users'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID to invite users to' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name to invite users to' },
           users: { type: 'string', description: 'Comma-separated user IDs (e.g. U01234,U56789)' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/conversations.invite', {
-          channel: params.channel,
+          channel: ch.id,
           users: params.users,
         })
       },
@@ -342,13 +399,15 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel', 'topic'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name' },
           topic: { type: 'string', description: 'New channel topic text' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/conversations.setTopic', {
-          channel: params.channel,
+          channel: ch.id,
           topic: params.topic,
         })
       },
@@ -408,13 +467,15 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel', 'timestamp'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID where the message is' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name where the message is' },
           timestamp: { type: 'string', description: 'Message ts field (e.g. 1512085950.000216)' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/chat.delete', {
-          channel: params.channel,
+          channel: ch.id,
           ts: params.timestamp,
         })
       },
@@ -429,14 +490,16 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel', 'timestamp', 'text'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name' },
           timestamp: { type: 'string', description: 'Message ts field' },
           text: { type: 'string', description: 'New message text' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/chat.update', {
-          channel: params.channel,
+          channel: ch.id,
           ts: params.timestamp,
           text: params.text,
         })
@@ -451,11 +514,13 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID to list pins for' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name to list pins for' },
         },
       },
       execute: async (creds, params) => {
-        return slackGet(creds.api_key, `/pins.list?channel=${params.channel as string}`)
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
+        return slackGet(creds.api_key, `/pins.list?channel=${ch.id}`)
       },
     },
     {
@@ -485,13 +550,15 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel', 'user'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name' },
           user: { type: 'string', description: 'User ID to remove' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/conversations.kick', {
-          channel: params.channel,
+          channel: ch.id,
           user: params.user,
         })
       },
@@ -505,13 +572,15 @@ export const slackManifest: ConnectorManifest = {
         type: 'object',
         required: ['channel', 'purpose'],
         properties: {
-          channel: { type: 'string', description: 'Channel ID' },
+          channel: { type: 'string', description: 'Channel ID or #channel-name' },
           purpose: { type: 'string', description: 'New channel purpose text' },
         },
       },
       execute: async (creds, params) => {
+        const ch = await resolveChannelId(creds.api_key, params.channel)
+        if (!ch.ok) return ch
         return slackPost(creds.api_key, '/conversations.setPurpose', {
-          channel: params.channel,
+          channel: ch.id,
           purpose: params.purpose,
         })
       },

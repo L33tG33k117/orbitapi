@@ -40,6 +40,47 @@ export function getLaunchesServer(): Launch[] {
   return EMPTY
 }
 
+// ---- Finished-launch history --------------------------------------------
+// The Starlab orbit strip shows past launches too (click-through to Activity),
+// kept for 7 days in localStorage so the graph survives reloads without
+// growing forever (beta feedback 2026-07-12).
+
+const HISTORY_KEY = 'orbit_launch_history_v1'
+const HISTORY_MS = 7 * 24 * 60 * 60 * 1000
+const HISTORY_MAX = 200
+
+let history: Launch[] = EMPTY
+let historyLoaded = false
+
+function loadHistoryOnce() {
+  if (historyLoaded || typeof window === 'undefined') return
+  historyLoaded = true
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY)
+    const cutoff = Date.now() - HISTORY_MS
+    history = raw
+      ? (JSON.parse(raw) as Launch[]).filter(l => l.status !== 'running' && (l.endedAt ?? l.startedAt) >= cutoff)
+      : []
+  } catch {
+    history = []
+  }
+}
+
+function recordHistory(l: Launch) {
+  loadHistoryOnce()
+  const cutoff = Date.now() - HISTORY_MS
+  history = [l, ...history.filter(h => h.id !== l.id && (h.endedAt ?? h.startedAt) >= cutoff)].slice(0, HISTORY_MAX)
+  try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history)) } catch { /* storage full/blocked — history stays in-memory */ }
+}
+
+export function getLaunchHistory(): Launch[] {
+  loadHistoryOnce()
+  return history
+}
+export function getLaunchHistoryServer(): Launch[] {
+  return EMPTY
+}
+
 export function clearFinishedLaunches() {
   launches = launches.filter(l => l.status === 'running')
   emit()
@@ -68,13 +109,18 @@ export async function trackLaunch(
       emit()
       return { ok: r.ok }
     }
-    launches = launches.map(l => l.id === id
-      ? { ...l, status: r.ok ? 'done' : 'failed', endedAt: Date.now(), error: r.ok ? undefined : (r.error ?? 'Failed') }
-      : l)
+    const finished: Launch = {
+      ...entry, status: r.ok ? 'done' : 'failed', endedAt: Date.now(),
+      error: r.ok ? undefined : (r.error ?? 'Failed'),
+    }
+    launches = launches.map(l => (l.id === id ? finished : l))
+    recordHistory(finished)
     emit()
     return { ok: r.ok }
   } catch (e) {
-    launches = launches.map(l => l.id === id ? { ...l, status: 'failed', endedAt: Date.now(), error: String(e) } : l)
+    const finished: Launch = { ...entry, status: 'failed', endedAt: Date.now(), error: String(e) }
+    launches = launches.map(l => (l.id === id ? finished : l))
+    recordHistory(finished)
     emit()
     return { ok: false }
   }

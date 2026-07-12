@@ -12,6 +12,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-07-12',
+    title: 'Starlab history, smarter Slack errors, and fixes',
+    tag: 'Improved',
+    points: [
+      'The Starlab orbit strip now keeps the last 7 days of launches — click any finished flight to jump to its results in Activity, and scroll sideways when the pad gets busy.',
+      'Slack actions now accept #channel-names everywhere (not just when sending), and errors tell you what to actually do — like which OAuth scope the bot token is missing or that the bot needs a /invite.',
+      'Fixed "connector not found" when creating a simulated connection for newer catalog apps like Microsoft Outlook.',
+    ],
+  },
+  {
+    date: '2026-07-12',
     title: 'Per-action permissions on every connection',
     tag: 'New',
     points: [

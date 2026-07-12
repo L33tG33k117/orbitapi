@@ -62,11 +62,29 @@ export async function POST(request: Request) {
       }
     }
   }
-  const { data: connectorRow } = await admin
+  let { data: connectorRow } = await admin
     .from('connectors')
     .select('id')
     .eq('slug', connectorSlug)
     .single()
+
+  // Self-heal: connectors added in code (catalog waves, factory specs) may not
+  // have a DB row yet — seed it from the manifest instead of failing. This was
+  // "connector not found" when simulating Microsoft Outlook (beta feedback).
+  if (!connectorRow) {
+    const { data: seeded } = await admin
+      .from('connectors')
+      .upsert({
+        slug: manifest.slug,
+        name: manifest.name,
+        category: manifest.category,
+        manifest: { description: manifest.description },
+        is_simulated: !!manifest.isSimulated,
+      }, { onConflict: 'slug' })
+      .select('id')
+      .single()
+    connectorRow = seeded
+  }
 
   if (!connectorRow) return NextResponse.json({ error: 'Connector not found in database' }, { status: 404 })
 
