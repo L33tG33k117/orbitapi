@@ -6,7 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { FlaskConical, Trash2, X, Clock, Zap, Settings2, Play, PlugZap } from 'lucide-react'
+import { toast } from 'sonner'
+import { FlaskConical, Trash2, X, Clock, Zap, Settings2, Play, PlugZap, Square, CheckSquare } from 'lucide-react'
 
 interface Connection {
   id: string
@@ -29,7 +30,7 @@ function health(c: Connection): { label: string; dot: string; text: string } {
 }
 
 interface DeleteModalProps {
-  connection: Connection
+  connections: Connection[]
   defaultMode: 'trash' | 'permanent'
   locked?: boolean
   onCancel: () => void
@@ -37,16 +38,19 @@ interface DeleteModalProps {
   loading: boolean
 }
 
-function DeleteModal({ connection, defaultMode, locked, onCancel, onConfirm, loading }: DeleteModalProps) {
+function DeleteModal({ connections, defaultMode, locked, onCancel, onConfirm, loading }: DeleteModalProps) {
   const [mode, setMode] = useState<'trash' | 'permanent'>(defaultMode)
+  const many = connections.length > 1
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-2xl space-y-5 p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="font-semibold">Remove connection</p>
-            <p className="text-sm text-muted-foreground mt-0.5 truncate max-w-xs">{connection.label}</p>
+            <p className="font-semibold">{many ? `Remove ${connections.length} connections` : 'Remove connection'}</p>
+            <p className="text-sm text-muted-foreground mt-0.5 truncate max-w-xs">
+              {many ? connections.map(c => c.label).join(', ') : connections[0]?.label}
+            </p>
           </div>
           <button onClick={onCancel} className="text-muted-foreground hover:text-foreground shrink-0">
             <X className="h-4 w-4" />
@@ -82,7 +86,7 @@ function DeleteModal({ connection, defaultMode, locked, onCancel, onConfirm, loa
               <span className="text-[10px] px-1.5 py-0 rounded-full bg-muted text-muted-foreground ml-auto">Recommended</span>
             </div>
             <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
-              Connection is disabled and held for 7 days. Skills and groups are preserved. Restore at any time from the Trash bin.
+              {many ? 'Connections are' : 'Connection is'} disabled and held for 7 days. Skills and groups are preserved. Restore at any time from the Trash bin.
             </p>
           </button>
 
@@ -99,7 +103,7 @@ function DeleteModal({ connection, defaultMode, locked, onCancel, onConfirm, loa
               <p className={`text-sm font-medium ${mode === 'permanent' ? 'text-destructive' : ''}`}>Delete Forever</p>
             </div>
             <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
-              Immediately and permanently removes the connection and all its data. Cannot be undone.
+              Immediately and permanently removes {many ? 'these connections' : 'the connection'} and all {many ? 'their' : 'its'} data. Cannot be undone.
             </p>
           </button>
         </div>
@@ -137,8 +141,18 @@ export function ConnectionList({
   const router = useRouter()
   const [testing, setTesting] = useState<string | null>(null)
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; error?: string }>>({})
-  const [deleteTarget, setDeleteTarget] = useState<Connection | null>(null)
+  const [deleteTargets, setDeleteTargets] = useState<Connection[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  function toggleSelected(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   async function handleTest(id: string) {
     setTesting(id)
@@ -150,21 +164,70 @@ export function ConnectionList({
   }
 
   async function handleDelete(mode: 'trash' | 'permanent') {
-    if (!deleteTarget) return
+    if (deleteTargets.length === 0) return
     setDeleting(true)
-    await fetch(`/api/connections/${deleteTarget.id}?mode=${mode}`, { method: 'DELETE' })
+    const results = await Promise.all(deleteTargets.map(async c => {
+      const res = await fetch(`/api/connections/${c.id}?mode=${mode}`, { method: 'DELETE' })
+      return { label: c.label, ok: res.ok }
+    }))
     setDeleting(false)
-    setDeleteTarget(null)
+    setDeleteTargets([])
+    setSelected(new Set())
+    const failed = results.filter(r => !r.ok)
+    if (failed.length > 0) {
+      toast.error(`Couldn't remove ${failed.map(f => f.label).join(', ')}`)
+    } else if (results.length > 1) {
+      toast.success(mode === 'trash'
+        ? `Moved ${results.length} connections to Trash`
+        : `Deleted ${results.length} connections`)
+    }
     router.refresh()
   }
 
   return (
     <>
+      {canManage && selected.size > 0 && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-2.5">
+          <p className="text-sm font-medium">{selected.size} selected</p>
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setSelected(new Set(connections.map(c => c.id)))}
+          >
+            Select all
+          </button>
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setSelected(new Set())}
+          >
+            Clear
+          </button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="ml-auto gap-1.5"
+            onClick={() => setDeleteTargets(connections.filter(c => selected.has(c.id)))}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Remove selected
+          </Button>
+        </div>
+      )}
       <div className="space-y-2">
         {connections.map(c => {
           const h = health(c)
           return (
-          <div key={c.id} className="border rounded-lg p-4 flex items-center gap-4">
+          <div key={c.id} className={`border rounded-lg p-4 flex items-center gap-4 ${selected.has(c.id) ? 'border-primary/50 bg-primary/5' : ''}`}>
+            {canManage && (
+              <button
+                onClick={() => toggleSelected(c.id)}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                aria-label={selected.has(c.id) ? `Deselect ${c.label}` : `Select ${c.label}`}
+              >
+                {selected.has(c.id)
+                  ? <CheckSquare className="h-4 w-4 text-primary" />
+                  : <Square className="h-4 w-4" />}
+              </button>
+            )}
             <div className="relative shrink-0">
               <Image
                 src={`/logos/${c.connector?.slug ?? 'default'}.svg`}
@@ -217,7 +280,7 @@ export function ConnectionList({
                     variant="ghost"
                     size="sm"
                     className="text-destructive gap-1.5"
-                    onClick={() => setDeleteTarget(c)}
+                    onClick={() => setDeleteTargets([c])}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Remove
@@ -230,12 +293,12 @@ export function ConnectionList({
         })}
       </div>
 
-      {deleteTarget && (
+      {deleteTargets.length > 0 && (
         <DeleteModal
           locked={deleteLocked}
-          connection={deleteTarget}
+          connections={deleteTargets}
           defaultMode={deletePreference}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => setDeleteTargets([])}
           onConfirm={handleDelete}
           loading={deleting}
         />

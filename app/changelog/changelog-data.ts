@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-07-12',
+    title: 'Batch delete for connections',
+    tag: 'Improved',
+    points: [
+      'Select multiple connections on the Connections page and remove them in one go — move to Trash or delete forever, same as single removals.',
+      'Fixed an error that could block deleting a connection that had audit history.',
+    ],
+  },
+  {
     date: '2026-07-02',
     title: '100+ integrations, and full-API access on every one',
     tag: 'New',
