@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
+import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
 
 export const maxDuration = 120
 
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   try {
     const { text } = await generateText({
       model: anthropic('claude-opus-4-8'),
+      maxRetries: AI_MAX_RETRIES,
       system: `You introspect an HTTP API and propose a connector manifest for an automation platform.
 Return ONLY a JSON object, no prose, of the form:
 {

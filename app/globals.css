@@ -311,6 +311,44 @@
   .reveal { opacity: 1; transform: none; transition: none; }
 }
 
+/* ─── Cursors ────────────────────────────────────────────────────────────────
+   Tailwind v4's preflight dropped v3's `cursor: pointer` on buttons, so the
+   browser default (an arrow) applies to every button, tab, switch and menu item
+   in the app. A beta tester flagged it: "Can it be a hand when it is a clickable
+   thing?" Restore the hand globally rather than sprinkling cursor-pointer on
+   hundreds of components. Anchors already get it from the UA stylesheet. */
+button:not(:disabled),
+summary,
+label[for],
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="file"]:not(:disabled),
+input[type="range"]:not(:disabled),
+input[type="color"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+[role="button"],
+[role="tab"],
+[role="switch"],
+[role="option"],
+[role="menuitem"],
+[role="menuitemcheckbox"],
+[role="menuitemradio"],
+[role="combobox"] {
+  cursor: pointer;
+}
+
+/* Disabled controls: show "not allowed" rather than a hand or a bare arrow.
+   Buttons set `disabled:pointer-events-none`, so this is scoped to the wrapper
+   the app puts around locked/disabled controls. */
+button:disabled,
+select:disabled,
+input:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* ─── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -94,7 +94,28 @@ lock, falling back to the per-user preference only when allowed.
 
 ---
 
-## Other notable single mentions (not yet actioned)
-- Restrict Orbit Assistant to Orbit-only topics (system-prompt scope). *(Medium)*
-- "Connector Actions" page purpose unclear / feels redundant with per-connector view. *(Decide: keep, merge, or explain.)*
-- Webhooks page: in addition to examples (done), consider a short "what is a webhook" primer.
+## Other notable single mentions
+
+> **Status update 2026-08-02:** all three shipped.
+
+- ~~Restrict Orbit Assistant to Orbit-only topics (system-prompt scope).~~ ✅ **SHIPPED 2026-08-02** —
+  `SCOPE_SYSTEM_RULES` in `lib/prompt-safety.ts`, applied in the chat route to the default
+  assistant only. Skills keep their own persona and remit, so the skill runner doesn't use it.
+  Deliberately permissive about *content that came out of a connected app* — analysing a
+  customer's email is in scope even though the subject matter is general.
+- ~~"Connector Actions" page purpose unclear / feels redundant with per-connector view.~~
+  ✅ **DECIDED + SHIPPED 2026-08-02: keep and explain.** It isn't redundant — it's the only
+  cross-connector search ("which of my apps can do X?"). The page never said so. Hero, intro
+  callout, sidebar tooltip, entitlement blurb and tour now all lead with that, and the callout
+  links one-app users back to Connectors for the guided "Use now" form.
+- ~~Webhooks page: short "what is a webhook" primer.~~ ✅ **SHIPPED 2026-08-02** — collapsible
+  "New to webhooks? Start here" panel (`WebhookPrimer` in `webhooks-client.tsx`): private-phone-number
+  analogy, 3-step how-it-works, and a plain-language "is it safe?" note. Open by default, remembered
+  per browser once dismissed. The `SectionIntro` copy was de-jargoned to match.
+
+## New this pass (2026-08-02)
+- **Cursor is an arrow on everything clickable** (beta feedback, `/webhooks`, Mac/Chrome).
+  Root cause was Tailwind v4's preflight dropping v3's `cursor: pointer` on buttons — fixed
+  globally in `app/globals.css` rather than per-component. Also covers `[role=button]`, tabs,
+  switches, menu items, `<summary>`, `<label for>`, and file/range/colour inputs; disabled
+  controls get `not-allowed`.

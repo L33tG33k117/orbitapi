@@ -52,8 +52,8 @@ export const SECTION_INTROS = {
   },
   webhooks: {
     title: 'What are webhooks?',
-    what: 'Webhooks let outside apps trigger your automations in real time via a secure URL.',
-    fits: 'Point an external service at the URL to fire a Skill the instant something happens — no polling, no waiting for a schedule.',
+    what: 'A webhook is a private URL that Orbit gives you. When something happens in another app — a payment lands, an order comes in — that app calls the URL to tell Orbit about it.',
+    fits: 'It’s the difference between Orbit checking every hour and the other app tapping Orbit on the shoulder the second it happens. Paste the URL into the other app once; Orbit runs your Skill or Playbook every time it’s called.',
   },
   approvals: {
     title: 'What are approvals?',

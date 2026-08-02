@@ -18,13 +18,24 @@ Snapshot of where the product is the night beta testing began, and the prioritiz
 
 ## Known gaps / tech debt
 - **Shared dev/prod database** — testers and local dev share one Supabase. Split soon.
+  ⚠️ Still open — needs a second Supabase project (account-level, not something the agent can do).
 - **Mobile** — structural nav fixed; individual screens still need polish (drive by tester feedback).
-- **No error monitoring** — add Sentry (or alerting on the existing log endpoint) for the beta.
-- **Resilient AI errors** — the friendly "Orbit's AI is busy, retrying…" + Economy fallback on 529s
-  was discussed but never shipped; testers will eventually hit a raw provider error.
+- ~~**No error monitoring**~~ ✅ **SHIPPED 2026-08-02** — in-app error log instead of Sentry, so
+  there's no second account to check. `error_events` table (migration **052**, applied),
+  `lib/error-log.ts` captures client errors via `/api/log-error` and server errors from the chat
+  route + skill/playbook runners, rolled up by fingerprint so one repeating bug is one row.
+  Read at **/admin/errors** with an unresolved-count badge in the admin nav. Every write is
+  best-effort and never throws; if the migration is missing it falls back to `console.error`
+  and the page says so.
+- ~~**Resilient AI errors**~~ ✅ **SHIPPED 2026-08-02** — `lib/ai-resilience.ts`. Three layers:
+  `maxRetries: 3` on every AI call site (up from the SDK default of 2, with exponential backoff);
+  `withModelFallback()` reruns on the Economy model when the primary is still 529-overloaded, and
+  bills whichever model actually answered; `friendlyAiError()` turns provider payloads into a plain
+  sentence. Chat gets retries + friendly copy but **not** model fallback — once the stream is
+  flushing there's no way to rewind and re-answer without the user seeing two half-replies.
 - **Stripe not live** — fine (comp via admin), wire when ready to charge.
-- **Secrets in transcript** — Vercel token + Supabase/Anthropic keys were pasted during setup;
-  revoke the Vercel token now, rotate the others after the beta.
+- **Secrets in transcript** — Vercel token + Supabase/Anthropic keys were pasted during setup,
+  plus the `SUPABASE_ACCESS_TOKEN` pasted 2026-07-03. ⚠️ Still open — rotation is account-level.
 - **Crons daily** (Hobby limit) — scheduled skills/playbooks fire once/day until a paid Vercel plan.
 
 ## What to work on next (prioritized)

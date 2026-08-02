@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Search, ChevronRight, ChevronDown, Play, AlertTriangle, BookOpen, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
@@ -122,7 +123,7 @@ export function RefClient({ connectors }: { connectors: ConnectorEntry[] }) {
       <PageHero
         eyebrow="Operate"
         title="Connector Actions"
-        description="Full, searchable docs for every command your connected APIs can run — and a way to run them directly."
+        description="Search every action across all your connected apps at once — the one place to answer “can anything I've connected do X?” — then run it right here."
         stats={[
           { label: 'connected APIs', value: connectors.length },
           { label: 'commands', value: totalActions },
@@ -140,13 +141,24 @@ export function RefClient({ connectors }: { connectors: ConnectorEntry[] }) {
         </div>
       </div>
 
-      {/* Intro callout */}
+      {/* Intro callout. Beta feedback: this page reads as a duplicate of the
+          per-connector view, so lead with the thing only this page does —
+          search ACROSS every connected app — and point one-app users away. */}
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
-        <p className="text-sm font-medium text-primary">Direct API execution</p>
+        <p className="text-sm font-medium text-primary">Search across every connected app</p>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Execute any command directly — no AI needed. Expand an action, fill in the parameters, and hit Run.
-          Read actions return data immediately. Write actions go through the normal approval flow.
-          Every call is logged to the Audit Log.
+          A connector&apos;s own page shows what that one app can do. This page searches{' '}
+          <span className="text-foreground font-medium">all {connectors.length} of them at once</span> —
+          useful when you know what you want done but not which app does it. Expand any action, fill in
+          the parameters, and hit Run: no AI involved. Reads return data immediately, writes go through
+          the normal approval flow, and every call lands in the Audit Log.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Working with just one app?{' '}
+          <Link href="/connectors" className="text-primary underline underline-offset-2">
+            Open it from Connectors
+          </Link>{' '}
+          for the guided &ldquo;Use now&rdquo; form instead.
         </p>
       </div>
 

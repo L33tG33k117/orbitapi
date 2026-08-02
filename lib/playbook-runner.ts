@@ -5,7 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
-import { computeCost, normalizeUsage } from '@/lib/usage-cost'
+import { computeCost, normalizeUsage, type ModelId } from '@/lib/usage-cost'
+import { AI_MAX_RETRIES, friendlyAiError, isAiError, withModelFallback } from '@/lib/ai-resilience'
+import { logServerError } from '@/lib/error-log'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
 import { riskAllowed, explorationBlocks, actionPolicy, policyBlocks } from '@/lib/connector-access'
@@ -231,11 +233,13 @@ async function executeFrom(
 
       // ---- assess: AI gathers read-only data and scores severity 0–10
       if (node.type === 'assess') {
-        const { severity: sev, summary, findings, usage } = await assess(node, playbook, actionIndex, state, chosenModel)
+        const { severity: sev, summary, findings, usage, model: servingModel } =
+          await assess(node, playbook, actionIndex, state, chosenModel)
         severity = sev
         state = { ...state, ...findings, assessment: summary, severity: sev }
         const { tokensIn, tokensOut } = normalizeUsage(usage)
-        const stepCost = computeCost(chosenModel, tokensIn, tokensOut)
+        // Bill the model that actually answered — it may have fallen back.
+        const stepCost = computeCost(servingModel, tokensIn, tokensOut)
         log.push({
           step: log.length + 1, node_id: node.id, type: 'assess', severity: sev,
           status: 'success', note: summary, duration_ms: Date.now() - startedAt,
@@ -431,10 +435,14 @@ async function executeFrom(
     })
     return { runId, status: 'completed' }
   } catch (err) {
-    await fail(runId, log, String(err))
+    logServerError(err, 'playbook-runner', { workspaceId: playbook.workspace_id })
+    // Provider outages get plain-English copy; everything else keeps its own
+    // message, which is the one that actually helps.
+    const reason = isAiError(err) ? friendlyAiError(err) : String(err).slice(0, 200)
+    await fail(runId, log, reason)
     await createNotification({
       workspaceId: playbook.workspace_id, type: 'skill_failed',
-      title: `${playbook.name} run failed`, body: String(err).slice(0, 200),
+      title: `${playbook.name} run failed`, body: reason,
       link: `/playbooks/${playbook.id}/runs/${runId}`,
     })
     throw err
@@ -450,8 +458,8 @@ async function assess(
   playbook: LoadedPlaybook,
   actionIndex: ActionIndex,
   state: Record<string, unknown>,
-  model: string,
-): Promise<{ severity: number; summary: string; findings: Record<string, unknown>; usage: unknown }> {
+  model: ModelId,
+): Promise<{ severity: number; summary: string; findings: Record<string, unknown>; usage: unknown; model: ModelId }> {
   // Only expose read actions to the assessment pass.
   const tools: Record<string, ReturnType<typeof dynamicTool>> = {}
   for (const key of Object.keys(actionIndex)) {
@@ -481,19 +489,26 @@ Current carried state: ${JSON.stringify(state).slice(0, 1500)}
 Respond with ONE json object and nothing else:
 {"severity": <0-10 number>, "summary": "<one sentence>", "findings": { <key facts downstream steps need> }}`
 
-  const { text, usage } = await generateText({
-    model: anthropic(model),
-    // Cache the system + tool definitions so input bills ~10%.
-    messages: [
-      { role: 'system', content: systemPrompt, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
-      { role: 'user', content: interpolate(node.prompt ?? 'Assess the current situation.', state) },
-    ],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tools: tools as any,
-    stopWhen: stepCountIs(10),
-  })
+  // Retry transient failures, then drop to Economy if still overloaded. An
+  // assess step blocks the whole playbook, so a cheaper answer beats a dead run.
+  const { result: gen, model: servingModel } = await withModelFallback(
+    model,
+    m => generateText({
+      model: anthropic(m),
+      // Cache the system + tool definitions so input bills ~10%.
+      messages: [
+        { role: 'system', content: systemPrompt, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
+        { role: 'user', content: interpolate(node.prompt ?? 'Assess the current situation.', state) },
+      ],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: tools as any,
+      stopWhen: stepCountIs(10),
+      maxRetries: AI_MAX_RETRIES,
+    }),
+    { label: `playbook assess ${node.id}` },
+  )
 
-  return { ...parseAssessment(text), usage }
+  return { ...parseAssessment(gen.text), usage: gen.usage, model: servingModel }
 }
 
 function parseAssessment(text: string): { severity: number; summary: string; findings: Record<string, unknown> } {

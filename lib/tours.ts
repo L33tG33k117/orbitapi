@@ -188,7 +188,7 @@ const TOURS: Record<string, Tour> = {
   '/reference': {
     key: 'reference',
     steps: [
-      { popover: { title: 'Connector Actions — the full menu', description: 'A live, searchable list of every single thing your connected apps can do, with the details each one needs. It’s the complete reference behind the friendly “Use now” screens.' } },
+      { popover: { title: 'Connector Actions — search across every app', description: 'Each connector’s own page shows what that one app can do. This page searches all of them at once — the place to go when you know what you need done but not which app does it.' } },
       { popover: { title: 'Try one right here', description: 'Find an action, fill in its fields, and run it on the spot — a quick way to see exactly what an app can do before you build a skill around it.' } },
       outro('For everyday use, the “Use now” button on a connector is friendlier — this is the power-user index.'),
     ],

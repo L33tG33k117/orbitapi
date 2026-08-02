@@ -11,6 +11,27 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-08-02',
+    title: 'Orbit rides out AI outages instead of failing',
+    tag: 'Improved',
+    points: [
+      'When the AI provider is overloaded, Orbit now retries automatically with backoff — and if it\'s still busy, skills and playbooks finish on a faster model rather than failing the run.',
+      'Provider hiccups are explained in plain English ("Orbit\'s AI is unusually busy right now…") instead of a raw error code.',
+      'Runs are always billed to the model that actually answered.',
+    ],
+  },
+  {
+    date: '2026-08-02',
+    title: 'Clearer webhooks, a sharper Assistant, and the cursor fix you asked for',
+    tag: 'Improved',
+    points: [
+      'New to webhooks? There\'s now a plain-language explainer on the Webhooks page — what a webhook actually is, the three steps to set one up, and whether it\'s safe.',
+      'Every clickable thing shows a hand cursor again instead of an arrow. Thanks to the beta tester who spotted it.',
+      'Connector Actions now says what it\'s for: searching every action across all your connected apps at once, for when you know what you need done but not which app does it.',
+      'Orbit Assistant stays on topic — your apps, your data, and using Orbit — rather than answering general trivia.',
+    ],
+  },
+  {
     date: '2026-07-12',
     title: 'The assistant now respects — and explains — disabled actions',
     tag: 'Improved',

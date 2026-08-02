@@ -65,6 +65,8 @@ export function WebhooksClient({ initialEndpoints, skills, playbooks }: { initia
 
   return (
     <div className="space-y-4">
+      <WebhookPrimer />
+
       {creating ? (
         <form onSubmit={create} className="border rounded-xl p-4 bg-card space-y-3">
           {/* Recipes: one click fills the form for the most common inbound hooks,
@@ -132,6 +134,85 @@ export function WebhooksClient({ initialEndpoints, skills, playbooks }: { initia
           onToggle={() => setExpanded(expanded === ep.id ? null : ep.id)}
           onCopy={copy} onDelete={() => remove(ep.id)} onRefresh={() => router.refresh()} />
       ))}
+    </div>
+  )
+}
+
+// Beta feedback: the page is understandable once you already know what a webhook
+// IS. This is the missing first rung — plain language, no jargon, collapsed by
+// default so it never gets in the way of people who don't need it. Remembered
+// per browser so it doesn't nag after the first read.
+function WebhookPrimer() {
+  const [open, setOpen] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  // Default to open for first-timers; respect the choice afterwards. Resolved
+  // after mount so server and client render the same thing.
+  useEffect(() => {
+    setOpen(localStorage.getItem('orbit_webhook_primer_seen') !== '1')
+    setReady(true)
+  }, [])
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (!next) localStorage.setItem('orbit_webhook_primer_seen', '1')
+  }
+
+  if (!ready) return null
+
+  return (
+    <div className="border rounded-xl bg-muted/30 overflow-hidden">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left"
+      >
+        <span className="text-sm font-medium flex items-center gap-2">
+          <Webhook className="h-3.5 w-3.5 text-primary" />
+          New to webhooks? Start here
+        </span>
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3 text-sm text-muted-foreground border-t pt-3">
+          <p>
+            A webhook is a <span className="text-foreground font-medium">private phone number for your automation</span>.
+            Orbit gives you a URL, you paste it into another app once, and from then on that app
+            calls the URL the moment something happens — a payment lands, an order comes in, a form
+            gets filled out.
+          </p>
+          <p>
+            Without one, Orbit would have to keep asking &ldquo;anything new yet?&rdquo; on a schedule.
+            With one, the other app does the telling, and your Skill or Playbook runs within seconds.
+          </p>
+
+          <div className="grid gap-2 sm:grid-cols-3 pt-1">
+            {[
+              { n: '1', t: 'Create an endpoint', d: 'Pick a recipe below, or name your own. Choose what should run when it fires.' },
+              { n: '2', t: 'Paste the URL', d: 'Copy the URL Orbit gives you into the other app’s webhook settings.' },
+              { n: '3', t: 'It runs itself', d: 'Every call is logged here, and you can replay any of them to test.' },
+            ].map(s => (
+              <div key={s.n} className="rounded-lg border bg-background/60 p-2.5">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="grid place-items-center size-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">{s.n}</span>
+                  <span className="text-xs font-medium text-foreground">{s.t}</span>
+                </div>
+                <p className="text-[11px] leading-snug">{s.d}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[11px]">
+            <span className="text-foreground font-medium">Is it safe?</span> The URL contains a
+            secret only you and the other app know, and every call is signed so Orbit can tell a real
+            one from a fake. Treat the URL like a password — anyone who has it can trigger the run.
+            If it ever leaks, rotate the secret on the endpoint below.
+          </p>
+        </div>
+      )}
     </div>
   )
 }

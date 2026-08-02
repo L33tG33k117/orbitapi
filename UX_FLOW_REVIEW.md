@@ -33,9 +33,10 @@ redirect to login correctly; two clean type-checked builds.
    now render a shared `AdminsOnly` notice for members — keeps the page header, explains in
    plain words what the page does, and lists the workspace admins (name + mailto) to ask.
 
-5. **Webhooks setup is still technical past the header.** Consider preset "recipes"
-   (Stripe payment received, GitHub issue opened, Typeform response) that pre-fill the
-   endpoint config, rather than starting from a blank signed endpoint.
+5. ~~**Webhooks setup is still technical past the header.**~~ **Fixed:** recipes shipped
+   2026-07-02 (Stripe / GitHub / Typeform / Shopify / Calendly / Mailchimp chips that pre-fill
+   the form), and a plain-language "New to webhooks? Start here" primer shipped 2026-08-02 for
+   the rung below that — what a webhook actually *is*.
 
 6. **Naming consistency win to keep:** sidebar label, page title, and eyebrow now match on
    every tab (e.g. "Groups", not "Connection Groups"). Keep this rule for new pages.

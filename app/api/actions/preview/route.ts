@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { CHEAP_MODEL } from '@/lib/usage-cost'
+import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
 
 // Feature #9 — Destructive action preview.
 // Predicts the impact of an action BEFORE it runs, and whether it's reversible,
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
   try {
     const { text } = await generateText({
       model: anthropic(CHEAP_MODEL),
+      maxRetries: AI_MAX_RETRIES,
       system: `You predict the real-world impact of an API action before it runs, for a human approver.
 Be concrete and concise (one or two sentences). State what will change and roughly how much, based on the
 action and its parameters. If it is destructive, say plainly that it cannot be undone. Do not hedge with

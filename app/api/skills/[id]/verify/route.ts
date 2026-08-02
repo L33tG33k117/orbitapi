@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { screenInput } from '@/lib/prompt-safety'
+import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
 
 export type CheckStatus = 'pass' | 'warn' | 'fail'
 interface Check { status: CheckStatus; label: string; detail?: string }
@@ -113,6 +114,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
       const { text } = await generateText({
         model: anthropic('claude-sonnet-4-6'),
+        maxRetries: AI_MAX_RETRIES,
         system: `You verify whether an automation "skill" can actually run with the connectors available to it. You are given the skill's persona (its instructions) and the EXACT list of connected apps + actions it can use. Decide if the skill is buildable.
 
 Return ONLY a JSON object, no markdown:

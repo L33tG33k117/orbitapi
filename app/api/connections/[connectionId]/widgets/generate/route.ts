@@ -4,6 +4,7 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
+import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
 
 const ICON_VALUES = [
   'Shield', 'ShieldOff', 'ShieldCheck', 'Lock', 'Unlock', 'Zap', 'ZapOff',
@@ -55,6 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ connect
 
   const { text } = await generateText({
     model: anthropic('claude-sonnet-4-6'),
+    maxRetries: AI_MAX_RETRIES,
     system: `You are an expert UI designer for API integration platforms. Design widget button configurations that make API actions accessible as single-click controls.
 
 Key principles:

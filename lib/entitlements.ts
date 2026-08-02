@@ -104,5 +104,5 @@ export const CAPABILITY_INFO: Record<Capability, { label: string; description: s
   bundle_export: { label: 'Bundle Export', description: 'Package your own setup as a shareable bundle.' },
   discover: { label: 'Discover', description: 'Explore and auto-discover what an API can do.' },
   webhooks: { label: 'Webhooks', description: 'Trigger automations from external events in real time.' },
-  api_reference: { label: 'Connector Actions', description: 'Browse the full catalog of available actions.' },
+  api_reference: { label: 'Connector Actions', description: 'Search and run actions across all your connected apps in one place.' },
 }

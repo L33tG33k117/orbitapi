@@ -35,7 +35,7 @@ const LOCKED_HINTS: Partial<Record<Capability, string>> = {
   data_mapping: 'Data Mapping — automatically translate fields between connectors (e.g. a NetSuite invoice → a Slack alert) so data flows cleanly across apps. Upgrade to unlock.',
   bundles: 'Bundles — ready-made packs of connectors, skills, and mappings you can install in one click. Upgrade to unlock.',
   webhooks: 'Webhooks — let external services trigger your skills instantly via a secure URL. Upgrade to unlock.',
-  api_reference: 'Connector Actions — full, searchable docs for every action on your connectors. Upgrade to unlock.',
+  api_reference: 'Connector Actions — search every action across all your connected apps at once, and run any of them. Upgrade to unlock.',
   discover: 'Discover — AI-assisted exploration that suggests connectors and workflows for your stack. Upgrade to unlock.',
 }
 
