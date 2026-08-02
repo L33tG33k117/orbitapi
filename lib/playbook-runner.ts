@@ -6,7 +6,10 @@ import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
 import { computeCost, normalizeUsage, type ModelId } from '@/lib/usage-cost'
-import { AI_MAX_RETRIES, friendlyAiError, isAiError, withModelFallback } from '@/lib/ai-resilience'
+import {
+  AGENTIC_MAX_TOKENS, AGENTIC_THINKING, AI_MAX_RETRIES,
+  friendlyAiError, isAiError, withModelFallback,
+} from '@/lib/ai-resilience'
 import { logServerError } from '@/lib/error-log'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
@@ -504,6 +507,10 @@ Respond with ONE json object and nothing else:
       tools: tools as any,
       stopWhen: stepCountIs(10),
       maxRetries: AI_MAX_RETRIES,
+      // Thinking shares the output budget on Opus 5 / Sonnet 5 — give the
+      // assessment pass room so its JSON verdict is never truncated.
+      providerOptions: AGENTIC_THINKING,
+      maxOutputTokens: AGENTIC_MAX_TOKENS,
     }),
     { label: `playbook assess ${node.id}` },
   )

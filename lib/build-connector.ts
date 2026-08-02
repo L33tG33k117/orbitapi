@@ -1,6 +1,6 @@
 import { generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
-import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
+import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
 
 export interface ConnectorBuildResult {
   validated: boolean
@@ -118,8 +118,10 @@ export async function buildConnector(
   preferredSlug?: string | null,
 ): Promise<ConnectorBuildResult> {
   const { text } = await generateText({
-    model: anthropic('claude-opus-4-8'),
+    model: anthropic('claude-opus-5'),
     maxRetries: AI_MAX_RETRIES,
+
+    providerOptions: NO_THINKING,
     maxOutputTokens: 8000,
     messages: [
       {

@@ -11,7 +11,8 @@
     "check:bundles": "node --no-warnings scripts/check-bundles.mjs",
     "db:status": "node --no-warnings scripts/db-migrate.mjs status",
     "db:up": "node --no-warnings scripts/db-migrate.mjs up",
-    "db:migrate": "node --no-warnings scripts/db-migrate.mjs"
+    "db:migrate": "node --no-warnings scripts/db-migrate.mjs",
+    "check:models": "node scripts/check-models.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.83",

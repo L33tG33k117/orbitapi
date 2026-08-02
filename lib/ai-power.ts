@@ -16,8 +16,8 @@ export type Efficiency = 'maximum' | 'balanced' | 'economy'
 
 // Efficiency → underlying model. Kept server-side only; never sent to the UI.
 export const EFFICIENCY_MODEL: Record<Efficiency, ModelId> = {
-  maximum: 'claude-opus-4-8',
-  balanced: 'claude-sonnet-4-6',
+  maximum: 'claude-opus-5',
+  balanced: 'claude-sonnet-5',
   economy: 'claude-haiku-4-5',
 }
 

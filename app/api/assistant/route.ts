@@ -1,7 +1,7 @@
 import { generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
-import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
+import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
 
 export const maxDuration = 30
 
@@ -37,8 +37,9 @@ Key concepts to explain when asked:
 Do not make up feature names or capabilities that aren't described above. If unsure, say so and suggest the user explore the relevant section.`
 
   const { text } = await generateText({
-    model: anthropic('claude-haiku-4-5-20251001'),
+    model: anthropic('claude-haiku-4-5'),
     maxRetries: AI_MAX_RETRIES,
+    providerOptions: NO_THINKING,
     system,
     messages: messages.slice(-10),
     maxOutputTokens: 400,

@@ -12,8 +12,8 @@ import { computeCost, type ModelId } from '@/lib/usage-cost'
 export type Efficiency = 'maximum' | 'balanced' | 'economy'
 
 const EFFICIENCY_MODEL: Record<Efficiency, ModelId> = {
-  maximum: 'claude-opus-4-8',
-  balanced: 'claude-sonnet-4-6',
+  maximum: 'claude-opus-5',
+  balanced: 'claude-sonnet-5',
   economy: 'claude-haiku-4-5',
 }
 

@@ -11,8 +11,8 @@
 // ============================================================
 
 export type ModelId =
-  | 'claude-opus-4-8'
-  | 'claude-sonnet-4-6'
+  | 'claude-opus-5'
+  | 'claude-sonnet-5'
   | 'claude-haiku-4-5'
   | 'claude-fable-5'
 
@@ -24,13 +24,16 @@ export interface ModelPrice {
 }
 
 export const MODEL_PRICING: Record<ModelId, ModelPrice> = {
-  'claude-fable-5':   { inputPerMTok: 10, outputPerMTok: 50, tier: 4 },
-  'claude-opus-4-8':  { inputPerMTok: 5,  outputPerMTok: 25, tier: 3 },
-  'claude-sonnet-4-6':{ inputPerMTok: 3,  outputPerMTok: 15, tier: 2 },
-  'claude-haiku-4-5': { inputPerMTok: 1,  outputPerMTok: 5,  tier: 1 },
+  'claude-fable-5':  { inputPerMTok: 10, outputPerMTok: 50, tier: 4 },
+  'claude-opus-5':   { inputPerMTok: 5,  outputPerMTok: 25, tier: 3 },
+  // Sonnet 5 list price. Anthropic is running an introductory $2/$10 through
+  // 2026-08-31; we bill the list rate so AI Power never has to be re-priced
+  // upward when the promo ends. Slightly conservative, never under-charges.
+  'claude-sonnet-5': { inputPerMTok: 3,  outputPerMTok: 15, tier: 2 },
+  'claude-haiku-4-5':{ inputPerMTok: 1,  outputPerMTok: 5,  tier: 1 },
 }
 
-export const DEFAULT_MODEL: ModelId = 'claude-sonnet-4-6'
+export const DEFAULT_MODEL: ModelId = 'claude-sonnet-5'
 export const CHEAP_MODEL: ModelId = 'claude-haiku-4-5'
 
 // Cost of a single run in USD given token usage.
@@ -63,8 +66,8 @@ export function routeModel(opts: {
   if (opts.override && opts.override in MODEL_PRICING) return opts.override as ModelId
   const c = opts.complexity ?? 0.5
   if (c < 0.25) return 'claude-haiku-4-5'
-  if (c < 0.7) return 'claude-sonnet-4-6'
-  return 'claude-opus-4-8'
+  if (c < 0.7) return 'claude-sonnet-5'
+  return 'claude-opus-5'
 }
 
 // Estimate the cost of a run before it happens, for the "warn before expensive

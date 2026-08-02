@@ -1,0 +1,84 @@
+name: Model freshness
+
+# Daily check that the Claude models this app ships are (a) still being served
+# and (b) still the newest generation.
+#
+# WHY A GITHUB ACTION AND NOT A VERCEL CRON: Vercel's Hobby plan allows two cron
+# jobs and both are already used (skills + playbooks). This also isn't runtime
+# data — the model ids live in lib/usage-cost.ts, so the repo is the right place
+# to watch them, and Actions is free.
+#
+# WHY IT DOESN'T AUTO-UPGRADE: adopting a new model generation is not a string
+# swap. Each one has carried breaking changes — Opus 5 and Sonnet 5 turned
+# thinking on by default, which shares the max_tokens budget and silently
+# truncated tight-budget calls until we set an explicit policy. On top of that,
+# the Models API does not publish prices, so a bot bumping the id would leave
+# MODEL_PRICING wrong and the app would bill customers incorrectly. So this
+# opens an issue and a human does the (small) migration.
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 09:00 UTC daily
+  workflow_dispatch:       # and on demand from the Actions tab
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Check for missing API key
+        id: creds
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Model check skipped::ANTHROPIC_API_KEY secret is not set. Add it under Settings -> Secrets and variables -> Actions."
+          else
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check models
+        if: steps.creds.outputs.has_key == 'true'
+        id: check
+        continue-on-error: true          # exit 1/2 are findings, not CI failures
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set +e
+          node scripts/check-models.mjs | tee report.txt
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update an issue when something needs attention
+        if: steps.creds.outputs.has_key == 'true' && steps.check.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS: ${{ steps.check.outputs.status }}
+        run: |
+          set -euo pipefail
+          if [ "$STATUS" = "2" ]; then
+            title="🚨 A Claude model OrbitAPI uses is no longer served"
+          else
+            title="⬆️ Newer Claude models are available"
+          fi
+
+          body=$(printf '%s\n\n```\n%s\n```\n\n_Checked automatically by `.github/workflows/model-check.yml`. Re-run it from the Actions tab after updating._\n' \
+            "Detected on $(date -u +%Y-%m-%d)." "$(cat report.txt)")
+
+          # One rolling issue per kind, so a daily job can't spam the tracker.
+          existing=$(gh issue list --state open --label model-check --search "$title in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+            echo "Updated issue #$existing"
+          else
+            gh issue create --title "$title" --body "$body" --label model-check
+          fi

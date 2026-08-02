@@ -12,6 +12,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-08-02',
+    title: 'Upgraded to the latest Claude models',
+    tag: 'Improved',
+    points: [
+      'Maximum and Balanced now run on Anthropic\'s newest generation — noticeably better at multi-step work: picking the right action, chaining several apps together, and recovering when an API answers unexpectedly.',
+      'These models reason between tool calls, so skills and playbooks think before they act. Quick one-shot jobs skip that step and stay just as fast.',
+      'No change to how AI Power is priced. Reasoning-heavy runs use somewhat more of it than before, and Orbit still shows the estimate before you run anything expensive.',
+    ],
+  },
+  {
+    date: '2026-08-02',
     title: 'Orbit rides out AI outages instead of failing',
     tag: 'Improved',
     points: [

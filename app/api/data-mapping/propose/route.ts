@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { simulateAction } from '@/lib/simulate-action'
-import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
+import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
 
 export const maxDuration = 120
 
@@ -70,8 +70,9 @@ export async function POST(req: Request) {
 
   try {
     const { text } = await generateText({
-      model: anthropic('claude-opus-4-8'),
+      model: anthropic('claude-opus-5'),
       maxRetries: AI_MAX_RETRIES,
+      providerOptions: NO_THINKING,
       system: `You map fields from a source record to a target action's input schema.
 Return ONLY JSON:
 {

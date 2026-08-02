@@ -10,7 +10,10 @@ import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
 import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
 import { SAFETY_SYSTEM_RULES } from '@/lib/prompt-safety'
-import { AI_MAX_RETRIES, friendlyAiError, isAiError, withModelFallback } from '@/lib/ai-resilience'
+import {
+  AGENTIC_MAX_TOKENS, AGENTIC_THINKING, AI_MAX_RETRIES,
+  friendlyAiError, isAiError, withModelFallback,
+} from '@/lib/ai-resilience'
 import { logServerError } from '@/lib/error-log'
 
 export type RunStep = {
@@ -361,6 +364,11 @@ Guidelines:
         tools: tools as any,
         stopWhen: stepCountIs(15),
         maxRetries: AI_MAX_RETRIES,
+        // Opus 5 / Sonnet 5 reason between tool calls, which is the whole
+        // point of a skill run. maxOutputTokens must cover thinking as well
+        // as the answer, hence the generous ceiling.
+        providerOptions: AGENTIC_THINKING,
+        maxOutputTokens: AGENTIC_MAX_TOKENS,
       }),
       { label: `skill ${skillId}` },
     )

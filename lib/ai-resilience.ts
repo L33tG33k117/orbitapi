@@ -23,6 +23,51 @@ import { CHEAP_MODEL, MODEL_PRICING, type ModelId } from './usage-cost'
 /** Attempts per request before we give up on the chosen model (1 try + 3 retries). */
 export const AI_MAX_RETRIES = 3
 
+// ------------------------------------------------------------
+// Thinking policy (Opus 5 / Sonnet 5 migration, 2026-08-02)
+// ------------------------------------------------------------
+// Claude Opus 5 and Sonnet 5 think BY DEFAULT — unlike Opus 4.8 / Sonnet 4.6,
+// where omitting the parameter meant no thinking. Two consequences:
+//
+//   1. `maxOutputTokens` is a hard cap on thinking + answer TOGETHER. A call
+//      that asked for 900 tokens of JSON can now spend all 900 thinking and
+//      return a truncated answer. Every tight-budget call site must either opt
+//      out or get real headroom.
+//   2. Thinking tokens bill as output tokens, so leaving it on costs more.
+//
+// So we split call sites in two:
+//
+//   NO_THINKING  — short, structured, single-shot work (a JSON manifest, a
+//                  field mapping, a yes/no verdict). Thinking buys nothing
+//                  here and would eat the budget. Keeps cost and latency
+//                  exactly where they were before the upgrade.
+//   AGENTIC      — multi-step tool use (chat, skills, playbooks). Reasoning
+//                  between tool calls is precisely what got better in this
+//                  generation, so we let it think and give it room instead.
+//
+// Note: on Opus 5, disabling thinking is only permitted at effort `high` or
+// below (the default). Don't pair NO_THINKING with `effort: 'xhigh' | 'max'`
+// — the API rejects that combination with a 400.
+
+/** Opt a short structured call out of thinking. Pass as `providerOptions`. */
+export const NO_THINKING = {
+  anthropic: { thinking: { type: 'disabled' as const } },
+} as const
+
+/**
+ * Let a multi-step agent reason between tool calls. Pass as `providerOptions`.
+ * Pair with a generous `maxOutputTokens` — see AGENTIC_MAX_TOKENS.
+ */
+export const AGENTIC_THINKING = {
+  anthropic: { thinking: { type: 'adaptive' as const } },
+} as const
+
+/**
+ * Output ceiling for agentic runs. Covers thinking + tool-call arguments + the
+ * final answer, so it has to be well clear of what the answer alone needs.
+ */
+export const AGENTIC_MAX_TOKENS = 32_000
+
 // The AI SDK wraps repeated failures in a RetryError carrying every attempt.
 // We don't import the class (it isn't exported from every entry point) — we
 // duck-type it and walk the chain so classification works either way.

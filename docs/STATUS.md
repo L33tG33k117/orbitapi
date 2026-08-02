@@ -37,6 +37,30 @@ Snapshot of where the product is the night beta testing began, and the prioritiz
 - **Secrets in transcript** — Vercel token + Supabase/Anthropic keys were pasted during setup,
   plus the `SUPABASE_ACCESS_TOKEN` pasted 2026-07-03. ⚠️ Still open — rotation is account-level.
 - **Crons daily** (Hobby limit) — scheduled skills/playbooks fire once/day until a paid Vercel plan.
+  Both cron slots are used, so the daily model check runs as a GitHub Action instead.
+- ⚠️ **Vercel auto-deploy stopped firing after 2026-07-12** — commits kept landing on `main`,
+  GitHub recorded no Deployment, and nothing reached production for three weeks. Mitigated by a
+  `deploy` job in `.github/workflows/ci.yml` that deploys from CI (gated on the quality checks),
+  which needs a `VERCEL_TOKEN` repo secret. The underlying Vercel↔GitHub integration should still
+  be reconnected in the Vercel dashboard.
+
+## Models
+Current: **Opus 5** (maximum) · **Sonnet 5** (balanced, default) · **Haiku 4.5** (economy) ·
+Fable 5 available as an explicit per-skill override only. Migrated 2026-08-02 from Opus 4.8 /
+Sonnet 4.6.
+
+**The thing to know:** Opus 5 and Sonnet 5 think *by default*, and thinking is billed as output
+and shares the `max_tokens` budget. `lib/ai-resilience.ts` therefore defines an explicit policy —
+`NO_THINKING` for short structured one-shots (connector builds, field mappings, verify verdicts,
+widget configs, previews, sim data) so their tight budgets aren't eaten, and `AGENTIC_THINKING`
+plus `AGENTIC_MAX_TOKENS` for chat, skills and playbooks where reasoning between tool calls is
+the point. Expect agentic runs to consume somewhat more AI Power than on 4.8/4.6 in exchange for
+better tool use. Sonnet 5 also uses a new tokenizer (~30% more tokens for the same text), so
+`lib/ai-estimate.ts` profiles run a little optimistic — re-baseline if estimates start drifting.
+
+`npm run check:models` (and a daily GitHub Action) flags retirements and newer releases.
+Upgrading stays manual on purpose: the Models API doesn't publish prices, so `MODEL_PRICING` must
+be updated by hand, and each generation has carried breaking changes.
 
 ## What to work on next (prioritized)
 1. **Run the beta feedback loop** (now active) — triage tester input, fix high-signal issues fast.

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { simulateAction, hasSimulatedData } from '@/lib/simulate-action'
 import { CHEAP_MODEL, computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { consumeCredits } from '@/lib/ai-power'
-import { AI_MAX_RETRIES } from '@/lib/ai-resilience'
+import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
 
 // ============================================================
 // Simulation engine — the "always answers" sandbox
@@ -186,6 +186,7 @@ export async function resolveSimulatedAction(opts: {
     const { text, usage } = await generateText({
       model: anthropic(GEN_MODEL),
       maxRetries: AI_MAX_RETRIES,
+      providerOptions: NO_THINKING,
       prompt: buildPrompt({ connectorName, connectorSlug, action, params, shapeExample, world: state.world }),
     })
 

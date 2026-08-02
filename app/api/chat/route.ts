@@ -14,7 +14,9 @@ import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { SAFETY_SYSTEM_RULES, SCOPE_SYSTEM_RULES } from '@/lib/prompt-safety'
-import { AI_MAX_RETRIES, friendlyAiError, isAiError } from '@/lib/ai-resilience'
+import {
+  AGENTIC_MAX_TOKENS, AGENTIC_THINKING, AI_MAX_RETRIES, friendlyAiError, isAiError,
+} from '@/lib/ai-resilience'
 import { logServerError } from '@/lib/error-log'
 
 export const maxDuration = 60
@@ -381,6 +383,11 @@ Guidelines:
   const result = streamText({
     model: anthropic(chatModel),
     maxRetries: AI_MAX_RETRIES,
+    // Opus 5 / Sonnet 5 reason between tool calls. Streaming means the user
+    // sees output as it lands, so the extra latency is hidden — but the output
+    // budget now covers thinking too, hence the explicit ceiling.
+    providerOptions: AGENTIC_THINKING,
+    maxOutputTokens: AGENTIC_MAX_TOKENS,
     // Cache the system + tool definitions (the repeated chunk) so input bills ~10%.
     messages: [
       { role: 'system', content: systemPrompt, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
