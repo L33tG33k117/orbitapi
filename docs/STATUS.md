@@ -38,11 +38,14 @@ Snapshot of where the product is the night beta testing began, and the prioritiz
   plus the `SUPABASE_ACCESS_TOKEN` pasted 2026-07-03. ⚠️ Still open — rotation is account-level.
 - **Crons daily** (Hobby limit) — scheduled skills/playbooks fire once/day until a paid Vercel plan.
   Both cron slots are used, so the daily model check runs as a GitHub Action instead.
-- ⚠️ **Vercel auto-deploy stopped firing after 2026-07-12** — commits kept landing on `main`,
-  GitHub recorded no Deployment, and nothing reached production for three weeks. Mitigated by a
-  `deploy` job in `.github/workflows/ci.yml` that deploys from CI (gated on the quality checks),
-  which needs a `VERCEL_TOKEN` repo secret. The underlying Vercel↔GitHub integration should still
-  be reconnected in the Vercel dashboard.
+- **Deploys** — Vercel's GitHub App auto-deploys `main` and works (787e6f6 was live ~2 min after
+  push). A `deploy` job in `.github/workflows/ci.yml` can deploy from CI *gated on the quality
+  checks*, so a broken build can't reach production; it no-ops until a `VERCEL_TOKEN` repo secret
+  is set. That's an optional hardening, not a fix.
+  ⚠️ Don't diagnose a stalled pipeline from deployment dates alone — a repo with no commits looks
+  identical to a broken integration. Check `git log` for the same window first. Also note `curl` to
+  the beta URL intermittently returns 403 `X-Vercel-Mitigated: challenge` (bot protection), which
+  is not an outage.
 
 ## Models
 Current: **Opus 5** (maximum) · **Sonnet 5** (balanced, default) · **Haiku 4.5** (economy) ·
