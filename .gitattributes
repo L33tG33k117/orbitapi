@@ -1,0 +1,14 @@
+# Files that are executed inside Linux containers MUST keep LF endings.
+# Checked out on Windows with core.autocrlf=true they would otherwise get CRLF,
+# and `#!/bin/sh\r` fails with a bewildering "no such file or directory" that
+# names a file which plainly exists. Same for anything postgres or nginx reads.
+*.sh              text eol=lf
+Dockerfile        text eol=lf
+*.inc             text eol=lf
+*.conf            text eol=lf
+docker/**         text eol=lf
+supabase/**/*.sql text eol=lf
+scripts/*.mjs     text eol=lf
+
+# Let git decide for everything else.
+* text=auto
