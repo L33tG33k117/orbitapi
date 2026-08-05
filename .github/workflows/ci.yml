@@ -36,6 +36,101 @@ jobs:
       - name: Simulation data parity (every action has demo data)
         run: npm run test:sim-parity
 
+      - name: Offline edition checks (provider, secrets, config, gating)
+        run: npm run test:offline
+
+      # Grep guards for the two rules that are invisible in a diff but break
+      # the self-hosted build. Both were real design decisions, and both are
+      # the kind that quietly erode when someone adds "just one more" call site.
+      - name: Offline edition invariants
+        run: |
+          set -euo pipefail
+
+          # Every LLM call must go through lib/ai-provider.ts. A stray
+          # anthropic() would work perfectly on cloud and be unreachable on an
+          # air-gapped box — the worst possible place to discover it.
+          stray=$(grep -rn --include='*.ts' --include='*.tsx' \
+            -e "anthropic(" -e "@ai-sdk/anthropic" \
+            app lib connectors 2>/dev/null | grep -v '^lib/ai-provider.ts:' || true)
+          if [ -n "$stray" ]; then
+            echo "::error title=Anthropic used outside the provider factory::$stray"
+            exit 1
+          fi
+
+          # NEXT_PUBLIC_APP_URL is inlined at build time, so one prebuilt
+          # self-hosted image would carry whichever URL CI happened to have.
+          # lib/app-url.ts is the only place allowed to read it.
+          baked=$(grep -rn --include='*.ts' --include='*.tsx' \
+            "process.env.NEXT_PUBLIC_APP_URL" app lib components 2>/dev/null \
+            | grep -v '^lib/app-url.ts:' || true)
+          if [ -n "$baked" ]; then
+            echo "::error title=NEXT_PUBLIC_APP_URL read outside lib/app-url.ts::$baked"
+            exit 1
+          fi
+
+          echo "Offline invariants hold."
+
+  # ----------------------------------------------------------------------
+  # Self-hosted stack smoke test.
+  #
+  # WHY THIS EXISTS: the offline edition is a second, permanent deployment
+  # target that nobody exercises day to day. Every other check in this file
+  # reads code; this one BUILDS the image, boots all five containers and
+  # drives a real browser-shaped path through them — first-run wizard, sign-in
+  # through the gateway, a simulated connector run with no AI configured.
+  #
+  # Without it, the offline build would only ever be tested on a customer's
+  # air-gapped machine, which is the one place nobody can debug it.
+  # ----------------------------------------------------------------------
+  selfhost:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate an install config
+        working-directory: docker
+        run: node ../scripts/selfhost-gen-env.mjs --url http://localhost --out .env
+
+      - name: Build the app image
+        run: docker build -f docker/Dockerfile -t orbitapi/app:ci .
+
+      - name: Start the stack
+        working-directory: docker
+        run: |
+          set -euo pipefail
+          sed -i 's|^ORBIT_IMAGE=.*|ORBIT_IMAGE=orbitapi/app:ci|' .env
+          docker compose --env-file .env up -d
+          docker compose --env-file .env ps
+
+      - name: Smoke test
+        working-directory: docker
+        run: |
+          set -euo pipefail
+          # The smoke test needs the generated keys to call PostgREST and GoTrue
+          # exactly as the browser does.
+          set -a; . ./.env; set +a
+          node ../scripts/selfhost-smoke.mjs --url http://localhost
+
+      # Logs are the only way to diagnose a container that never became
+      # healthy, and they vanish with the runner.
+      - name: Container logs (on failure)
+        if: failure()
+        working-directory: docker
+        run: |
+          docker compose --env-file .env ps
+          for s in orbit-app orbit-db orbit-auth orbit-rest orbit-gateway; do
+            echo "::group::$s"
+            docker compose --env-file .env logs --tail 200 "$s" || true
+            echo "::endgroup::"
+          done
+
+      - name: Tear down
+        if: always()
+        working-directory: docker
+        run: docker compose --env-file .env down -v || true
+
   # ----------------------------------------------------------------------
   # Deploy to production.
   #
