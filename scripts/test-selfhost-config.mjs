@@ -130,6 +130,9 @@ try {
   check('only the gateway publishes ports', (compose.match(/^\s{4}ports:/gm) ?? []).length === 1)
   check('public signup is disabled by default', compose.includes('GOTRUE_DISABLE_SIGNUP'))
   check('server-side Supabase calls use the internal URL', compose.includes('SUPABASE_INTERNAL_URL'))
+  // The installer generates CRON_SECRET, but if compose doesn't pass it to the
+  // app the cron routes fall back to "self-host with no secret = open".
+  check('CRON_SECRET reaches the app container', /CRON_SECRET:\s*\$\{CRON_SECRET/.test(compose))
   check('required secrets fail fast if unset', compose.includes('ORBIT_SECRETS_KEY:?'))
 
   const initSh = readFileSync(join(ROOT, 'docker', 'postgres-init', '01-roles-and-schemas.sh'), 'utf8')

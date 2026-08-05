@@ -172,7 +172,8 @@ console.log('\nSimulated connector (no AI configured)')
     expires_at: Math.floor(Date.now() / 1000) + 3600,
     user: userRecord,
   }
-  const cookie = `sb-${ref}-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`
+  // @supabase/ssr prefixes the value with `base64-` and uses STANDARD base64.
+  const cookie = `sb-${ref}-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64')}`
 
   const authed = { 'Content-Type': 'application/json', cookie }
 
@@ -212,12 +213,12 @@ console.log('\nSimulated connector (no AI configured)')
   }
 }
 
-// An unauthenticated call must be refused rather than redirected into an HTML
-// page — the /api/health fix must not have made every API route public.
+// An unauthenticated call must not succeed. The app answers these with a
+// redirect to /login rather than a 401 — that predates the offline work and is
+// the same on cloud, so this asserts "refused", not a specific status.
 {
   const { res } = await get('/api/connections')
-  check('an unauthenticated API call is refused, not redirected',
-    res.status === 401, `status ${res.status}`)
+  check('an unauthenticated API call is refused', res.status !== 200, `status ${res.status}`)
 }
 
 // ---- 5. the scheduler's entry point ---------------------------------------

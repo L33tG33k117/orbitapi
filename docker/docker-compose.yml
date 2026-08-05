@@ -145,6 +145,11 @@ services:
 
       # Runs the schedules in-process; there is no Vercel Cron here.
       ORBIT_ENABLE_SCHEDULER: ${ORBIT_ENABLE_SCHEDULER:-true}
+      # The installer generates this, but without passing it through, the
+      # /api/cron/* routes fall back to "self-host with no secret = open" and
+      # anyone who can reach the box could trigger real automation. The
+      # in-process scheduler doesn't need it; the HTTP routes do.
+      CRON_SECRET: ${CRON_SECRET:-}
     volumes:
       # Where update bundles are dropped for the admin Updates screen to find.
       - ./updates:/app/updates:ro
