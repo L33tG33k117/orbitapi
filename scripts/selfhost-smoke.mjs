@@ -190,11 +190,16 @@ console.log('\nSimulated connector (no AI configured)')
       isSimulated: true,
     }),
   })
-  const created = await create.json().catch(() => null)
+  // Read as text first: a thrown error returns Next's HTML error page, not our
+  // JSON, and "status 500" with no body is not something anyone can act on.
+  const createBody = await create.text()
+  let created = null
+  try { created = JSON.parse(createBody) } catch { /* not JSON — an error page */ }
+
   check('the app accepts a browser session cookie', create.status !== 401 && create.status < 300,
-    `status ${create.status}`)
+    `status ${create.status} · ${createBody.replace(/\s+/g, ' ').slice(0, 300)}`)
   check('a simulated connection can be created', create.ok && !!created?.connection?.id,
-    created?.error ?? `status ${create.status}`)
+    created?.error ?? `status ${create.status} · ${createBody.replace(/\s+/g, ' ').slice(0, 300)}`)
 
   if (created?.connection?.id) {
     const run = await fetch(`${BASE}/api/execute`, {
