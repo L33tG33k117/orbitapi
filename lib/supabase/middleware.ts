@@ -51,6 +51,7 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/how-it-works')
     || url.pathname.startsWith('/integrations')
     || url.pathname.startsWith('/solutions')
+    || url.pathname.startsWith('/self-hosted')
     || url.pathname.startsWith('/changelog')
     || url.pathname.startsWith('/opengraph-image')
     // The first-run wizard has to be reachable before any account exists.

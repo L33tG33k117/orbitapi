@@ -78,6 +78,9 @@ const CLOUD_ONLY_ROUTES = [
   '/pricing',
   '/integrations',
   '/solutions',
+  // Doubly true here: a page selling self-hosting to someone already running
+  // the self-hosted edition is nonsense.
+  '/self-hosted',
   '/changelog',
   '/how-it-works',
   '/demo',

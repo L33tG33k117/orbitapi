@@ -19,6 +19,7 @@ export function MarketingNav() {
           <Link href="/#how-it-works" className="hover:text-white transition-colors">How it works</Link>
           <Link href="/integrations" className="hover:text-white transition-colors">Integrations</Link>
           <Link href="/solutions" className="hover:text-white transition-colors">Solutions</Link>
+          <Link href="/self-hosted" className="hover:text-white transition-colors">Self-hosted</Link>
           <Link href="/#pricing" className="hover:text-white transition-colors">Pricing</Link>
           <Link href="/changelog" className="hover:text-white transition-colors">Changelog</Link>
         </div>
@@ -60,6 +61,7 @@ export function MarketingFooter() {
               <div className="space-y-2">
                 <Link href="/integrations" className="block text-white/45 hover:text-white transition-colors">Integrations</Link>
                 <Link href="/solutions" className="block text-white/45 hover:text-white transition-colors">Solutions</Link>
+                <Link href="/self-hosted" className="block text-white/45 hover:text-white transition-colors">Self-hosted</Link>
                 <Link href="/#pricing" className="block text-white/45 hover:text-white transition-colors">Pricing</Link>
                 <Link href="/changelog" className="block text-white/45 hover:text-white transition-colors">Changelog</Link>
                 <Link href="/demo" className="block text-white/45 hover:text-white transition-colors">15-second demo</Link>

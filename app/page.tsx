@@ -491,6 +491,17 @@ export default async function RootPage() {
                 >
                   {plan.cta} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
+                {plan.enterprise && (
+                  // The self-hosted bullet above raises an obvious question.
+                  // Answer it here rather than making them go to sales to find
+                  // out what it involves.
+                  <Link
+                    href="/self-hosted"
+                    className="text-center text-[11px] text-amber-300/70 hover:text-amber-300 transition-colors -mt-2"
+                  >
+                    How self-hosting works →
+                  </Link>
+                )}
               </div>
             ))}
           </div>
