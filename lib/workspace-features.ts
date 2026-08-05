@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_FEATURE_FLAGS, type FeatureFlags, type WorkspaceTier } from '@/types'
 import { hasCapability, requiredTierFor, CAPABILITY_INFO, type Capability } from '@/lib/entitlements'
+import { isSelfHost } from '@/lib/edition'
 
 export interface WorkspaceFeatures {
   workspaceId: string
@@ -28,6 +29,23 @@ export async function getWorkspaceFeatures(): Promise<WorkspaceFeatures | null> 
     .select('tier, feature_flags')
     .eq('id', membership.workspace_id)
     .single()
+
+  // A self-hosted install has no plans, no Stripe, and nothing to upgrade to —
+  // the customer bought the whole product. Tiers there mean "what your licence
+  // grants", which Phase 3 will read from the licence key. Until then everyone
+  // gets the full set, plus byo_llm, which no tier grants by default and which
+  // a self-hosted instance cannot function without.
+  if (isSelfHost()) {
+    return {
+      workspaceId: membership.workspace_id,
+      tier: 'enterprise',
+      flags: {
+        ...DEFAULT_FEATURE_FLAGS,
+        ...((workspace?.feature_flags ?? {}) as FeatureFlags),
+        byo_llm: true,
+      } as FeatureFlags,
+    }
+  }
 
   return {
     workspaceId: membership.workspace_id,

@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
+import { editionGuard } from '@/lib/edition-gate'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe, STRIPE_PRICES } from '@/lib/stripe'
 import { getAppUrl } from '@/lib/app-url'
 
 export async function POST(req: Request) {
+  const denied = editionGuard('billing')
+  if (denied) return denied
+
   if (!stripe) {
     return NextResponse.json({ error: 'Billing is not configured' }, { status: 503 })
   }

@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { HelpCircle, Compass, LifeBuoy, Keyboard, MessageSquarePlus } from 'lucide-react'
 import { getTour } from '@/lib/tours'
+import { useIsSelfHost } from '@/components/config-provider'
 
 // One Help menu to keep the top bar to consistent icons. Consolidates the page
 // tour, the Guide, keyboard shortcuts, and feedback — the standard SaaS pattern,
@@ -14,6 +15,7 @@ export function HelpMenu() {
   const router = useRouter()
   const pathname = usePathname()
   const hasTour = !!getTour(pathname)
+  const selfHost = useIsSelfHost()
 
   return (
     <DropdownMenu>
@@ -40,10 +42,20 @@ export function HelpMenu() {
           Keyboard shortcuts
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => window.dispatchEvent(new Event('orbit:open-feedback'))} className="gap-2">
-          <MessageSquarePlus className="h-3.5 w-3.5" />
-          Send feedback
-        </DropdownMenuItem>
+        {/* Feedback from a self-hosted install lands in that customer's own
+            database, where nobody at OrbitAPI will ever read it. Offering it
+            would be a black hole dressed up as a support channel. */}
+        {selfHost ? (
+          <DropdownMenuItem onClick={() => router.push('/guide#support')} className="gap-2">
+            <MessageSquarePlus className="h-3.5 w-3.5" />
+            Contact support
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onClick={() => window.dispatchEvent(new Event('orbit:open-feedback'))} className="gap-2">
+            <MessageSquarePlus className="h-3.5 w-3.5" />
+            Send feedback
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LanCaveat } from '@/components/lan-caveat'
 import { toast } from 'sonner'
 import { Webhook, Plus, Copy, Play, ChevronDown, ChevronUp, Trash2, RefreshCw } from 'lucide-react'
 
@@ -66,6 +67,7 @@ export function WebhooksClient({ initialEndpoints, skills, playbooks }: { initia
   return (
     <div className="space-y-4">
       <WebhookPrimer />
+      <LanCaveat feature="webhooks" />
 
       {creating ? (
         <form onSubmit={create} className="border rounded-xl p-4 bg-card space-y-3">

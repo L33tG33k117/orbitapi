@@ -29,17 +29,26 @@ export default async function AiPowerPage() {
   const { data: skills } = await admin
     .from('skills').select('id, name, ai_efficiency').eq('workspace_id', membership.workspace_id).order('name')
 
+  // On a self-hosted install nothing is metered — the model runs on the
+  // customer's own hardware. The page becomes "here's what your AI has been
+  // doing", with no allowance, no countdown and nothing to buy.
+  const unmetered = !!power.unmetered
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <PageHero
         eyebrow="Insights"
-        title="AI Power"
-        description="Your plan includes a monthly pool of AI Power that every assistant, skill, and playbook draws from. Choose how much horsepower they use, and top up anytime."
+        title={unmetered ? 'AI Usage' : 'AI Power'}
+        description={unmetered
+          ? 'How much your assistant, skills, and playbooks have been using. Your AI runs on your own hardware, so there is no allowance to track and nothing to top up.'
+          : 'Your plan includes a monthly pool of AI Power that every assistant, skill, and playbook draws from. Choose how much horsepower they use, and top up anytime.'}
       />
       <AiPowerClient
         power={power}
         tier={power.tier}
-        packs={TOPUP_PACKS}
+        unmetered={unmetered}
+        // Nothing to sell on an air-gapped box; the top-up UI would 404.
+        packs={unmetered ? [] : TOPUP_PACKS}
         efficiencyInfo={EFFICIENCY_INFO}
         efficiencyOrder={EFFICIENCY_ORDER}
         skills={(skills ?? []).map(s => ({ id: s.id, name: s.name, efficiency: (s.ai_efficiency ?? null) as Efficiency | null }))}

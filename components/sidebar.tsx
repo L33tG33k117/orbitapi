@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import type { UserRole, FeatureFlags, WorkspaceTier } from '@/types'
 import { cn } from '@/lib/utils'
 import { hasCapability, type Capability } from '@/lib/entitlements'
+import { useIsSelfHost } from '@/components/config-provider'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
@@ -20,6 +21,12 @@ interface NavItem {
   excludeStartsWith?: string | string[]
   capability?: Capability
   comingSoon?: boolean
+  /**
+   * Exists only in the hosted product. Hidden outright on self-host rather
+   * than locked: there is nothing to upgrade to, and the pages it would link
+   * to (billing, upgrade) aren't there either.
+   */
+  cloudOnly?: boolean
 }
 
 interface NavSection {
@@ -90,7 +97,7 @@ const sections: NavSection[] = [
 
 const adminItems: NavItem[] = [
   { href: '/settings/members', label: 'Members', icon: Users },
-  { href: '/settings/billing', label: 'Billing', icon: CreditCard },
+  { href: '/settings/billing', label: 'Billing', icon: CreditCard, cloudOnly: true },
   { href: '/settings/ai-provider', label: 'AI Provider', icon: Cpu },
   { href: '/settings/workspace', label: 'Workspace', icon: Settings },
 ]
@@ -108,6 +115,7 @@ interface SidebarProps {
 export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingApprovals, unreadConnectorMessages }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const selfHost = useIsSelfHost()
 
   // The TopBar hamburger fires `orbit:toggle-nav` to open the mobile drawer.
   useEffect(() => {
@@ -131,6 +139,11 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
   }
 
   function renderItem(item: NavItem) {
+    // Cloud-only entries are removed, not dimmed. A locked item says "upgrade";
+    // there is no upgrade here, so leaving it visible would only raise a
+    // question the product can't answer.
+    if (item.cloudOnly && selfHost) return null
+
     const active = isActive(item)
     const Icon = item.icon
     const comingSoon = !!item.comingSoon

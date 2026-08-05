@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { LanCaveat } from '@/components/lan-caveat'
 import { Bot, Copy, Check, RefreshCw, ShieldCheck, Eye, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -66,6 +67,8 @@ export function McpClient({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="space-y-6">
+      <LanCaveat feature="mcp" />
+
       {/* Safety promises — this is the pitch */}
       <div className="grid sm:grid-cols-3 gap-3">
         {[

@@ -13,7 +13,18 @@ function firstExisting(base) {
   return null
 }
 
+// Next ships some entry points that its own bundler resolves but plain Node
+// does not. Map the handful our library code imports.
+const BARE_SPECIFIER_FIXUPS = {
+  'next/server': 'next/server.js',
+  'next/headers': 'next/headers.js',
+  'next/navigation': 'next/navigation.js',
+}
+
 export async function resolve(specifier, context, nextResolve) {
+  const fixup = BARE_SPECIFIER_FIXUPS[specifier]
+  if (fixup) return nextResolve(fixup, context)
+
   // `@/lib/foo` → <root>/lib/foo.ts
   if (specifier.startsWith('@/')) {
     const hit = firstExisting(path.join(projectRoot, specifier.slice(2)))

@@ -12,7 +12,7 @@ interface Pack { id: string; label: string; retailUsd: number; credits: number }
 interface SkillRow { id: string; name: string; efficiency: Efficiency | null }
 
 export function AiPowerClient({
-  power, tier, packs, efficiencyInfo, efficiencyOrder, skills,
+  power, tier, packs, efficiencyInfo, efficiencyOrder, skills, unmetered = false,
 }: {
   power: AiPower
   tier: string
@@ -20,6 +20,8 @@ export function AiPowerClient({
   efficiencyInfo: Record<Efficiency, { label: string; blurb: string }>
   efficiencyOrder: Efficiency[]
   skills: SkillRow[]
+  /** Self-hosted: the customer's own model, so there is no pool and no cap. */
+  unmetered?: boolean
 }) {
   const router = useRouter()
   const [defaultEff, setDefaultEff] = useState<Efficiency>(power.efficiency)
@@ -27,8 +29,10 @@ export function AiPowerClient({
   const [saving, setSaving] = useState(false)
   const [buying, setBuying] = useState<string | null>(null)
 
-  const low = power.pctUsed >= 80
-  const out = power.remaining <= 0
+  // "Running low" and "out of power" are meaningless without an allowance —
+  // and with allowance = Infinity the arithmetic would render as NaN%.
+  const low = !unmetered && power.pctUsed >= 80
+  const out = !unmetered && power.remaining <= 0
 
   async function setDefault(eff: Efficiency) {
     setDefaultEff(eff)
@@ -62,7 +66,23 @@ export function AiPowerClient({
 
   return (
     <div className="space-y-8">
+      {/* Usage summary — self-hosted. No allowance, so no meter: a progress bar
+          against an infinite pool would be meaningless (and renders as NaN%). */}
+      {unmetered && (
+        <div data-tour="aipower-meter" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent p-5">
+          <p className="text-xs text-muted-foreground">AI used so far</p>
+          <p className="text-3xl font-bold mt-1">
+            {power.used.toLocaleString()} <span className="text-base font-normal text-muted-foreground">units of work</span>
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Your AI runs on hardware you control, so there is no allowance and nothing to top up.
+            This is here so you can see how heavily your automations are working.
+          </p>
+        </div>
+      )}
+
       {/* Power meter */}
+      {!unmetered && (
       <div data-tour="aipower-meter" className={`rounded-2xl border p-5 ${out ? 'border-red-500/40 bg-red-500/5' : low ? 'border-amber-500/30 bg-amber-500/5' : 'border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent'}`}>
         <div className="flex items-end justify-between mb-3">
           <div>
@@ -106,8 +126,10 @@ export function AiPowerClient({
           </div>
         )}
       </div>
+      )}
 
       {/* Top-up packs */}
+      {packs.length > 0 && (
       <section className="space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-1.5"><Sparkles className="h-4 w-4 text-primary" /> Add more AI Power</h2>
         <div className="grid sm:grid-cols-3 gap-3">
@@ -124,11 +146,19 @@ export function AiPowerClient({
         </div>
         <p className="text-[11px] text-muted-foreground">Packs add to your current cycle and never expose what runs under the hood.</p>
       </section>
+      )}
 
       {/* Default efficiency */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-1.5"><Zap className="h-4 w-4 text-primary" /> Default AI horsepower</h2>
-        <p className="text-[11px] text-muted-foreground">Higher horsepower is more capable but uses more AI Power. Applies everywhere unless a skill overrides it.</p>
+        <p className="text-[11px] text-muted-foreground">
+          {unmetered
+            // With one installed model there is nothing for the setting to
+            // choose between — say so rather than leave a control that appears
+            // to do something and doesn't.
+            ? 'This installation uses the single AI model you configured, so this setting has no effect unless you switch to OrbitAPI Cloud.'
+            : 'Higher horsepower is more capable but uses more AI Power. Applies everywhere unless a skill overrides it.'}
+        </p>
         <div className="grid sm:grid-cols-3 gap-3">
           {efficiencyOrder.map(eff => {
             const info = efficiencyInfo[eff]

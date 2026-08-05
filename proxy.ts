@@ -62,9 +62,46 @@ function rateLimited(request: NextRequest): Response | null {
   return null
 }
 
+// ------------------------------------------------------------
+// Cloud-only routes, hidden on self-host
+// ------------------------------------------------------------
+// Billing, the upgrade page and the public marketing site have no meaning on
+// a customer's own hardware: there is no Stripe, nothing to upgrade to, and
+// no reason to serve marketing copy to the four people who work there.
+//
+// Gated HERE rather than page by page because one prebuilt image serves both
+// editions — the pages can't be excluded at build time — and because a single
+// list is far easier to keep honest than a check scattered across ~20 files.
+const CLOUD_ONLY_ROUTES = [
+  '/settings/billing',
+  '/upgrade',
+  '/pricing',
+  '/integrations',
+  '/solutions',
+  '/changelog',
+  '/how-it-works',
+  '/demo',
+  '/about',
+  '/contact',
+]
+
+function cloudOnlyBlocked(request: NextRequest): boolean {
+  if (process.env.ORBIT_EDITION !== 'selfhost') return false
+  const path = request.nextUrl.pathname
+  return CLOUD_ONLY_ROUTES.some(r => path === r || path.startsWith(`${r}/`))
+}
+
 export async function proxy(request: NextRequest) {
   const limited = rateLimited(request)
   if (limited) return limited
+
+  // 404 rather than a redirect: on this installation the route genuinely does
+  // not exist, and bouncing someone to the dashboard makes a missing page look
+  // like a bug in navigation.
+  if (cloudOnlyBlocked(request)) {
+    return new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain' } })
+  }
+
   return await updateSession(request)
 }
 

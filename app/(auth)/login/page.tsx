@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useIsSelfHost } from '@/components/config-provider'
 import { Orbit } from 'lucide-react'
 
 export default function LoginPage() {
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const selfHost = useIsSelfHost()
   const [loading, setLoading] = useState(false)
 
   async function handleEmailLogin(e: React.FormEvent) {
@@ -89,6 +91,11 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-4">
+            {/* Google and SAML both need the hosted auth service and a public
+                redirect URL. Neither exists in the self-hosted build — OSS
+                GoTrue has no SAML at all — so the buttons are hidden rather
+                than shown and then failing at the redirect. */}
+            {!selfHost && (
             <Button
               variant="outline"
               className="w-full bg-white/5 border-white/15 text-white hover:bg-white/10 hover:border-white/25 hover:text-white"
@@ -103,7 +110,9 @@ export default function LoginPage() {
               </svg>
               Continue with Google
             </Button>
+            )}
 
+            {!selfHost && (
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-white/10" />
@@ -112,6 +121,7 @@ export default function LoginPage() {
                 <span className="px-3 text-white/30" style={{ background: 'oklch(0.07 0.02 268)' }}>or</span>
               </div>
             </div>
+            )}
 
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div className="space-y-1.5">
@@ -153,6 +163,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
+            {!selfHost && (
             <button
               type="button"
               onClick={handleSSO}
@@ -161,14 +172,24 @@ export default function LoginPage() {
             >
               Use single sign-on (SSO)
             </button>
+            )}
           </div>
 
+          {/* Self-hosted accounts are created by an administrator; public
+              signup is disabled on the auth service, so a "create one" link
+              would lead to a form that always fails. */}
+          {selfHost ? (
+          <p className="text-center text-sm text-white/40">
+            Need an account? Ask your OrbitAPI administrator to create one for you.
+          </p>
+          ) : (
           <p className="text-center text-sm text-white/40">
             No account?{' '}
             <Link href="/signup" className="text-[oklch(0.72_0.18_264)] hover:text-[oklch(0.78_0.16_264)] transition-colors">
               Create one free
             </Link>
           </p>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isSelfHost } from '@/lib/edition'
 import type { ModelId } from '@/lib/usage-cost'
 
 // ============================================================
@@ -92,6 +93,8 @@ export interface AiPower {
   efficiency: Efficiency
   resetInDays: number   // whole days until the allowance resets (0 for trial)
   isTrial: boolean      // free = one-time pool that never refills
+  /** Self-hosted: nothing is metered, so the UI shows usage instead of credits. */
+  unmetered?: boolean
 }
 
 // Read-only view of a workspace's AI Power. Treats an elapsed cycle as reset
@@ -103,6 +106,27 @@ export async function getAiPower(workspaceId: string): Promise<AiPower> {
     .select('tier, ai_credits_used, ai_topup_credits, ai_credits_cycle_start, ai_efficiency, ai_credit_override')
     .eq('id', workspaceId)
     .single()
+
+  // Self-hosted installs meter nothing: the customer's model runs on the
+  // customer's hardware, and there is no top-up to sell them if it ran out.
+  // An effectively infinite allowance keeps every existing caller working
+  // (`remaining > 0` stays true) without a branch at each call site — and the
+  // AI Power screen reads this as "usage", not "credits left".
+  if (isSelfHost()) {
+    return {
+      tier: 'enterprise',
+      monthly: Infinity,
+      topup: 0,
+      used: ws?.ai_credits_used ?? 0,
+      allowance: Infinity,
+      remaining: Infinity,
+      pctUsed: 0,
+      efficiency: (ws?.ai_efficiency ?? 'balanced') as Efficiency,
+      resetInDays: 0,
+      isTrial: false,
+      unmetered: true,
+    }
+  }
 
   const tier = ws?.tier ?? 'free'
   // Free is a one-time trial pool (never refills); paid tiers reset each cycle.
