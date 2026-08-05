@@ -112,7 +112,17 @@ export async function POST(request: Request) {
     .select()
     .single()
 
-  if (connErr) return NextResponse.json({ error: connErr.message }, { status: 500 })
+  if (connErr) {
+    // Logged as well as returned: connErr.message is sometimes empty (a bare
+    // permission or constraint failure), and a 500 with an empty body is
+    // impossible to act on — especially on a self-hosted box where nobody can
+    // read our server logs for the customer.
+    console.error('[connections] insert failed:', JSON.stringify(connErr))
+    return NextResponse.json(
+      { error: connErr.message || connErr.hint || connErr.details || connErr.code || 'Could not save the connection.' },
+      { status: 500 },
+    )
+  }
 
   await logAuditEvent({ workspaceId: membership.workspace_id, userId: user.id, actorEmail: user.email,
     category: 'connector', action: 'connector.connected', target: label,
