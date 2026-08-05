@@ -56,10 +56,16 @@ export async function updateSession(request: NextRequest) {
 
   // A brand-new self-hosted install has no accounts and no way to make one:
   // public signup is disabled on the auth service, and there is no admin yet
-  // to send an invite. Send the first visitor to the wizard instead of a login
+  // to send an invite. Send the first VISITOR to the wizard instead of a login
   // page they can never get past. needsFirstRunSetup() is cached and latches
   // shut for good once an account exists.
-  if (!user && url.pathname !== '/setup' && url.pathname !== '/api/setup') {
+  //
+  // Only page navigations are redirected. Redirecting /api/* here broke the
+  // container healthcheck — /api/health answered 307, so the app never became
+  // healthy, so `orbit.sh install` waited forever on a stack that was actually
+  // running fine. Nothing that speaks JSON wants an HTML wizard anyway.
+  const isApiRequest = url.pathname.startsWith('/api/')
+  if (!user && !isApiRequest && url.pathname !== '/setup') {
     if (await needsFirstRunSetup()) {
       url.pathname = '/setup'
       return NextResponse.redirect(url)
