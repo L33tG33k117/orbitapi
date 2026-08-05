@@ -43,6 +43,10 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/privacy')
     || url.pathname.startsWith('/terms')
     || url.pathname.startsWith('/contact')
+    // The contact form is for people who don't have an account yet — that's
+    // most of the point. The page was already public but the endpoint behind
+    // it wasn't, so every submission redirected to /login.
+    || url.pathname === '/api/contact'
     || url.pathname.startsWith('/demo')
     || url.pathname.startsWith('/how-it-works')
     || url.pathname.startsWith('/integrations')

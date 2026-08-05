@@ -1,26 +1,86 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Orbit, ArrowLeft, Mail, MessageSquare, Rocket } from 'lucide-react'
+import { Orbit, ArrowLeft, Mail, MessageSquare, Rocket, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export default function ContactPage() {
+// What each ?subject= is called on screen, and the prompt it puts in the box.
+// Landing here from "Talk to sales" should feel like a continuation of the
+// thing you clicked, not a blank generic form.
+const SUBJECTS: Record<string, { label: string; heading: string; blurb: string; placeholder: string }> = {
+  enterprise: {
+    label: 'Enterprise',
+    heading: 'Talk to us about Enterprise',
+    blurb: 'Custom AI Power, SSO, white-labelling, a dedicated SLA — and the option to run OrbitAPI entirely on your own hardware.',
+    placeholder: 'How many people would use it? Any compliance requirements we should know about?',
+  },
+  selfhost: {
+    label: 'Self-hosted',
+    heading: 'Run OrbitAPI on your own hardware',
+    blurb: 'Air-gapped installs, your own LLM, no data leaving your network. Tell us about your environment and we\'ll get you set up.',
+    placeholder: 'What does your environment look like? Air-gapped or just private? Do you already run an AI model in-house?',
+  },
+  support: {
+    label: 'Support',
+    heading: 'Get support',
+    blurb: 'Something not working? Tell us what happened and we\'ll dig in.',
+    placeholder: 'What were you trying to do, and what happened instead?',
+  },
+  partnership: {
+    label: 'Partnership',
+    heading: 'Partner with us',
+    blurb: 'Integrations, resale, or something we haven\'t thought of yet.',
+    placeholder: 'What did you have in mind?',
+  },
+}
+
+const DEFAULT_COPY = {
+  heading: 'Contact us',
+  blurb: 'Questions, feedback, or partnership inquiries — we\'d love to hear from you.',
+  placeholder: 'Tell us what you need, what you\'re building, or how we can help...',
+}
+
+function ContactForm() {
+  const params = useSearchParams()
+  const rawSubject = params.get('subject') ?? 'general'
+  const preset = SUBJECTS[rawSubject]
+  const subject = preset ? rawSubject : 'general'
+  const copy = preset ?? DEFAULT_COPY
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSending(true)
-    // In production, wire this to an email API (e.g. SendGrid)
-    await new Promise(r => setTimeout(r, 800))
-    setSending(false)
-    setSent(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message, subject }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // Say what actually went wrong. Claiming success when the message
+        // wasn't stored is precisely the bug this replaces.
+        setError(data.error ?? 'Something went wrong. Please email hello@orbitapi.com directly.')
+        return
+      }
+      setSent(true)
+    } catch {
+      setError('We couldn\'t reach the server. Please email hello@orbitapi.com directly.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -39,8 +99,14 @@ export default function ContactPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-16">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold">Contact us</h1>
-          <p className="text-white/45 mt-2">Questions, feedback, or partnership inquiries — we&apos;d love to hear from you.</p>
+          {preset && (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-xs text-amber-300 mb-3">
+              {subject === 'selfhost' ? <Server className="h-3 w-3" /> : <Rocket className="h-3 w-3" />}
+              {preset.label}
+            </div>
+          )}
+          <h1 className="text-3xl font-bold">{copy.heading}</h1>
+          <p className="text-white/45 mt-2">{copy.blurb}</p>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4 mb-12">
@@ -108,11 +174,16 @@ export default function ContactPage() {
                 rows={5}
                 value={message}
                 onChange={e => setMessage(e.target.value)}
-                placeholder="Tell us what you need, what you're building, or how we can help..."
+                placeholder={copy.placeholder}
                 required
                 className="w-full rounded-lg border border-white/15 bg-white/5 text-white placeholder:text-white/20 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[oklch(0.56_0.2_264)]/40 focus:border-[oklch(0.56_0.2_264)]"
               />
             </div>
+            {error && (
+              <p className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {error}
+              </p>
+            )}
             <Button
               type="submit"
               disabled={sending}
@@ -124,5 +195,15 @@ export default function ContactPage() {
         )}
       </div>
     </div>
+  )
+}
+
+// useSearchParams needs a Suspense boundary or the whole route opts out of
+// static rendering.
+export default function ContactPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[oklch(0.07_0.02_268)]" />}>
+      <ContactForm />
+    </Suspense>
   )
 }

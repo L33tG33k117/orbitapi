@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Building2, Users, ShieldCheck, ArrowLeft,
-  Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus, X, Bug,
+  Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus, X, Bug, Inbox,
 } from 'lucide-react'
 
-type BadgeKey = 'feedback' | 'requests' | 'reports' | 'errors'
+type BadgeKey = 'feedback' | 'requests' | 'reports' | 'errors' | 'contact'
 
 const items = [
   { href: '/admin/overview',            label: 'Overview',   icon: LayoutDashboard },
@@ -16,6 +16,7 @@ const items = [
   { href: '/admin/users',               label: 'Users',      icon: Users },
   { href: '/admin/analytics',           label: 'Analytics',  icon: BarChart2 },
   { href: '/admin/feedback',            label: 'Feedback',   icon: MessageSquarePlus, badge: 'feedback' as BadgeKey },
+  { href: '/admin/contact',             label: 'Contact',    icon: Inbox, badge: 'contact' as BadgeKey },
   { href: '/admin/bans',                label: 'Bans',       icon: Ban },
   { href: '/admin/connector-requests',  label: 'Requests',   icon: Plug, badge: 'requests' as BadgeKey },
   { href: '/admin/connector-reports',   label: 'Reports',    icon: Flag, badge: 'reports' as BadgeKey },
@@ -38,14 +39,16 @@ interface AdminSidebarProps {
   newFeedback?: number
   pendingRequests?: number
   openErrors?: number
+  newContact?: number
 }
 
-export function AdminSidebar({ email, fullName, openReports = 0, newFeedback = 0, pendingRequests = 0, openErrors = 0 }: AdminSidebarProps) {
+export function AdminSidebar({ email, fullName, openReports = 0, newFeedback = 0, pendingRequests = 0, openErrors = 0, newContact = 0 }: AdminSidebarProps) {
   const counts: Record<BadgeKey, number> = {
     feedback: newFeedback,
     requests: pendingRequests,
     reports: openReports,
     errors: openErrors,
+    contact: newContact,
   }
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
