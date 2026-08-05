@@ -4,41 +4,32 @@ Not for customers. This is how *we* issue licences and cut releases.
 
 ---
 
-## Before the first customer install
+## Signing keys — both are set up ✅
 
-Two one-off setup steps. Neither has been done yet.
+Done on 2026-08-05. Recorded here so nobody regenerates them by mistake:
+**issuing a new `k1` would invalidate every licence already in the field.**
 
-### 1. Create the licence signing key
+### Licence key `k1`
 
-```bash
-node scripts/license-issue.mjs keygen --kid k1
-```
+Public half is in `PUBLIC_KEYS` in `lib/license.ts`. Licences verify.
 
-This writes `k1.private.pem` (mode 600) and prints the public half.
+**The private half must live in the founder's password manager** — it is the
+only copy, it is not in the repo, and anyone holding it can mint licences.
 
-- Put the **private** key in the founder's password manager. Delete the local
-  copy. It never goes in the repo, and anyone holding it can mint licences.
-- Paste the **public** half into `PUBLIC_KEYS` in `lib/license.ts` and commit.
+### Release key `r1`
 
-Until a key is registered there, every licence key is refused — which is the
-correct default, but means no customer can be licensed yet.
+Public half is in `RELEASE_PUBLIC_KEYS` in `scripts/verify-bundle.mjs`.
+Private half is stored as the GitHub repo secret `RELEASE_SIGNING_KEY`, so
+`release.yml` produces signed bundles automatically.
 
-### 2. Create the release signing key
+Deliberately a **separate** key from `k1`: a leaked licence key must not also
+let someone forge an update bundle.
 
-Same idea, separate key — a leaked licence key must not also let someone forge
-an update bundle.
+### Rotating
 
-```bash
-node scripts/license-issue.mjs keygen --kid r1
-```
-
-- Private half → GitHub repo secret `RELEASE_SIGNING_KEY` (paste the whole PEM).
-- Optionally set repo variable `RELEASE_KID` if you use a kid other than `r1`.
-- Public half → `RELEASE_PUBLIC_KEYS` in `scripts/verify-bundle.mjs`, committed.
-
-Until that secret exists the release workflow still runs, but produces an
-**unsigned** bundle that `verify-bundle.mjs` refuses — so nothing unsigned can
-reach a customer by accident.
+Add a new entry (`k2`, `r2`) alongside the old one rather than replacing it —
+existing licences and bundles keep verifying against the key they were signed
+with, and new ones are issued under the new `kid`.
 
 ---
 
@@ -107,51 +98,6 @@ Common causes, roughly in order of frequency:
 | Skills produce nonsense | Model too small. Recommend 30B+ with tool calling. |
 | Nobody can sign in | No SMTP; generate a fresh invite link from Members. |
 | App won't start | Missing value in `.env` — the container names it and exits. |
-
----
-
-## Open issue: creating a connection returns 500 on the containerised stack
-
-**Status: unresolved. Blocks a real customer install.**
-
-In the `selfhost` CI job, `POST /api/connections` returns 500 and the Supabase
-error object comes back completely empty — `{}` with no own properties, so no
-message, code, hint or details.
-
-What is known to work (all asserted by the smoke test):
-
-- All five containers healthy; all 54 migrations apply from empty.
-- GoTrue issues a token through the gateway at `/auth/v1`.
-- PostgREST answers through the gateway at `/rest/v1` with the **anon** key
-  and a user token, and returns the workspace the wizard provisioned.
-- The browser session cookie is accepted — an unauthenticated call is
-  redirected, not 500'd, so the request reaches the route as a logged-in user.
-
-That narrows it to the **service_role path**: `createAdminClient()` writing
-through PostgREST. Most likely candidates, in order:
-
-1. PostgREST rejecting the generated `service_role` JWT (empty body → empty
-   error object). Check `PGRST_JWT_SECRET` really equals `JWT_SECRET`, and
-   that `authenticator` can `SET ROLE service_role`.
-2. Missing INSERT privilege on `public.connections` for `service_role` —
-   `ALTER DEFAULT PRIVILEGES` in the db init only covers tables created by the
-   role that ran it.
-3. An RLS policy applying despite `BYPASSRLS`.
-
-**Fastest way to resolve:** run the stack locally with Docker and hit it
-directly — this was never reproduced on the dev machine because Docker isn't
-installed there, and remote CI log archaeology ran out of road.
-
-```bash
-cd docker && ./orbit.sh install --url http://localhost
-docker compose exec orbit-db psql -U orbit -d orbit \
-  -c "\dp public.connections" -c "\du service_role"
-docker compose logs orbit-rest --tail 100
-```
-
-The two smoke-test checks for this are marked `knownGap()` — they report
-loudly but do not fail the build, so the rest of the suite stays a useful
-signal. **Promote them back to `check()` the moment it's fixed.**
 
 ---
 
