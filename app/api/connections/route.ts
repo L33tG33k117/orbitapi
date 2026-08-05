@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { storeSecret } from '@/lib/credentials'
 import { getConnector } from '@/connectors'
 import { getWorkspaceFeatures } from '@/lib/workspace-features'
 import { connectorLimit } from '@/lib/entitlements'
@@ -88,24 +89,13 @@ export async function POST(request: Request) {
 
   if (!connectorRow) return NextResponse.json({ error: 'Connector not found in database' }, { status: 404 })
 
-  // Simulated connections skip vault entirely — store placeholder
+  // Simulated connections have no real credentials to protect — the marker is
+  // a flag, not a secret, so it stays plain.
   let vaultSecretId: string | null = null
   if (isSimulated) {
     vaultSecretId = `inline:${Buffer.from(JSON.stringify({ __simulated: true })).toString('base64')}`
   } else {
-    // Store credentials in Vault
-    const secretName = `connection_${user.id}_${connectorSlug}_${Date.now()}`
-    const { data: vaultData, error: vaultErr } = await admin.rpc('vault.create_secret', {
-      secret: JSON.stringify(credentials),
-      name: secretName,
-    })
-
-    if (vaultErr) {
-      console.warn('Vault not available, falling back to inline storage:', vaultErr.message)
-      vaultSecretId = `inline:${Buffer.from(JSON.stringify(credentials)).toString('base64')}`
-    } else {
-      vaultSecretId = vaultData as string
-    }
+    vaultSecretId = await storeSecret(credentials, `connection_${user.id}_${connectorSlug}_${Date.now()}`)
   }
 
   const { data: connection, error: connErr } = await admin

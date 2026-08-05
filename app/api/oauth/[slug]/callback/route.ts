@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { storeSecret } from '@/lib/credentials'
 import { getConnector } from '@/connectors'
 
 // Completes the OAuth2 flow: verifies state, exchanges the code for tokens, and
@@ -77,15 +78,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const { data: connectorRow } = await admin.from('connectors').select('id').eq('slug', slug).single()
   if (!connectorRow) return fail(req, 'connector_not_in_db')
 
-  // Store tokens the same way /api/connections does: Vault, with inline fallback.
-  let vaultSecretId: string | null = null
-  const secretName = `connection_${user.id}_${slug}_${Date.now()}`
-  const { data: vaultData, error: vaultErr } = await admin.rpc('vault.create_secret', {
-    secret: JSON.stringify(creds), name: secretName,
-  })
-  vaultSecretId = vaultErr || !vaultData
-    ? `inline:${Buffer.from(JSON.stringify(creds)).toString('base64')}`
-    : (vaultData as string)
+  // Store tokens the same way /api/connections does.
+  const vaultSecretId = await storeSecret(creds, `connection_${user.id}_${slug}_${Date.now()}`)
 
   const { data: connection } = await admin
     .from('connections')

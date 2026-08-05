@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { storeSecret } from '@/lib/credentials'
 import { getConnector } from '@/connectors'
 import { z } from 'zod'
 
@@ -51,25 +52,15 @@ export async function POST(request: Request, { params }: Params) {
 
   const { credentials, label } = parsed.data
 
-  // Store real credentials in Vault
-  const secretName = `connection_${user.id}_${connectorSlug}_${Date.now()}`
-  const { data: vaultData, error: vaultErr } = await admin.rpc('vault.create_secret', {
-    secret: JSON.stringify(credentials),
-    name: secretName,
-  })
-
-  const vaultSecretId: string | null = vaultErr ? null : (vaultData as string)
-
-  const inlineSecret = vaultErr
-    ? `inline:${Buffer.from(JSON.stringify(credentials)).toString('base64')}`
-    : null
+  // Store the real credentials (Vault, or encrypted locally when there is none).
+  const storedSecretId = await storeSecret(credentials, `connection_${user.id}_${connectorSlug}_${Date.now()}`)
 
   // Flip is_simulated = false and store real credentials
   const { data: updated, error: updateErr } = await admin
     .from('connections')
     .update({
       is_simulated: false,
-      vault_secret_id: vaultSecretId ?? inlineSecret,
+      vault_secret_id: storedSecretId,
       ...(label ? { label } : {}),
       status: 'active',
     })

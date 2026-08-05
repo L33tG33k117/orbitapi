@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { storeSecret } from '@/lib/credentials'
 import { getConnector } from '@/connectors'
 import { normalizeRiskLevels, ACTION_POLICIES, type ActionPolicy } from '@/lib/connector-access'
 import { logAuditEvent } from '@/lib/audit'
@@ -74,18 +75,7 @@ export async function PATCH(req: Request, { params }: Params) {
       }
     }
 
-    // Try vault first, fall back to inline
-    const secretName = `connection_${connectionId}_${Date.now()}`
-    const { data: vaultData, error: vaultErr } = await admin.rpc('vault.create_secret', {
-      secret: JSON.stringify(credentials),
-      name: secretName,
-    })
-
-    if (vaultErr) {
-      updates.vault_secret_id = `inline:${Buffer.from(JSON.stringify(credentials)).toString('base64')}`
-    } else {
-      updates.vault_secret_id = vaultData as string
-    }
+    updates.vault_secret_id = await storeSecret(credentials, `connection_${connectionId}_${Date.now()}`)
   }
 
   if (Object.keys(updates).length === 0) {
