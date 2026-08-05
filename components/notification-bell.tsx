@@ -50,38 +50,36 @@ export function NotificationBell({ workspaceId }: { workspaceId: string }) {
 
   const unread = notifications.filter(n => !n.read).length
 
-  // Initial load
+  // Load now, then poll.
+  //
+  // This used to hold a Supabase Realtime subscription. Realtime was this
+  // component's ONLY consumer app-wide, and it's a whole extra service the
+  // self-hosted package would have to ship and support just to make a bell
+  // icon update a few seconds sooner. Polling every 30s reads the same table
+  // through the same client, and runs in BOTH editions — a behaviour that
+  // differs between cloud and self-host is a behaviour we'd have to debug
+  // twice. Notifications are not time-critical; nothing here is a live feed.
   useEffect(() => {
-    supabase
-      .from('notifications')
-      .select('id, type, title, body, link, read, created_at')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false })
-      .limit(30)
-      .then(({ data }) => {
-        if (data) setNotifications(data as Notification[])
-      })
-  }, [workspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
+    let cancelled = false
 
-  // Realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel(`notifications:${workspaceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `workspace_id=eq.${workspaceId}`,
-        },
-        (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev].slice(0, 30))
-        }
-      )
-      .subscribe()
+    async function load() {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id, type, title, body, link, read, created_at')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false })
+        .limit(30)
+      if (!cancelled && data) setNotifications(data as Notification[])
+    }
 
-    return () => { supabase.removeChannel(channel) }
+    load()
+    const timer = setInterval(() => {
+      // Don't poll a tab nobody is looking at, and don't clobber the list
+      // while the panel is open and being read.
+      if (document.visibilityState === 'visible') load()
+    }, 30_000)
+
+    return () => { cancelled = true; clearInterval(timer) }
   }, [workspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close on outside click (the panel is portaled, so check both the button and panel).

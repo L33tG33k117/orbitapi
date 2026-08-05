@@ -1,0 +1,42 @@
+'use client'
+
+import { createContext, useContext } from 'react'
+
+// ============================================================
+// Runtime config for client components
+// ============================================================
+// Client components can't read `process.env` at runtime — only `NEXT_PUBLIC_`
+// vars, and those are INLINED INTO THE BUNDLE AT BUILD TIME. That's fine for
+// cloud, where we build per deployment, and fatal for the self-hosted package,
+// where one image is shipped to every customer and each runs it at their own
+// address under their own edition.
+//
+// So the server layout reads the runtime values once and hands them down
+// through React context. Adding a new NEXT_PUBLIC_ var to solve a "the client
+// needs to know X" problem should be treated as a bug — put X here instead.
+// ============================================================
+
+export interface AppConfig {
+  /** 'cloud' or 'selfhost'. Drives which features the UI offers at all. */
+  edition: 'cloud' | 'selfhost'
+  /** Absolute base URL this instance is served from, no trailing slash. */
+  appUrl: string
+}
+
+const FALLBACK: AppConfig = { edition: 'cloud', appUrl: '' }
+
+const ConfigContext = createContext<AppConfig>(FALLBACK)
+
+export function ConfigProvider({ config, children }: { config: AppConfig; children: React.ReactNode }) {
+  return <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>
+}
+
+/** Runtime config for this instance. Safe in any client component. */
+export function useConfig(): AppConfig {
+  return useContext(ConfigContext)
+}
+
+/** True when the UI is running inside a customer's self-hosted install. */
+export function useIsSelfHost(): boolean {
+  return useConfig().edition === 'selfhost'
+}

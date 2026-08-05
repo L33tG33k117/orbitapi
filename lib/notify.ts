@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, emailConfigured } from '@/lib/email'
+import { getAppUrl } from '@/lib/app-url'
 
 type NotifType = 'skill_completed' | 'skill_failed' | 'pending_action' | 'info'
 
@@ -62,8 +63,7 @@ export async function emailSkillRunOutcome(p: {
     .map(pr => pr.email as string)
   if (recipients.length === 0) return
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const url = `${base}${p.link}`
+  const url = `${getAppUrl()}${p.link}`
   const verb = p.outcome === 'failed' ? 'failed' : 'completed'
   const subject = `${p.skillName} ${verb}`
   const html = `

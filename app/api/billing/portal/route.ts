@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe'
+import { getAppUrl } from '@/lib/app-url'
 
 export async function POST() {
   if (!stripe) {
@@ -34,7 +35,7 @@ export async function POST() {
     return NextResponse.json({ error: 'No billing account found. Start a subscription first.' }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = getAppUrl()
 
   const session = await stripe.billingPortal.sessions.create({
     customer: workspace.stripe_customer_id as string,

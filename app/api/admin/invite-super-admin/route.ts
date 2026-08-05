@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/admin-guard'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAppUrl } from '@/lib/app-url'
 
 export async function POST(req: NextRequest) {
   const caller = await requireSuperAdmin()
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
-  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const siteUrl = getAppUrl(process.env.NEXT_PUBLIC_SITE_URL)
 
   // Send Supabase auth invite — creates the user in auth.users immediately
   const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {

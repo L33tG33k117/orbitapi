@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/app-url'
 
 // Server-side signup so the closed-beta invite code is enforced before any
 // account is created. When SIGNUP_INVITE_CODE is unset, signup is open.
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'A valid invite code is required to sign up.' }, { status: 403 })
   }
 
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? new URL(req.url).origin
+  const origin = getAppUrl(new URL(req.url).origin)
   const supabase = await createClient()
   const { error } = await supabase.auth.signUp({
     email,

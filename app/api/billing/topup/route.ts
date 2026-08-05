@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe'
 import { getPack } from '@/lib/ai-power'
+import { getAppUrl } from '@/lib/app-url'
 
 // One-time purchase of an AI Power pack. Grants credits via the billing webhook.
 export async function POST(req: Request) {
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
     await admin.from('workspaces').update({ stripe_customer_id: customerId }).eq('id', workspace.id)
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = getAppUrl()
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'payment',

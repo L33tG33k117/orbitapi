@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe, STRIPE_PRICES } from '@/lib/stripe'
+import { getAppUrl } from '@/lib/app-url'
 
 export async function POST(req: Request) {
   if (!stripe) {
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     await admin.from('workspaces').update({ stripe_customer_id: customerId }).eq('id', workspace.id)
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = getAppUrl()
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
