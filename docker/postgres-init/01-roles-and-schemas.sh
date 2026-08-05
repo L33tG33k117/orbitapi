@@ -44,6 +44,23 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   create role authenticator login noinherit password '${POSTGRES_PASSWORD}';
   grant anon, authenticated, service_role to authenticator;
 
+  -- GoTrue's own migrations do:
+  --     grant select on auth.<table> to postgres with grant option;
+  -- On hosted Supabase the bootstrap superuser is literally named "postgres",
+  -- so that role always exists. Ours is POSTGRES_USER (default "orbit"), and
+  -- without this GoTrue dies on startup with:
+  --     running db migrations: ... role "postgres" does not exist
+  -- which reads like a broken image rather than a naming mismatch.
+  --
+  -- Created only when it isn't already the bootstrap user.
+  do \$\$
+  begin
+    if not exists (select from pg_roles where rolname = 'postgres') then
+      create role postgres superuser login password '${POSTGRES_PASSWORD}';
+    end if;
+  end
+  \$\$;
+
   -- ----------------------------------------------------------
   -- Schemas
   -- ----------------------------------------------------------

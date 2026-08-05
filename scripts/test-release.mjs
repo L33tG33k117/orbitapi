@@ -26,21 +26,41 @@ const { getVersion, compareVersions, isUpgrade } = await import('../lib/version.
 
 console.log('\nVersion detection')
 {
-  const before = { v: process.env.ORBIT_VERSION, sha: process.env.VERCEL_GIT_COMMIT_SHA }
+  // getVersion() reads several ambient variables, and CI sets GITHUB_SHA for
+  // us — so each case has to clear ALL of them, not just the one it sets.
+  const before = {
+    v: process.env.ORBIT_VERSION,
+    vercel: process.env.VERCEL_GIT_COMMIT_SHA,
+    gh: process.env.GITHUB_SHA,
+  }
+  const clearAll = () => {
+    delete process.env.ORBIT_VERSION
+    delete process.env.VERCEL_GIT_COMMIT_SHA
+    delete process.env.GITHUB_SHA
+  }
+
+  clearAll()
   process.env.ORBIT_VERSION = '1.2.3'
   const released = getVersion()
   check('a semver build arg is a release', released.version === '1.2.3' && released.released)
 
-  delete process.env.ORBIT_VERSION
+  clearAll()
   process.env.VERCEL_GIT_COMMIT_SHA = 'abcdef1234567890'
   const rolling = getVersion()
   check('a commit SHA is not a release', rolling.version === 'abcdef1' && !rolling.released)
 
-  delete process.env.VERCEL_GIT_COMMIT_SHA
+  clearAll()
+  process.env.GITHUB_SHA = 'fedcba9876543210'
+  const ghBuild = getVersion()
+  check('a GitHub SHA is also not a release', ghBuild.version === 'fedcba9' && !ghBuild.released)
+
+  clearAll()
   check('with nothing set it reports dev', getVersion().version === 'dev')
 
+  clearAll()
   if (before.v) process.env.ORBIT_VERSION = before.v
-  if (before.sha) process.env.VERCEL_GIT_COMMIT_SHA = before.sha
+  if (before.vercel) process.env.VERCEL_GIT_COMMIT_SHA = before.vercel
+  if (before.gh) process.env.GITHUB_SHA = before.gh
 }
 
 console.log('\nVersion comparison')
