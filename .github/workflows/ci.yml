@@ -116,10 +116,12 @@ jobs:
           set -a; . ./.env; set +a
           node ../scripts/selfhost-smoke.mjs --url http://localhost
 
-      # Logs are the only way to diagnose a container that never became
-      # healthy, and they vanish with the runner.
-      - name: Container logs (on failure)
-        if: failure()
+      # Logs are the only way to diagnose a container, and they vanish with the
+      # runner. Captured on success too: the smoke test reports known gaps
+      # WITHOUT failing the build, so the run that finally explains one would
+      # otherwise throw away the evidence. They're collapsed by default.
+      - name: Container logs
+        if: always()
         working-directory: docker
         run: |
           docker compose --env-file .env ps
