@@ -117,11 +117,7 @@ export async function POST(request: Request) {
     // permission or constraint failure), and a 500 with an empty body is
     // impossible to act on — especially on a self-hosted box where nobody can
     // read our server logs for the customer.
-    // JSON.stringify on an Error yields "{}" — message and stack are
-    // non-enumerable — so serialise every own property explicitly.
-    console.error('[connections] insert failed:', JSON.stringify(
-      Object.fromEntries(Object.getOwnPropertyNames(connErr).map(k => [k, (connErr as unknown as Record<string, unknown>)[k]])),
-    ))
+    console.error('[connections] insert failed:', connErr)
     return NextResponse.json(
       { error: connErr.message || connErr.hint || connErr.details || connErr.code || 'Could not save the connection.' },
       { status: 500 },
