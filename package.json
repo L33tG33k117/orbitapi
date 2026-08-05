@@ -8,6 +8,7 @@
     "start": "next start",
     "test:sim-parity": "node --no-warnings scripts/test-sim-parity.mjs",
     "test:ai-provider": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve-hook.mjs scripts/test-ai-provider.mjs",
+    "test:local-wire": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve-hook.mjs scripts/test-local-provider-wire.mjs",
     "check:connectors": "node --no-warnings scripts/check-connectors.mjs",
     "check:bundles": "node --no-warnings scripts/check-bundles.mjs",
     "db:status": "node --no-warnings scripts/db-migrate.mjs status",
