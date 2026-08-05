@@ -27,6 +27,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Migrations replay cleanly from an empty database
+        run: npm run check:migrations
+
       - name: Connector integrity (no dups, complete manifests, valid actions)
         run: npm run check:connectors
 

@@ -1,48 +1,32 @@
--- Conversation history for Orbit Assistant chat
-CREATE TABLE conversations (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  user_id      uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title        text,                     -- auto-generated from first message
-  created_at   timestamptz NOT NULL DEFAULT now(),
-  updated_at   timestamptz NOT NULL DEFAULT now()
-);
+-- ============================================================
+-- 014 — Conversation history (SUPERSEDED — intentionally a no-op)
+-- ============================================================
+-- This originally did `CREATE TABLE conversations`, but migration 001 had
+-- already created that table. On the hosted database it therefore aborted
+-- partway — and was still recorded as applied, which is how
+-- `conversation_messages` came to be missing until migration 042 repaired it
+-- (see the note at the top of 042).
+--
+-- That went unnoticed for a long time because the hosted database was built up
+-- incrementally and never replayed from empty. The self-hosted edition DOES
+-- replay from empty on every install, so the collision became a hard failure:
+-- the app container crash-looped on
+--     ✗ relation "conversations" already exists
+-- and the stack never came up.
+--
+-- The correct end state is already produced by:
+--   001  conversations
+--   040  conversations.updated_at
+--   042  conversation_messages, its index and its RLS policy
+--
+-- So there is nothing left for this migration to do.
+--
+-- Kept as a no-op rather than deleted: it is already recorded as applied on
+-- the hosted database and every other existing environment, and removing the
+-- file would make the migration list disagree with the tracking table.
+--
+-- The one thing 014 had that nothing else recreates is a trigger bumping
+-- conversations.updated_at on insert. That omission is deliberate — the app
+-- bumps it explicitly after each insert (see the note in 042).
 
-CREATE TABLE conversation_messages (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id uuid NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  role            text NOT NULL CHECK (role IN ('user', 'assistant')),
-  content         text NOT NULL,
-  created_at      timestamptz NOT NULL DEFAULT now()
-);
-
--- Auto-bump updated_at on conversations when a message is inserted
-CREATE OR REPLACE FUNCTION bump_conversation_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN
-  UPDATE conversations SET updated_at = now() WHERE id = NEW.conversation_id;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_bump_conversation_updated_at
-  AFTER INSERT ON conversation_messages
-  FOR EACH ROW EXECUTE FUNCTION bump_conversation_updated_at();
-
--- Indexes
-CREATE INDEX ON conversations (workspace_id, user_id, updated_at DESC);
-CREATE INDEX ON conversation_messages (conversation_id, created_at ASC);
-
--- RLS
-ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conversation_messages ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "own conversations" ON conversations
-  FOR ALL USING (user_id = auth.uid());
-
-CREATE POLICY "own conversation messages" ON conversation_messages
-  FOR ALL USING (
-    conversation_id IN (
-      SELECT id FROM conversations WHERE user_id = auth.uid()
-    )
-  );
+select 1;   -- no-op

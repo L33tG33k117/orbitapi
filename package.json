@@ -17,6 +17,7 @@
     "test:offline": "npm run test:ai-provider && npm run test:local-wire && npm run test:secrets && npm run test:selfhost-config && npm run test:edition-gating && npm run test:license && npm run test:release",
     "secrets:reencrypt": "node --no-warnings scripts/reencrypt-secrets.mjs",
     "selfhost:gen-env": "node --no-warnings scripts/selfhost-gen-env.mjs",
+    "check:migrations": "node --no-warnings scripts/check-migrations.mjs",
     "check:connectors": "node --no-warnings scripts/check-connectors.mjs",
     "check:bundles": "node --no-warnings scripts/check-bundles.mjs",
     "db:status": "node --no-warnings scripts/db-migrate.mjs status",
