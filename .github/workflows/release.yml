@@ -1,0 +1,113 @@
+name: Self-hosted release
+
+# Builds the offline update bundle a self-hosted customer applies by hand.
+#
+# Triggered by a tag so releases are deliberate: `git tag selfhost-v1.2.3`.
+# Continuous deployment is right for cloud and wrong here — an air-gapped
+# customer schedules an upgrade, they don't receive one.
+
+on:
+  push:
+    tags: ['selfhost-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version, e.g. 1.2.3'
+        required: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Resolve version
+        id: v
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            v="${{ github.event.inputs.version }}"
+          else
+            v="${GITHUB_REF_NAME#selfhost-v}"
+          fi
+          if ! printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::error::'$v' is not a semantic version"; exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Building $v"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The bundle is only worth building if the code is sound; a customer
+      # cannot roll back easily once it's on their hardware.
+      - name: Verify
+        run: |
+          npx tsc --noEmit
+          npm run check:connectors
+          npm run check:bundles
+          npm run test:offline
+
+      - name: Build the app image
+        run: |
+          docker build -f docker/Dockerfile \
+            --build-arg ORBIT_VERSION=${{ steps.v.outputs.version }} \
+            -t orbitapi/app:${{ steps.v.outputs.version }} .
+
+      - name: Pull the pinned upstream images
+        run: |
+          docker pull postgres:16-alpine
+          docker pull supabase/gotrue:v2.177.0
+          docker pull postgrest/postgrest:v12.2.3
+          docker pull nginx:1.27-alpine
+
+      - name: Write the signing key
+        if: env.RELEASE_SIGNING_KEY != ''
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$RELEASE_SIGNING_KEY" > /tmp/release.pem
+
+      - name: Build the bundle
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${RELEASE_SIGNING_KEY:-}" ]; then
+            node scripts/build-release-bundle.mjs \
+              --version ${{ steps.v.outputs.version }} \
+              --sign /tmp/release.pem --kid ${{ vars.RELEASE_KID || 'r1' }}
+          else
+            # Unsigned bundles are refused by verify-bundle.mjs, so this can
+            # never reach a customer — it just keeps the workflow runnable
+            # before the signing key exists.
+            echo "::warning title=Unsigned release::RELEASE_SIGNING_KEY is not set, so this bundle is UNSIGNED and customers cannot apply it."
+            node scripts/build-release-bundle.mjs --version ${{ steps.v.outputs.version }}
+          fi
+
+      - name: Shred the signing key
+        if: always()
+        run: rm -f /tmp/release.pem
+
+      - name: Verify the bundle we just built
+        run: |
+          set -euo pipefail
+          cd dist
+          if [ -n "${{ secrets.RELEASE_SIGNING_KEY }}" ]; then
+            node ../scripts/verify-bundle.mjs orbit-selfhost-${{ steps.v.outputs.version }}.tar.gz
+          else
+            node ../scripts/verify-bundle.mjs orbit-selfhost-${{ steps.v.outputs.version }}.tar.gz --allow-unsigned
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orbit-selfhost-${{ steps.v.outputs.version }}
+          path: dist/orbit-selfhost-${{ steps.v.outputs.version }}.tar.gz
+          retention-days: 90

@@ -10,7 +10,7 @@ import { useIsSelfHost } from '@/components/config-provider'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network, KeyRound,
+  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network, KeyRound, PackageOpen,
 } from 'lucide-react'
 
 interface NavItem {
@@ -104,6 +104,7 @@ const adminItems: NavItem[] = [
   { href: '/settings/network', label: 'Network Access', icon: Network },
   // The mirror image of Billing: only exists where Billing doesn't.
   { href: '/settings/license', label: 'Licence', icon: KeyRound, selfHostOnly: true },
+  { href: '/settings/updates', label: 'Updates', icon: PackageOpen, selfHostOnly: true },
   { href: '/settings/workspace', label: 'Workspace', icon: Settings },
 ]
 

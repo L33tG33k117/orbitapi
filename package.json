@@ -1,6 +1,6 @@
 {
-  "name": "orbit-temp",
-  "version": "0.1.0",
+  "name": "orbitapi",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
@@ -12,8 +12,9 @@
     "test:secrets": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve-hook.mjs scripts/test-secrets.mjs",
     "test:selfhost-config": "node --no-warnings scripts/test-selfhost-config.mjs",
     "test:license": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve-hook.mjs scripts/test-license.mjs",
+    "test:release": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve-hook.mjs scripts/test-release.mjs",
     "test:edition-gating": "node --experimental-strip-types --no-warnings --import ./scripts/ts-resolve-hook.mjs scripts/test-edition-gating.mjs",
-    "test:offline": "npm run test:ai-provider && npm run test:local-wire && npm run test:secrets && npm run test:selfhost-config && npm run test:edition-gating && npm run test:license",
+    "test:offline": "npm run test:ai-provider && npm run test:local-wire && npm run test:secrets && npm run test:selfhost-config && npm run test:edition-gating && npm run test:license && npm run test:release",
     "secrets:reencrypt": "node --no-warnings scripts/reencrypt-secrets.mjs",
     "selfhost:gen-env": "node --no-warnings scripts/selfhost-gen-env.mjs",
     "check:connectors": "node --no-warnings scripts/check-connectors.mjs",

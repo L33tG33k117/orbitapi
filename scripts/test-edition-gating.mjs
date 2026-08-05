@@ -105,8 +105,13 @@ console.log('\nSelf-host entitlements')
 check('byo_llm is granted by no tier on cloud', !hasCapability('enterprise', null, 'byo_llm'))
 check('byo_llm can still be granted per-workspace', hasCapability('free', { byo_llm: true }, 'byo_llm'))
 const wsFeatures = readFileSync(join(ROOT, 'lib', 'workspace-features.ts'), 'utf8')
-check('self-host forces byo_llm on', /isSelfHost\(\)[\s\S]{0,400}byo_llm:\s*true/.test(wsFeatures))
-check('self-host runs the full tier', /isSelfHost\(\)[\s\S]{0,300}tier:\s*'enterprise'/.test(wsFeatures))
+check('self-host forces byo_llm on', /isSelfHost\(\)[\s\S]{0,600}byo_llm:\s*true/.test(wsFeatures))
+// Since Phase 3 the self-host tier comes from the LICENCE rather than being
+// hardcoded — that indirection is the whole point, so assert it explicitly.
+check('self-host takes its tier from the licence',
+  /isSelfHost\(\)[\s\S]{0,300}licenseEntitlements\(license\)/.test(wsFeatures))
+check('self-host applies licence overrides',
+  /isSelfHost\(\)[\s\S]{0,600}\.\.\.overrides/.test(wsFeatures))
 
 console.log('\nCloud-only routes are blocked at the proxy')
 const proxy = readFileSync(join(ROOT, 'proxy.ts'), 'utf8')
