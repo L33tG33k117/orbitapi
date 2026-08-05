@@ -124,6 +124,8 @@ console.log('\nFirst run')
 // /auth/v1 on the same host as the app, with no CORS and no baked-in URL.
 console.log('\nSign in through the gateway')
 let accessToken = null
+let refreshToken = null
+let userRecord = null
 {
   const res = await fetch(`${BASE}/auth/v1/token?grant_type=password`, {
     method: 'POST',
@@ -132,6 +134,8 @@ let accessToken = null
   })
   const json = await res.json().catch(() => null)
   accessToken = json?.access_token ?? null
+  refreshToken = json?.refresh_token ?? null
+  userRecord = json?.user ?? null
   check('GoTrue answers on /auth/v1 and issues a token', !!accessToken,
     json?.error_description ?? json?.msg ?? `status ${res.status}`)
 }
@@ -149,15 +153,34 @@ let accessToken = null
 }
 
 // ---- 4. a connector works with no AI --------------------------------------
+// The app's own routes authenticate from a COOKIE, not a bearer token —
+// they're called by a browser, not by API clients. So we build the session
+// cookie @supabase/ssr expects rather than reusing the token above.
 console.log('\nSimulated connector (no AI configured)')
 {
-  const authed = {
-    'Content-Type': 'application/json',
-    apikey: process.env.ANON_KEY ?? '',
-    Authorization: `Bearer ${accessToken ?? ''}`,
+  // @supabase/ssr names its cookie from the "project ref", which it takes as
+  // the first hostname label of the Supabase URL. Self-host points the server
+  // at SUPABASE_INTERNAL_URL (http://orbit-gateway), so the ref is the
+  // container name.
+  const internal = process.env.SUPABASE_INTERNAL_URL || 'http://orbit-gateway'
+  const ref = new URL(internal).hostname.split('.')[0]
+  const session = {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    user: userRecord,
   }
+  const cookie = `sb-${ref}-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`
+
+  const authed = { 'Content-Type': 'application/json', cookie }
+
+  // redirect: 'manual' throughout — a session that isn't accepted shows up as
+  // a redirect to /login, and following it would just loop.
   const create = await fetch(`${BASE}/api/connections`, {
     method: 'POST',
+    redirect: 'manual',
     headers: authed,
     body: JSON.stringify({
       connectorSlug: 'simulated-lights',
@@ -167,12 +190,15 @@ console.log('\nSimulated connector (no AI configured)')
     }),
   })
   const created = await create.json().catch(() => null)
+  check('the app accepts a browser session cookie', create.status !== 401 && create.status < 300,
+    `status ${create.status}`)
   check('a simulated connection can be created', create.ok && !!created?.connection?.id,
     created?.error ?? `status ${create.status}`)
 
   if (created?.connection?.id) {
     const run = await fetch(`${BASE}/api/execute`, {
       method: 'POST',
+      redirect: 'manual',
       headers: authed,
       body: JSON.stringify({
         connectionId: created.connection.id,
@@ -184,6 +210,14 @@ console.log('\nSimulated connector (no AI configured)')
     check('a simulated action runs without any AI configured', run.ok,
       result?.error ?? `status ${run.status}`)
   }
+}
+
+// An unauthenticated call must be refused rather than redirected into an HTML
+// page — the /api/health fix must not have made every API route public.
+{
+  const { res } = await get('/api/connections')
+  check('an unauthenticated API call is refused, not redirected',
+    res.status === 401, `status ${res.status}`)
 }
 
 // ---- 5. the scheduler's entry point ---------------------------------------
