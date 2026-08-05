@@ -164,6 +164,24 @@ than changing model.
 
 ---
 
+## Your licence
+
+**Settings → Licence** shows what this installation is licensed for and when it
+expires.
+
+Changes — a renewal, more seats, a different plan — arrive as a **replacement
+key**. Paste it in, check the summary of what it changes, and apply. There is
+nothing to activate online.
+
+If a licence lapses there is a **30-day grace period** during which nothing
+changes at all. After that, automation features pause until it is renewed.
+
+**Your data is never locked.** Even with an expired licence you can read and
+export everything in this installation. That is deliberate: losing access to
+your own operational data because an invoice was late would be unacceptable.
+
+---
+
 ## Updates
 
 Updates are files, not downloads from this machine.
