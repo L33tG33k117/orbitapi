@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { serverSupabaseUrl } from '@/lib/runtime-config'
+import { needsFirstRunSetup } from '@/lib/setup-state'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -48,6 +49,22 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/solutions')
     || url.pathname.startsWith('/changelog')
     || url.pathname.startsWith('/opengraph-image')
+    // The first-run wizard has to be reachable before any account exists.
+    // /api/setup refuses to do anything once one does, so this is safe.
+    || url.pathname === '/setup'
+    || url.pathname === '/api/setup'
+
+  // A brand-new self-hosted install has no accounts and no way to make one:
+  // public signup is disabled on the auth service, and there is no admin yet
+  // to send an invite. Send the first visitor to the wizard instead of a login
+  // page they can never get past. needsFirstRunSetup() is cached and latches
+  // shut for good once an account exists.
+  if (!user && url.pathname !== '/setup' && url.pathname !== '/api/setup') {
+    if (await needsFirstRunSetup()) {
+      url.pathname = '/setup'
+      return NextResponse.redirect(url)
+    }
+  }
 
   if (!user && !isPublic) {
     url.pathname = '/login'
