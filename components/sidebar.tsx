@@ -9,7 +9,7 @@ import { hasCapability, type Capability } from '@/lib/entitlements'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket,
+  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu,
 } from 'lucide-react'
 
 interface NavItem {
@@ -91,6 +91,7 @@ const sections: NavSection[] = [
 const adminItems: NavItem[] = [
   { href: '/settings/members', label: 'Members', icon: Users },
   { href: '/settings/billing', label: 'Billing', icon: CreditCard },
+  { href: '/settings/ai-provider', label: 'AI Provider', icon: Cpu },
   { href: '/settings/workspace', label: 'Workspace', icon: Settings },
 ]
 
