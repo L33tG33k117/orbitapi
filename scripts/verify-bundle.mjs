@@ -35,7 +35,10 @@ if (!existsSync(bundlePath)) fail(`No such file: ${bundlePath}`)
 // Release signing keys. The private half never leaves the founder's password
 // manager; rotation works by adding a new entry and selecting it with `kid`.
 const RELEASE_PUBLIC_KEYS = {
-  // 'r1': '-----BEGIN PUBLIC KEY-----\n…\n-----END PUBLIC KEY-----\n',
+  r1: `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAB1bqBDTqY3cIasnEZB5aM2NEu99QwGJc9PYdjhWa804=
+-----END PUBLIC KEY-----
+`,
 }
 
 const work = mkdtempSync(join(tmpdir(), 'orbit-verify-'))

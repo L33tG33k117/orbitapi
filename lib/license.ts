@@ -61,7 +61,10 @@ export interface LicenseState {
  * in the founder's password manager and are never in this repo.
  */
 const PUBLIC_KEYS: Record<string, string> = {
-  // 'k1': '-----BEGIN PUBLIC KEY-----\n…\n-----END PUBLIC KEY-----\n',
+  k1: `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAgy2Sx1U15eOpczGFL/hoarXLvKj7OFHOfleuWbT+BNc=
+-----END PUBLIC KEY-----
+`,
 }
 
 /** Capabilities still allowed once a licence has fully lapsed. */
