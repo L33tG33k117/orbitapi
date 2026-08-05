@@ -1,0 +1,175 @@
+# ============================================================
+# OrbitAPI — self-hosted stack
+# ============================================================
+# Five containers, but operationally it's "the app and its database": three of
+# the five are small stateless sidecars that sit behind one gateway and are
+# never addressed directly.
+#
+#   orbit-gateway  nginx — the only published port. Serves the app at /, and
+#                  proxies /rest/v1 and /auth/v1 so the browser talks to one
+#                  origin (no CORS, no per-customer URL baked into the image).
+#   orbit-app      the Next.js app, plus migrations-on-boot and the scheduler.
+#   orbit-rest     PostgREST — serves the ~600 .from() calls the app already
+#                  makes, unchanged. This is why we didn't rewrite the data
+#                  layer to raw SQL.
+#   orbit-auth     GoTrue — serves the ~130 supabase.auth.* calls, unchanged.
+#   orbit-db       Postgres.
+#
+# Start ordering matters and is enforced with healthchecks, not sleeps:
+# db must be accepting queries before GoTrue self-migrates its `auth` schema,
+# and `auth.users` must exist before the app's own migrations run, because 13
+# of them have foreign keys into it.
+
+name: orbit
+
+services:
+  orbit-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orbit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-orbit}
+    volumes:
+      - orbit-db-data:/var/lib/postgresql/data
+      # Runs ONCE, on an empty data directory: creates the roles PostgREST and
+      # GoTrue expect, and the schemas they live in.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orbit} -d ${POSTGRES_DB:-orbit}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks: [orbit]
+
+  orbit-auth:
+    # PINNED, not :latest. The app's migrations reference auth.users and a
+    # trigger fires on insert there; an unattended GoTrue upgrade could change
+    # that shape underneath a customer who has no internet to roll back with.
+    image: supabase/gotrue:v2.177.0
+    restart: unless-stopped
+    depends_on:
+      orbit-db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      PORT: 9999
+      API_EXTERNAL_URL: ${ORBIT_APP_URL}
+      GOTRUE_SITE_URL: ${ORBIT_APP_URL}
+      GOTRUE_URI_ALLOW_LIST: ${ORBIT_APP_URL}/**
+
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://${POSTGRES_USER:-orbit}:${POSTGRES_PASSWORD}@orbit-db:5432/${POSTGRES_DB:-orbit}?search_path=auth&sslmode=disable
+
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+
+      # No outbound internet and usually no SMTP: confirm signups immediately,
+      # or every account would be stuck waiting on an email that can't be sent.
+      # When SMTP IS configured, self-serve password reset lights up on its own.
+      GOTRUE_MAILER_AUTOCONFIRM: ${SMTP_HOST:+false}${SMTP_HOST:-true}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_FROM:-noreply@localhost}
+
+      # Accounts are created by an admin from inside the app. Leaving public
+      # signup on would let anyone who can reach the box make themselves a user.
+      GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-true}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/callback
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/callback
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/callback
+      GOTRUE_LOG_LEVEL: warn
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [orbit]
+
+  orbit-rest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    depends_on:
+      orbit-db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@orbit-db:5432/${POSTGRES_DB:-orbit}
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      # Same shape the hosted Supabase API returns, so client code is identical.
+      PGRST_DB_MAX_ROWS: 10000
+    networks: [orbit]
+
+  orbit-app:
+    image: ${ORBIT_IMAGE:-orbitapi/app:latest}
+    restart: unless-stopped
+    depends_on:
+      orbit-db:
+        condition: service_healthy
+      # Waiting for GoTrue is not cosmetic: it self-migrates the `auth` schema,
+      # and the app's migrations have foreign keys into auth.users.
+      orbit-auth:
+        condition: service_healthy
+    environment:
+      ORBIT_EDITION: selfhost
+      ORBIT_APP_URL: ${ORBIT_APP_URL}
+      ORBIT_VERSION: ${ORBIT_VERSION:-dev}
+      ORBIT_SECRETS_KEY: ${ORBIT_SECRETS_KEY:?ORBIT_SECRETS_KEY is required}
+
+      # Direct connection for migrations-on-boot.
+      DATABASE_URL: postgres://${POSTGRES_USER:-orbit}:${POSTGRES_PASSWORD}@orbit-db:5432/${POSTGRES_DB:-orbit}
+
+      # Server-side calls go straight to the sidecars over the compose network;
+      # the browser reaches them through the gateway on the public origin.
+      SUPABASE_INTERNAL_URL: http://orbit-gateway
+      SUPABASE_ANON_KEY: ${ANON_KEY:?ANON_KEY is required}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?SERVICE_ROLE_KEY is required}
+
+      # Bring-your-own model. Optional at install time — simulated connectors
+      # work without any AI at all, so the wizard lets it be skipped.
+      ORBIT_AI_BASE_URL: ${ORBIT_AI_BASE_URL:-}
+      ORBIT_AI_MODEL: ${ORBIT_AI_MODEL:-}
+      ORBIT_AI_API_KEY: ${ORBIT_AI_API_KEY:-}
+      ORBIT_AI_MAX_OUTPUT_TOKENS: ${ORBIT_AI_MAX_OUTPUT_TOKENS:-}
+
+      # Runs the schedules in-process; there is no Vercel Cron here.
+      ORBIT_ENABLE_SCHEDULER: ${ORBIT_ENABLE_SCHEDULER:-true}
+    volumes:
+      # Where update bundles are dropped for the admin Updates screen to find.
+      - ./updates:/app/updates:ro
+    networks: [orbit]
+
+  orbit-gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - orbit-app
+      - orbit-rest
+      - orbit-auth
+    ports:
+      - "${ORBIT_HTTP_PORT:-80}:80"
+      - "${ORBIT_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./orbit-locations.inc:/etc/nginx/conf.d/orbit-locations.inc:ro
+      # Drop cert.pem + key.pem here to serve HTTPS; see docs/SELF_HOST.md.
+      - ./certs:/etc/nginx/certs:ro
+    networks: [orbit]
+
+volumes:
+  orbit-db-data:
+
+networks:
+  orbit:
+    driver: bridge

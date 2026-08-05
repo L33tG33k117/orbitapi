@@ -1,0 +1,34 @@
+# Keep the build context small and, more importantly, keep secrets out of it.
+# Anything sent to the daemon can end up in an image layer.
+
+.env
+.env.*
+!.env.example
+docker/.env
+docker/certs
+docker/backups
+docker/updates
+docker/.orbit-state
+
+node_modules
+.next
+out
+build
+
+.git
+.github
+.vscode
+.idea
+
+*.log
+dev.log
+npm-debug.log*
+
+# Docs and local scratch aren't needed to build the app.
+docs
+README.md
+*.md
+!package.json
+
+.DS_Store
+Thumbs.db

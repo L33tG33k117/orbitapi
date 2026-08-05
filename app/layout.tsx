@@ -4,7 +4,7 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { ErrorReporter } from '@/components/error-reporter'
 import { ThemeProvider } from '@/components/theme-provider'
-import { ConfigProvider } from '@/components/config-provider'
+import { ConfigProvider, RuntimeConfigScript } from '@/components/config-provider'
 import { getAppUrl } from '@/lib/app-url'
 import { edition } from '@/lib/edition'
 
@@ -37,6 +37,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
+        {/* Runtime values for non-React code (the browser Supabase client).
+            Self-host generates its keys per install, so nothing can be baked
+            into the shared image at build time. */}
+        <RuntimeConfigScript
+          config={{
+            supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+            supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
+            edition: edition(),
+          }}
+        />
         <ConfigProvider config={{ edition: edition(), appUrl: getAppUrl() }}>
           <ThemeProvider>
             {children}

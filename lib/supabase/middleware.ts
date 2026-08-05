@@ -1,12 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { serverSupabaseUrl } from '@/lib/runtime-config'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    serverSupabaseUrl(),
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
@@ -33,6 +34,9 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/api/cron/')
     || url.pathname.startsWith('/api/billing/webhook')
     || url.pathname.startsWith('/api/webhooks/skills/')
+    // The container healthcheck runs before anyone has logged in, and gets no
+    // session. Redirecting it to /login would report a broken app as healthy.
+    || url.pathname === '/api/health'
   const isPublic = url.pathname === '/' || isAuth || isServerToServer
     || url.pathname.startsWith('/api/auth')
     || url.pathname.startsWith('/privacy')
