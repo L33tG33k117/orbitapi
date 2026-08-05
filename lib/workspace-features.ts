@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_FEATURE_FLAGS, type FeatureFlags, type WorkspaceTier } from '@/types'
 import { hasCapability, requiredTierFor, CAPABILITY_INFO, type Capability } from '@/lib/entitlements'
 import { isSelfHost } from '@/lib/edition'
+import { getLicenseState } from '@/lib/license-state'
+import { licenseEntitlements } from '@/lib/license'
 
 export interface WorkspaceFeatures {
   workspaceId: string
@@ -30,18 +32,26 @@ export async function getWorkspaceFeatures(): Promise<WorkspaceFeatures | null> 
     .eq('id', membership.workspace_id)
     .single()
 
-  // A self-hosted install has no plans, no Stripe, and nothing to upgrade to —
-  // the customer bought the whole product. Tiers there mean "what your licence
-  // grants", which Phase 3 will read from the licence key. Until then everyone
-  // gets the full set, plus byo_llm, which no tier grants by default and which
-  // a self-hosted instance cannot function without.
+  // A self-hosted install has no plans, no Stripe, and nothing to upgrade to.
+  // Its tier comes from the LICENCE instead of the workspace row — which is
+  // why lib/entitlements.ts needed no changes at all: hasCapability() is pure,
+  // so swapping where the tier comes from leaves capabilityGuard, page-gate
+  // and the sidebar working untouched.
+  //
+  // An unlicensed or lapsed instance falls to a free-like floor rather than
+  // refusing to run, and byo_llm stays on regardless — without it a
+  // self-hosted box could not run any AI at all, which would make an expired
+  // licence indistinguishable from a broken install.
   if (isSelfHost()) {
+    const license = await getLicenseState()
+    const { tier, overrides } = licenseEntitlements(license)
     return {
       workspaceId: membership.workspace_id,
-      tier: 'enterprise',
+      tier,
       flags: {
         ...DEFAULT_FEATURE_FLAGS,
         ...((workspace?.feature_flags ?? {}) as FeatureFlags),
+        ...overrides,
         byo_llm: true,
       } as FeatureFlags,
     }
