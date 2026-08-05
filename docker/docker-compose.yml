@@ -163,6 +163,9 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./orbit-locations.inc:/etc/nginx/conf.d/orbit-locations.inc:ro
+      # Turns HTTPS on only when certificates exist, so a fresh `compose up`
+      # with no certs still serves HTTP instead of refusing to start.
+      - ./nginx-entrypoint.d/20-orbit-tls.sh:/docker-entrypoint.d/20-orbit-tls.sh:ro
       # Drop cert.pem + key.pem here to serve HTTPS; see docs/SELF_HOST.md.
       - ./certs:/etc/nginx/certs:ro
     networks: [orbit]

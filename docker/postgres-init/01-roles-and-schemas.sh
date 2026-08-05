@@ -62,6 +62,26 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
   \$\$;
 
   -- ----------------------------------------------------------
+  -- supabase_realtime publication
+  -- ----------------------------------------------------------
+  -- We dropped the Realtime service (its only consumer, the notification bell,
+  -- now polls). But migration 010 adds a table to the supabase_realtime
+  -- publication, which hosted Supabase creates for you and plain Postgres does
+  -- not — so that migration aborts with:
+  --     publication "supabase_realtime" does not exist
+  --
+  -- Creating it empty is far better than forking the migration: identical
+  -- migrations across both editions is what stops the two databases drifting,
+  -- and a publication with nothing subscribed costs nothing.
+  do \$\$
+  begin
+    if not exists (select from pg_publication where pubname = 'supabase_realtime') then
+      create publication supabase_realtime;
+    end if;
+  end
+  \$\$;
+
+  -- ----------------------------------------------------------
   -- Schemas
   -- ----------------------------------------------------------
   -- GoTrue creates and migrates \`auth\` itself, but the schema must exist and

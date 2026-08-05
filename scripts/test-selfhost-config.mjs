@@ -96,8 +96,24 @@ try {
   // An upstream naming a service that doesn't exist fails only at runtime,
   // inside nginx, with a DNS error most operators won't recognise.
   for (const up of ['orbit-app:3000', 'orbit-rest:3000', 'orbit-auth:9999']) {
-    check(`gateway upstream ${up} matches a compose service`, nginx.includes(up))
+    check(`gateway upstream ${up} matches a compose service`, locations.includes(up))
   }
+  // Upstreams must be resolved per request. Without this nginx resolves once
+  // at startup and dies with "host not found in upstream" whenever a backend
+  // is still booting — which it always is on a cold `compose up`.
+  check('gateway resolves upstreams at request time', /resolver\s+127\.0\.0\.11/.test(nginx))
+  check('gateway proxies via variables, not static upstream blocks',
+    /proxy_pass http:\/\/\$orbit_app/.test(locations) && !/^upstream /m.test(nginx))
+  // nginx refuses to start if an ssl_certificate path is missing, so TLS has
+  // to be added conditionally or a certless install serves nothing at all.
+  // Comments stripped: the file explains WHY TLS is conditional, and that
+  // prose mentions ssl_certificate.
+  const nginxCode = nginx.split('\n').filter(l => !l.trim().startsWith('#')).join('\n')
+  check('TLS is not hardcoded into the always-loaded config', !nginxCode.includes('ssl_certificate'))
+  check('TLS is enabled by an entrypoint script when certs exist',
+    existsSync(join(ROOT, 'docker', 'nginx-entrypoint.d', '20-orbit-tls.sh')))
+  check('the TLS script is mounted into the nginx entrypoint dir',
+    compose.includes('/docker-entrypoint.d/20-orbit-tls.sh'))
   check('gateway proxies the paths supabase-js actually calls',
     locations.includes('/rest/v1/') && locations.includes('/auth/v1/'))
   check('gateway timeout clears the 300s maxDuration routes',
@@ -122,6 +138,11 @@ try {
   }
   check('db init creates the auth schema GoTrue needs', initSh.includes('create schema if not exists auth'))
   check('db init enables pgcrypto', initSh.includes('pgcrypto'))
+  // Both found by the selfhost CI job on its first run, and both fatal:
+  // GoTrue's own migrations grant to a `postgres` role, and our migration 010
+  // adds a table to the supabase_realtime publication.
+  check('db init creates the postgres role GoTrue grants to', /rolname = 'postgres'/.test(initSh))
+  check('db init creates the supabase_realtime publication', initSh.includes('create publication supabase_realtime'))
 
   const dockerfile = readFileSync(join(ROOT, 'docker', 'Dockerfile'), 'utf8')
   check('image does not bake NEXT_PUBLIC_SUPABASE_URL', !dockerfile.includes('NEXT_PUBLIC_SUPABASE_URL='))
