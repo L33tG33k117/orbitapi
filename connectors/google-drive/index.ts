@@ -40,6 +40,9 @@ export const googleDriveManifest: ConnectorManifest = {
     return { ok: true, label: `Google Drive (${(res.data as any)?.user?.emailAddress ?? 'connected'})` }
   },
 
+  network: { hosts: ['www.googleapis.com', 'oauth2.googleapis.com', 'accounts.google.com'] },
+
+
   actions: [
     {
       slug: 'list_files',

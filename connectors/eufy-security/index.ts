@@ -74,6 +74,7 @@ export const eufySecurityManifest: ConnectorManifest = {
     const list = Array.isArray(res.data) ? res.data : []
     return { ok: true, label: `Eufy Security (${list.length} device${list.length === 1 ? '' : 's'})` }
   },
+  network: { hosts: ['security-app.eufylife.com'] },
   actions: [
     {
       slug: 'list_devices',

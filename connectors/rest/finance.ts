@@ -101,6 +101,7 @@ export const chargebeeManifest = defineRestConnector({
   },
   testPath: '/customers?limit=1',
   testLabel: 'Chargebee site connected',
+  network: { hostPattern: '<your-site>.chargebee.com' },
   actions: [
     { slug: 'list_subscriptions', name: 'List subscriptions', risk: 'read', path: '/subscriptions', staticQuery: { limit: '25' },
       description: 'Subscriptions with plan, status, and MRR contribution.', params: {} },
@@ -195,6 +196,7 @@ export const zuoraManifest = defineRestConnector({
   },
   testPath: '/v1/catalog/products?pageSize=1',
   testLabel: 'Zuora tenant connected',
+  network: { hosts: ['rest.zuora.com', 'rest.apisandbox.zuora.com'] },
   actions: [
     { slug: 'list_accounts', name: 'List billing accounts', risk: 'read', method: 'POST', path: '/v1/action/query',
       description: 'Billing accounts with balances (ZOQL query).',

@@ -61,6 +61,8 @@ export const lodgifyManifest: ConnectorManifest = {
     return { ok: true, label: 'Lodgify account connected' }
   },
 
+  network: { hosts: ['api.lodgify.com'] },
+
   actions: [
     {
       slug: 'list_properties',

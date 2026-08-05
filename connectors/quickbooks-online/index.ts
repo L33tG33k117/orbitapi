@@ -71,6 +71,8 @@ export const quickbooksOnlineManifest: ConnectorManifest = {
     const name = (res.data as { CompanyInfo?: { CompanyName?: string } })?.CompanyInfo?.CompanyName
     return { ok: true, label: name ? `QuickBooks: ${name}` : `QuickBooks company ${creds.realmId}` }
   },
+  network: { hosts: ['quickbooks.api.intuit.com', 'oauth.platform.intuit.com'] },
+
   actions: [
     {
       slug: 'list_invoices',

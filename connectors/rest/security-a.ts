@@ -19,6 +19,7 @@ export const splunkManifest = defineRestConnector({
   },
   testPath: '/services/server/info?output_mode=json',
   testLabel: 'Splunk instance connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'run_search', name: 'Run search', risk: 'read', method: 'POST', path: '/services/search/jobs/export', staticQuery: { output_mode: 'json' },
       description: 'Runs an SPL search and streams results, e.g. "search index=main error | head 20". earliest: e.g. -24h (optional).',
@@ -51,6 +52,7 @@ export const microsoftSentinelManifest = defineRestConnector({
   },
   testPath: '/incidents?api-version=2023-02-01&$top=1',
   testLabel: 'Sentinel workspace connected',
+  network: { hosts: ['management.azure.com'] },
   actions: [
     { slug: 'list_incidents', name: 'List incidents', risk: 'read', path: '/incidents', staticQuery: { 'api-version': '2023-02-01', $top: '25', $orderby: 'properties/createdTimeUtc desc' },
       description: 'Sentinel incidents with severity and status.', params: {} },
@@ -81,6 +83,7 @@ export const ibmQradarManifest = defineRestConnector({
   },
   testPath: '/api/system/about',
   testLabel: 'QRadar console connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_offenses', name: 'List offenses', risk: 'read', path: '/api/siem/offenses', staticQuery: { sort: '-start_time' },
       description: 'Offenses with magnitude and status. filter: e.g. status=OPEN (optional).',
@@ -116,6 +119,7 @@ export const elasticSiemManifest = defineRestConnector({
   },
   testPath: '/api/status',
   testLabel: 'Elastic deployment connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_detection_rules', name: 'List detection rules', risk: 'read', path: '/api/detection_engine/rules/_find', staticQuery: { per_page: '30', sort_field: 'enabled', sort_order: 'desc' },
       description: 'Detection rules with enabled state and severity.', params: {} },
@@ -147,6 +151,7 @@ export const sumoLogicManifest = defineRestConnector({
   },
   testPath: '/collectors?limit=1',
   testLabel: 'Sumo Logic connected',
+  network: { hostPattern: 'api.<your-deployment>.sumologic.com' },
   actions: [
     { slug: 'list_collectors', name: 'List collectors', risk: 'read', path: '/collectors', staticQuery: { limit: '30' },
       description: 'Data collectors and their status.', params: {} },
@@ -179,6 +184,7 @@ export const logrhythmManifest = defineRestConnector({
   },
   testPath: '/lr-alarm-api/alarms?count=1',
   testLabel: 'LogRhythm connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_alarms', name: 'List alarms', risk: 'read', path: '/lr-alarm-api/alarms', staticQuery: { count: '25', orderBy: 'DateInserted', dir: 'descending' },
       description: 'Recent alarms with status and risk.', params: {} },
@@ -216,6 +222,7 @@ export const carbonBlackManifest = defineRestConnector({
   },
   testPath: '/integrationServices/v3/cblr/session',
   testLabel: 'Carbon Black Cloud connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'search_alerts', name: 'Search alerts', risk: 'read', method: 'POST', path: '/api/alerts/v7/orgs/{org_key}/alerts/_search',
       description: 'Recent alerts sorted by severity.',
@@ -253,6 +260,7 @@ export const cortexXdrManifest = defineRestConnector({
   },
   testPath: '/public_api/v1/healthcheck',
   testLabel: 'Cortex XDR tenant connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'get_incidents', name: 'List incidents', risk: 'read', method: 'POST', path: '/public_api/v1/incidents/get_incidents',
       description: 'Recent incidents sorted by creation time.',
@@ -289,6 +297,7 @@ export const oktaManifest = defineRestConnector({
   },
   testPath: '/api/v1/users/me',
   testLabel: 'Okta org connected',
+  network: { hostPattern: '<your-org>.okta.com' },
   actions: [
     { slug: 'list_users', name: 'List users', risk: 'read', path: '/api/v1/users', staticQuery: { limit: '25' },
       description: 'Users with status. q: name/email search (optional).',
@@ -362,6 +371,7 @@ export const duoSecurityManifest = defineRestConnector({
   },
   testPath: '/admin/v1/info/summary',
   testLabel: 'Duo account connected',
+  network: { hostPattern: '<your-api-hostname>.duosecurity.com' },
   actions: [
     { slug: 'list_users', name: 'List users', risk: 'read', path: '/admin/v1/users', staticQuery: { limit: '25' },
       description: 'Duo-enrolled users with status.', params: {} },

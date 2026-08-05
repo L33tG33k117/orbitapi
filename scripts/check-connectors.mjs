@@ -82,6 +82,45 @@ for (const m of connectors) {
   }
 }
 
+// 5b. Every real connector states what it needs to reach.
+//
+// A self-hosted customer's firewall denies egress by default. If a connector
+// can't say which hosts it talks to, they cannot write a rule for it, and the
+// integration fails at runtime with a DNS error nobody can interpret. Failing
+// the build is the only way this stays true as connectors are added — the
+// factory derives it from a static baseUrl, so this really only catches
+// function-baseUrl specs and hand-written manifests.
+for (const m of connectors) {
+  if (m.isSimulated) continue   // makes no outbound requests at all
+  const net = m.network
+  const declared = !!net && (
+    (Array.isArray(net.hosts) && net.hosts.length > 0) ||
+    (typeof net.hostPattern === 'string' && net.hostPattern.length > 0) ||
+    net.customerHost === true
+  )
+  if (!declared) {
+    errors.push(
+      `Manifest '${m.slug}': no network access declared. Add hosts / hostPattern / customerHost ` +
+      `to the spec so self-hosted customers can write a firewall rule for it.`,
+    )
+    continue
+  }
+  for (const h of net.hosts ?? []) {
+    if (/^https?:\/\//.test(h) || h.includes('/')) {
+      errors.push(`Manifest '${m.slug}': network host '${h}' should be a bare hostname, not a URL.`)
+    }
+  }
+  // A pattern the customer completes must LOOK completable; a literal
+  // hostname hiding in hostPattern would silently omit itself from the
+  // generated allowlist.
+  if (net.hostPattern && !net.hostPattern.includes('<')) {
+    errors.push(
+      `Manifest '${m.slug}': hostPattern '${net.hostPattern}' has no <placeholder>. ` +
+      `Use hosts for a fixed hostname.`,
+    )
+  }
+}
+
 // 6. Logo files exist
 for (const m of connectors) {
   if (m.logoUrl && m.logoUrl.startsWith('/logos/')) {

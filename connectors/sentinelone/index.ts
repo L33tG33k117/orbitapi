@@ -76,6 +76,8 @@ export const sentineloneManifest: ConnectorManifest = {
     return { ok: true, label: `SentinelOne ${creds.management_url}` }
   },
 
+  network: { hostPattern: '<your-console>.sentinelone.net' },
+
   actions: [
     {
       slug: 'list_threats',

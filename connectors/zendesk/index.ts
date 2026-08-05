@@ -58,6 +58,8 @@ export const zendeskManifest: ConnectorManifest = {
     return { ok: true, label: `Zendesk ${creds.subdomain}.zendesk.com` }
   },
 
+  network: { hostPattern: '<your-subdomain>.zendesk.com' },
+
   actions: [
     {
       slug: 'list_tickets',

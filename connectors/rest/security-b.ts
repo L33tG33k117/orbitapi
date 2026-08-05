@@ -18,6 +18,7 @@ export const cyberarkManifest = defineRestConnector({
   },
   testPath: '/PasswordVault/api/Verify',
   testLabel: 'CyberArk vault connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_accounts', name: 'List privileged accounts', risk: 'read', path: '/PasswordVault/api/Accounts', staticQuery: { limit: '25' },
       description: 'Managed accounts. search: filter text (optional).',
@@ -51,6 +52,7 @@ export const hashicorpVaultManifest = defineRestConnector({
   },
   testPath: '/v1/sys/health',
   testLabel: 'Vault server connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'get_health', name: 'Health check', risk: 'read', path: '/v1/sys/health',
       description: 'Seal status, HA mode, and version.', params: {} },
@@ -86,6 +88,7 @@ export const paloAltoXsoarManifest = defineRestConnector({
   },
   testPath: '/about',
   testLabel: 'XSOAR server connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'search_incidents', name: 'Search incidents', risk: 'read', method: 'POST', path: '/incidents/search',
       description: 'Recent incidents. query: Lucene filter, e.g. status:Active (optional).',
@@ -119,6 +122,7 @@ export const wizManifest = defineRestConnector({
   testPath: '/graphql',
   testInit: { method: 'POST', body: { query: '{ viewer { id } }' } },
   testLabel: 'Wiz tenant connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_issues', name: 'List issues', risk: 'read', method: 'POST', path: '/graphql',
       description: 'Open cloud security issues sorted by severity.',
@@ -168,6 +172,7 @@ export const qualysManifest = defineRestConnector({
   },
   testPath: '/rest/2.0/count/am/asset',
   testLabel: 'Qualys platform connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'search_assets', name: 'Search assets', risk: 'read', method: 'POST', path: '/rest/2.0/search/am/asset', staticQuery: { pageSize: '25' },
       description: 'Assets with OS and open vulnerability counts. filter: Qualys QQL (optional).',
@@ -278,6 +283,7 @@ export const rapid7Manifest = defineRestConnector({
   },
   testPath: '/validate',
   testLabel: 'Rapid7 Insight connected',
+  network: { hostPattern: '<your-region>.api.insight.rapid7.com' },
   actions: [
     { slug: 'search_assets', name: 'Search assets', risk: 'read', method: 'POST', path: '/vm/v4/integration/assets', staticQuery: { size: '25' },
       description: 'Assets with risk score and vulnerability counts.',
@@ -368,6 +374,7 @@ export const knowbe4Manifest = defineRestConnector({
   },
   testPath: '/account',
   testLabel: 'KnowBe4 account connected',
+  network: { hostPattern: '<your-region>.api.knowbe4.com' },
   actions: [
     { slug: 'get_account', name: 'Account overview', risk: 'read', path: '/account',
       description: 'Account info including overall Risk Score.', params: {} },

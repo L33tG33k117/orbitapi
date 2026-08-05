@@ -47,6 +47,7 @@ export const mailchimpManifest = defineRestConnector({
   auth: apiKeyAuth({ service: 'Mailchimp', keyLabel: 'API key', keyPlaceholder: 'xxxxxxxx-us21', where: 'Account → Extras → API keys', keyHint: 'The key ends with your data center (e.g. -us21) — paste the whole thing.' }),
   testPath: '/ping',
   testLabel: 'Mailchimp account connected',
+  network: { hostPattern: '<your-datacentre>.api.mailchimp.com' },
   actions: [
     { slug: 'list_audiences', name: 'List audiences', risk: 'read', path: '/lists', staticQuery: { count: '20' },
       description: 'Your audiences (lists) with member counts.', params: {} },

@@ -52,6 +52,7 @@ export const freshserviceManifest = defineRestConnector({
   },
   testPath: '/tickets?per_page=1',
   testLabel: 'Freshservice connected',
+  network: { hostPattern: '<your-domain>.freshservice.com' },
   actions: [
     { slug: 'list_tickets', name: 'List tickets', risk: 'read', path: '/tickets', staticQuery: { per_page: '30' },
       description: 'Service desk tickets with status and priority.', params: {} },
@@ -90,6 +91,7 @@ export const jiraServiceManifest = defineRestConnector({
   },
   testPath: '/rest/servicedeskapi/servicedesk',
   testLabel: 'JSM site connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_service_desks', name: 'List service desks', risk: 'read', path: '/rest/servicedeskapi/servicedesk',
       description: 'Service desks with project keys.', params: {} },
@@ -129,6 +131,7 @@ export const xmattersManifest = defineRestConnector({
   },
   testPath: '/people?limit=1',
   testLabel: 'xMatters instance connected',
+  network: { hostPattern: '<your-instance>.xmatters.com' },
   actions: [
     { slug: 'list_events', name: 'List events', risk: 'read', path: '/events', staticQuery: { limit: '25', sortBy: 'START_TIME', sortOrder: 'DESCENDING' },
       description: 'Recent notification events with status.', params: {} },
@@ -304,6 +307,7 @@ export const philipsHueManifest = defineRestConnector({
   },
   testPath: '/config',
   testLabel: 'Hue Bridge connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_lights', name: 'List lights', risk: 'read', path: '/lights',
       description: 'All lights with on/off and brightness state.', params: {} },

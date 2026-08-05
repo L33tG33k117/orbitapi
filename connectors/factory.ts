@@ -1,5 +1,5 @@
 import type {
-  ActionDef, ActionResult, ActionRisk, ApiKeyAuth, ConnectorManifest, JSONSchema,
+  ActionDef, ActionResult, ActionRisk, ApiKeyAuth, ConnectorManifest, JSONSchema, NetworkAccess,
 } from './types'
 
 // ============================================================================
@@ -57,7 +57,41 @@ export interface RestConnectorSpec {
   testInit?: { method: 'POST'; body: unknown }
   /** Send write bodies as application/x-www-form-urlencoded (e.g. Stripe). */
   formEncoded?: boolean
+  /**
+   * Outbound hosts, for the firewall rules a self-hosted customer needs.
+   *
+   * Omit it when `baseUrl` is a static string — the host is derived from it
+   * automatically. It is REQUIRED when `baseUrl` is a function, because the
+   * address then depends on credentials we don't have at build time and only
+   * the spec author knows the shape.
+   */
+  network?: NetworkAccess
   actions: RestActionSpec[]
+}
+
+/**
+ * Work out what a connector talks to.
+ *
+ * Derived from a static baseUrl so ~100 specs get correct rules for free and
+ * can never drift from the URL actually being called. An explicit `network`
+ * always wins, and a function baseUrl has nothing to derive from.
+ */
+export function resolveNetwork(spec: RestConnectorSpec): NetworkAccess {
+  if (spec.network) return spec.network
+
+  if (typeof spec.baseUrl === 'string') {
+    try {
+      const raw = /^https?:\/\//.test(spec.baseUrl) ? spec.baseUrl : `https://${spec.baseUrl}`
+      return { hosts: [new URL(raw).host] }
+    } catch {
+      /* fall through to the empty case, which check-connectors.mjs fails on */
+    }
+  }
+
+  // A function baseUrl with no declaration: deliberately returned empty so the
+  // CI check fails loudly rather than shipping a connector whose firewall rule
+  // nobody can write.
+  return {}
 }
 
 function baseUrlOf(spec: RestConnectorSpec, creds: Record<string, string>): string {
@@ -223,6 +257,7 @@ export function defineRestConnector(spec: RestConnectorSpec): ConnectorManifest 
       const result = await restFetch(spec, creds, url, init)
       return result.ok ? { ok: true, label: spec.testLabel } : { ok: false, error: result.error }
     },
+    network: resolveNetwork(spec),
     actions: [...spec.actions.map(a => buildAction(spec, a)), exploreApiAction(spec)],
   }
 }

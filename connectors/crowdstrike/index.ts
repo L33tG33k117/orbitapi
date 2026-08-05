@@ -94,6 +94,8 @@ export const crowdstrikeManifest: ConnectorManifest = {
     }
   },
 
+  network: { hosts: ['api.crowdstrike.com'] },
+
   actions: [
     {
       slug: 'list_detections',

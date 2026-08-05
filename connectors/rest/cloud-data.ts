@@ -23,6 +23,7 @@ export const datadogManifest = defineRestConnector({
   },
   testPath: '/api/v1/validate',
   testLabel: 'Datadog account connected',
+  network: { hostPattern: 'api.<your-datadog-site>' },
   actions: [
     { slug: 'list_monitors', name: 'List monitors', risk: 'read', path: '/api/v1/monitor', staticQuery: { page_size: '30' },
       description: 'Monitors with current state (OK / Alert / Warn / No Data).', params: {} },
@@ -94,6 +95,7 @@ export const grafanaManifest = defineRestConnector({
   },
   testPath: '/api/health',
   testLabel: 'Grafana instance connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_dashboards', name: 'List dashboards', risk: 'read', path: '/api/search', staticQuery: { type: 'dash-db', limit: '30' },
       description: 'Dashboards. query: title filter (optional).',
@@ -127,6 +129,7 @@ export const dynatraceManifest = defineRestConnector({
   },
   testPath: '/api/v2/problems?pageSize=1',
   testLabel: 'Dynatrace environment connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_problems', name: 'List problems', risk: 'read', path: '/api/v2/problems', staticQuery: { pageSize: '25' },
       description: 'Detected problems with impact and status.', params: {} },
@@ -160,6 +163,7 @@ export const awsCloudwatchManifest = defineRestConnector({
   },
   testPath: '/',
   testLabel: 'CloudWatch connected',
+  network: { hostPattern: 'monitoring.<your-region>.amazonaws.com' },
   actions: [
     { slug: 'describe_alarms', name: 'List alarms', risk: 'read', method: 'POST', path: '/', headers: { 'X-Amz-Target': 'GraniteServiceVersion20100801.DescribeAlarms' },
       description: 'CloudWatch alarms with state (OK / ALARM / INSUFFICIENT_DATA).',
@@ -196,6 +200,7 @@ export const awsSsmManifest = defineRestConnector({
   },
   testPath: '/',
   testLabel: 'AWS SSM connected',
+  network: { hostPattern: 'ssm.<your-region>.amazonaws.com' },
   actions: [
     { slug: 'list_instances', name: 'List managed instances', risk: 'read', method: 'POST', path: '/', headers: { 'X-Amz-Target': 'AmazonSSM.DescribeInstanceInformation' },
       description: 'SSM-managed instances with ping status and platform.',
@@ -229,6 +234,7 @@ export const azureMonitorManifest = defineRestConnector({
   },
   testPath: '/providers/Microsoft.AlertsManagement/alerts?api-version=2019-05-05&pageCount=1',
   testLabel: 'Azure subscription connected',
+  network: { hosts: ['management.azure.com'] },
   actions: [
     { slug: 'list_alerts', name: 'List alerts', risk: 'read', path: '/providers/Microsoft.AlertsManagement/alerts', staticQuery: { 'api-version': '2019-05-05', pageCount: '25' },
       description: 'Fired alerts across the subscription with severity and state.', params: {} },
@@ -319,6 +325,7 @@ export const snowflakeManifest = defineRestConnector({
   },
   testPath: '/api/v2/statements?pageSize=1',
   testLabel: 'Snowflake account connected',
+  network: { hostPattern: '<your-account>.snowflakecomputing.com' },
   actions: [
     { slug: 'run_sql', name: 'Run SQL', risk: 'read', method: 'POST', path: '/api/v2/statements',
       description: 'Executes a SQL statement, e.g. "SELECT * FROM ORDERS LIMIT 20". warehouse: compute warehouse name.',
@@ -346,6 +353,7 @@ export const databricksManifest = defineRestConnector({
   },
   testPath: '/api/2.0/clusters/list',
   testLabel: 'Databricks workspace connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_clusters', name: 'List clusters', risk: 'read', path: '/api/2.0/clusters/list',
       description: 'Compute clusters with state.', params: {} },
@@ -406,6 +414,7 @@ export const tableauManifest = defineRestConnector({
   },
   testPath: '/api/3.22/serverinfo',
   testLabel: 'Tableau server connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_workbooks', name: 'List workbooks', risk: 'read', path: '/api/3.22/sites/{site_id}/workbooks', staticQuery: { pageSize: '30' },
       description: 'Workbooks on the site.',

@@ -136,6 +136,8 @@ export const sophosManifest: ConnectorManifest = {
     }
   },
 
+  network: { hosts: ['api.central.sophos.com', 'id.sophos.com'] },
+
   actions: [
     {
       slug: 'list_alerts',

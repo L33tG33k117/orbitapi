@@ -56,6 +56,8 @@ export const plainManifest: ConnectorManifest = {
     return { ok: true, label: `Plain — ${name ?? 'workspace'}` }
   },
 
+  network: { hosts: ['core.plain.com'] },
+
   actions: [
     {
       slug: 'list_threads',

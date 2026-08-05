@@ -60,6 +60,30 @@ export interface ActionDef {
   execute: (creds: Record<string, string>, params: Record<string, unknown>) => Promise<ActionResult>
 }
 
+// ============================================================
+// Outbound network access
+// ============================================================
+// A self-hosted customer runs OrbitAPI behind a firewall that denies egress by
+// default. To use a connector they need one specific thing from us: the exact
+// hostnames it will talk to. "Allow all HTTPS" is not an answer their security
+// team will accept, and guessing means an integration that fails silently at
+// 3am with a DNS error nobody can interpret.
+//
+// Every connector must therefore declare one of:
+//   hosts         concrete hostnames, e.g. ['api.github.com']
+//   hostPattern   a shape the customer completes, for per-tenant domains,
+//                 e.g. '<your-domain>.freshdesk.com'
+//   customerHost  true when the address is entirely customer-supplied (a
+//                 self-hosted GitLab, a LAN device) — no internet rule needed
+//
+// scripts/check-connectors.mjs fails the build if a connector declares none,
+// so this can't quietly rot as connectors are added.
+export interface NetworkAccess {
+  hosts?: string[]
+  hostPattern?: string
+  customerHost?: true
+}
+
 export interface ConnectorManifest {
   slug: string
   name: string
@@ -70,6 +94,8 @@ export interface ConnectorManifest {
   auth: ApiKeyAuth | OAuth2Auth
   actions: ActionDef[]
   testConnection: (creds: Record<string, string>) => Promise<{ ok: boolean; label?: string; error?: string }>
+  /** What this connector needs to reach. Absent only for simulated connectors. */
+  network?: NetworkAccess
 }
 
 // Serializable subset — safe to pass from Server Components to Client Components.

@@ -96,6 +96,8 @@ export const pagerdutyManifest: ConnectorManifest = {
     return { ok: true, label: 'PagerDuty Events API connected' }
   },
 
+  network: { hosts: ['api.pagerduty.com', 'events.pagerduty.com'] },
+
   actions: [
     {
       slug: 'trigger_incident',

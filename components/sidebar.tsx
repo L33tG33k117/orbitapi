@@ -10,7 +10,7 @@ import { useIsSelfHost } from '@/components/config-provider'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu,
+  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network,
 } from 'lucide-react'
 
 interface NavItem {
@@ -99,6 +99,7 @@ const adminItems: NavItem[] = [
   { href: '/settings/members', label: 'Members', icon: Users },
   { href: '/settings/billing', label: 'Billing', icon: CreditCard, cloudOnly: true },
   { href: '/settings/ai-provider', label: 'AI Provider', icon: Cpu },
+  { href: '/settings/network', label: 'Network Access', icon: Network },
   { href: '/settings/workspace', label: 'Workspace', icon: Settings },
 ]
 

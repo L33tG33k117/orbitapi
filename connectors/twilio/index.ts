@@ -86,6 +86,8 @@ export const twilioManifest: ConnectorManifest = {
     return { ok: true, label: `Twilio: ${data.friendly_name ?? creds.account_sid}` }
   },
 
+  network: { hosts: ['api.twilio.com', 'lookups.twilio.com', 'verify.twilio.com'] },
+
   actions: [
     {
       slug: 'send_sms',

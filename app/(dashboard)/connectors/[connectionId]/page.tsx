@@ -5,6 +5,7 @@ import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { CONNECTOR_EXAMPLES } from '@/lib/connector-examples'
 import { Badge } from '@/components/ui/badge'
+import { ConnectorNetworkCard } from '@/components/connector-network-card'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ActionDebugPanel } from './action-debug-panel'
@@ -215,6 +216,8 @@ export default async function ConnectionPage({ params }: { params: Promise<{ con
       </div>
 
       <section data-tour="conn-actions" className="space-y-3">
+        {!connection.is_simulated && <ConnectorNetworkCard slug={connector.slug} />}
+
         <div>
           <h2 className="text-lg font-semibold">What you can do with {connector.name}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">

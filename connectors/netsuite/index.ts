@@ -113,6 +113,8 @@ export const netsuiteManifest: ConnectorManifest = {
     return { ok: true, label: `NetSuite ${creds.account_id} connected` }
   },
 
+  network: { hostPattern: '<your-account-id>.suitetalk.api.netsuite.com' },
+
   actions: [
     {
       slug: 'run_suiteql',

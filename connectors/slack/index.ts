@@ -117,6 +117,8 @@ export const slackManifest: ConnectorManifest = {
     return { ok: true, label: `${data.team} / ${data.user}` }
   },
 
+  network: { hosts: ['slack.com'] },
+
   actions: [
     {
       slug: 'send_message',

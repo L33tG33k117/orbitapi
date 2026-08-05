@@ -102,6 +102,8 @@ export const stellarCyberManifest: ConnectorManifest = {
     }
   },
 
+  network: { hostPattern: '<your-instance>.stellarcyber.cloud' },
+
   actions: [
     {
       slug: 'list_alerts',

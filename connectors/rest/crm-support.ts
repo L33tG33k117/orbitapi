@@ -57,6 +57,7 @@ export const salesforceManifest = defineRestConnector({
   },
   testPath: '/services/data/v59.0/limits',
   testLabel: 'Salesforce org connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'soql_query', name: 'Run SOQL query', risk: 'read', path: '/services/data/v59.0/query',
       description: 'Runs a SOQL query, e.g. "SELECT Id, Name, Amount FROM Opportunity WHERE IsClosed = false LIMIT 25".',
@@ -97,6 +98,7 @@ export const pipedriveManifest = defineRestConnector({
   },
   testPath: '/users/me',
   testLabel: 'Pipedrive account connected',
+  network: { hostPattern: '<your-company>.pipedrive.com' },
   actions: [
     { slug: 'list_deals', name: 'List deals', risk: 'read', path: '/deals', staticQuery: { limit: '50' },
       description: 'Deals with value, stage, and status. status: open | won | lost | all_not_deleted.',
@@ -139,6 +141,7 @@ export const freshdeskManifest = defineRestConnector({
   },
   testPath: '/tickets?per_page=1',
   testLabel: 'Freshdesk account connected',
+  network: { hostPattern: '<your-domain>.freshdesk.com' },
   actions: [
     { slug: 'list_tickets', name: 'List tickets', risk: 'read', path: '/tickets', staticQuery: { per_page: '30' },
       description: 'Tickets, newest first, with status and priority.', params: {} },
@@ -236,6 +239,7 @@ export const zohoCrmManifest = defineRestConnector({
   },
   testPath: '/org',
   testLabel: 'Zoho CRM connected',
+  network: { hostPattern: 'www.zohoapis.<your-datacentre>' },
   actions: [
     { slug: 'list_records', name: 'List records', risk: 'read', path: '/{module}', staticQuery: { per_page: '50' },
       description: 'Records from a module: Leads, Contacts, Deals, Accounts, Tasks.',

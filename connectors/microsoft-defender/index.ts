@@ -116,6 +116,8 @@ export const microsoftDefenderManifest: ConnectorManifest = {
     }
   },
 
+  network: { hosts: ['api.securitycenter.microsoft.com', 'login.microsoftonline.com'] },
+
   actions: [
     {
       slug: 'list_alerts',

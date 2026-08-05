@@ -56,6 +56,8 @@ export const servicenowManifest: ConnectorManifest = {
     return { ok: true, label: `ServiceNow ${creds.instance}.service-now.com` }
   },
 
+  network: { hostPattern: '<your-instance>.service-now.com' },
+
   actions: [
     {
       slug: 'list_incidents',

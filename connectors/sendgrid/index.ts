@@ -76,6 +76,8 @@ export const sendgridManifest: ConnectorManifest = {
     return { ok: true, label: `SendGrid: ${data.email ?? 'verified'}` }
   },
 
+  network: { hosts: ['api.sendgrid.com'] },
+
   actions: [
     {
       slug: 'send_email',

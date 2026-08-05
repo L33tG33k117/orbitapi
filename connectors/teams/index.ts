@@ -55,6 +55,8 @@ export const teamsManifest: ConnectorManifest = {
     return { ok: true, label: 'Microsoft Teams webhook connected' }
   },
 
+  network: { hostPattern: '<your-org>.webhook.office.com' },
+
   actions: [
     {
       slug: 'send_message',

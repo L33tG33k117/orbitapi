@@ -112,6 +112,7 @@ export const jiraManifest = defineRestConnector({
   },
   testPath: '/rest/api/3/myself',
   testLabel: 'Jira site connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'search_issues', name: 'Search issues (JQL)', risk: 'read', path: '/rest/api/3/search', staticQuery: { maxResults: '30' },
       description: 'Searches issues with JQL, e.g. "project = OPS AND status = \'In Progress\' ORDER BY updated DESC".',
@@ -165,6 +166,7 @@ export const confluenceManifest = defineRestConnector({
   },
   testPath: '/wiki/rest/api/space?limit=1',
   testLabel: 'Confluence site connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_spaces', name: 'List spaces', risk: 'read', path: '/wiki/rest/api/space', staticQuery: { limit: '30' },
       description: 'Lists Confluence spaces.', params: {} },
@@ -232,6 +234,7 @@ export const argocdManifest = defineRestConnector({
   },
   testPath: '/api/v1/projects?count=1',
   testLabel: 'Argo CD server connected',
+  network: { customerHost: true },
   actions: [
     { slug: 'list_applications', name: 'List applications', risk: 'read', path: '/api/v1/applications',
       description: 'All Argo CD applications with sync + health status.', params: {} },
