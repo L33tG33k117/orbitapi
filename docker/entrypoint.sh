@@ -50,6 +50,24 @@ echo "[orbit] database is ready"
 echo "[orbit] applying migrations…"
 node scripts/db-migrate.mjs up
 
+# ---- tell PostgREST the schema changed -------------------------------------
+# PostgREST builds its schema cache ONCE, when it connects. It starts in
+# parallel with this container, so it caches an empty database and then never
+# learns about the tables the migrations just created. Every request for one of
+# them comes back 404 with an empty body — which surfaces as an unexplained
+# 500 in the app, because supabase-js builds its error from that empty body.
+#
+# PostgREST listens on the `pgrst` NOTIFY channel for exactly this.
+echo "[orbit] asking PostgREST to reload its schema…"
+node -e "
+  const pg = require('pg');
+  const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  c.connect()
+    .then(() => c.query(\"notify pgrst, 'reload schema'\"))
+    .then(() => c.end())
+    .then(() => process.exit(0), e => { console.error('[orbit] schema reload notify failed:', e.message); process.exit(0) });
+" || echo "[orbit] could not notify PostgREST — it will pick the schema up on its next reconnect"
+
 # ---- serve ------------------------------------------------------------------
 echo "[orbit] starting the app on port ${PORT:-3000}"
 exec su-exec orbit "$@"

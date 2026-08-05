@@ -216,6 +216,8 @@ try {
   check('support bundle redacts secrets', /ORBIT_SECRETS_KEY[^\n]*redacted/.test(orbitSh))
   check('rollback warns that data is not rolled back', /rollback[\s\S]*not the previous DATA/i.test(orbitSh))
 
+  check('entrypoint tells PostgREST to reload after migrating',
+    readFileSync(join(ROOT, 'docker', 'entrypoint.sh'), 'utf8').includes("notify pgrst"))
   check('entrypoint refuses to start without required env',
     readFileSync(join(ROOT, 'docker', 'entrypoint.sh'), 'utf8').includes('missing required environment'))
   check('instrumentation only starts the scheduler on self-host',
