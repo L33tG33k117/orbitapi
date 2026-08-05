@@ -29,6 +29,13 @@ export type Capability =
   | 'discover'             // connector/schema discovery
   | 'webhooks'             // inbound webhook triggers
   | 'api_reference'        // full API action reference
+  // Bring-your-own LLM: point Orbit at a local/self-run model instead of Claude.
+  // Granted by NO tier — it exists for the self-hosted edition, where the
+  // license grants it. Listing it here anyway (rather than branching on
+  // edition) means support can still flip it per-workspace through the
+  // existing feature_flags override if a cloud enterprise customer demands it,
+  // with zero new admin surface.
+  | 'byo_llm'
 
 // Capabilities NOT in this list (dashboard, guide, usage, ai-power, audit,
 // approvals, settings) are never gated — every tier can see them.
@@ -105,4 +112,5 @@ export const CAPABILITY_INFO: Record<Capability, { label: string; description: s
   discover: { label: 'Discover', description: 'Explore and auto-discover what an API can do.' },
   webhooks: { label: 'Webhooks', description: 'Trigger automations from external events in real time.' },
   api_reference: { label: 'Connector Actions', description: 'Search and run actions across all your connected apps in one place.' },
+  byo_llm: { label: 'Your Own AI Model', description: 'Point Orbit at an AI model you run yourself, so your data never leaves your network.' },
 }

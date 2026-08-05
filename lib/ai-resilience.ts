@@ -17,8 +17,15 @@
 //
 // Pure module: no DB, no Supabase, safe to import anywhere.
 
-import { APICallError } from 'ai'
+import { APICallError, type generateText } from 'ai'
 import { CHEAP_MODEL, MODEL_PRICING, type ModelId } from './usage-cost'
+import type { AiProvider } from './ai-provider'
+
+// The AI SDK's provider-options type lives in @ai-sdk/provider-utils, which is
+// only a transitive dependency here — importing it directly would break the
+// day a lockfile hoists it differently. Deriving it from generateText's own
+// signature keeps us pinned to whatever `ai` actually accepts.
+type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]['providerOptions']>
 
 /** Attempts per request before we give up on the chosen model (1 try + 3 retries). */
 export const AI_MAX_RETRIES = 3
@@ -67,6 +74,42 @@ export const AGENTIC_THINKING = {
  * final answer, so it has to be well clear of what the answer alone needs.
  */
 export const AGENTIC_MAX_TOKENS = 32_000
+
+// ------------------------------------------------------------
+// Provider-aware wrappers
+// ------------------------------------------------------------
+// Everything above this line is Anthropic policy. A self-hosted customer's
+// local model has none of it: no extended thinking, no prompt caching, and a
+// far smaller output ceiling. Rather than make 11 call sites ask "am I on a
+// local model?", they pass their provider to these helpers and get back
+// options that are correct for whatever they're running on.
+
+/** `providerOptions` for a call site's thinking preset — `undefined` on local. */
+export function thinkingFor(
+  provider: { supportsThinking: boolean },
+  preset: 'none' | 'agentic',
+): ProviderOptions | undefined {
+  if (!provider.supportsThinking) return undefined
+  return preset === 'agentic' ? AGENTIC_THINKING : NO_THINKING
+}
+
+/**
+ * `providerOptions` for a message you'd like cached. Prompt caching is an
+ * Anthropic feature; sending the block to an OpenAI-compatible endpoint is at
+ * best ignored and at worst a 400, so local gets `undefined`.
+ */
+export function cacheControlFor(
+  provider: { supportsPromptCache: boolean },
+): ProviderOptions | undefined {
+  return provider.supportsPromptCache
+    ? { anthropic: { cacheControl: { type: 'ephemeral' } } }
+    : undefined
+}
+
+/** An output budget this provider can actually honour. */
+export function maxTokensFor(provider: { clampMaxTokens(n: number): number }, desired: number): number {
+  return provider.clampMaxTokens(desired)
+}
 
 // The AI SDK wraps repeated failures in a RetryError carrying every attempt.
 // We don't import the class (it isn't exported from every entry point) — we
@@ -137,11 +180,44 @@ export function isAiError(err: unknown): boolean {
   return errorChain(err).some(e => APICallError.isInstance(e))
 }
 
+/** The local model server is unreachable — not running, wrong URL, or firewalled. */
+export function isConnectionRefused(err: unknown): boolean {
+  return /econnrefused|enotfound|eai_again|ehostunreach|etimedout|fetch failed|network error/.test(
+    textOf(err),
+  )
+}
+
+/** The prompt was longer than the local model's context window. */
+export function isContextLengthError(err: unknown): boolean {
+  return /context length|context_length|too many tokens|maximum context|reduce the length/.test(
+    textOf(err),
+  )
+}
+
 /**
  * A sentence we're happy to show a non-technical beta user. Never leaks a raw
  * provider payload, a stack trace, or a model name.
+ *
+ * Pass the provider when you have it: a self-hosted customer's problems are
+ * completely different from ours (their model server is down, not Anthropic's),
+ * and telling them "Orbit's AI provider is busy" would send them hunting for a
+ * fault that isn't theirs — or worse, waiting for it to clear on its own.
  */
-export function friendlyAiError(err: unknown): string {
+export function friendlyAiError(err: unknown, provider?: { kind: 'anthropic' | 'local' }): string {
+  if (provider?.kind === 'local') {
+    if (isConnectionRefused(err)) {
+      return "Orbit couldn't reach your AI model server. Check that it's running and that the address in Settings → AI Provider is correct."
+    }
+    if (isContextLengthError(err)) {
+      return 'That request was too long for your AI model to handle. Try a shorter request, or split the task into smaller steps.'
+    }
+    if (isAuthError(err)) {
+      return 'Your AI model server rejected Orbit\'s credentials. Check the API key in Settings → AI Provider.'
+    }
+    const localMsg = err instanceof Error ? err.message : String(err ?? '')
+    return `Your local AI endpoint didn't respond as expected — check your model server. ${localMsg.slice(0, 200)}`.trim()
+  }
+
   if (isOverloadedError(err)) {
     return "Orbit's AI is unusually busy right now. We retried a few times and switched to a faster model, but it's still at capacity — please try again in a minute."
   }
@@ -181,8 +257,15 @@ export interface FallbackInfo {
 export async function withModelFallback<T>(
   primary: ModelId,
   run: (model: ModelId) => Promise<T>,
-  opts: { fallback?: ModelId; label?: string } = {},
+  opts: { fallback?: ModelId; label?: string; provider?: Pick<AiProvider, 'kind'> } = {},
 ): Promise<{ result: T } & FallbackInfo> {
+  // A self-hosted customer has exactly one model. There is nothing to fall
+  // back TO, and "we switched you to a faster model" would be a lie. Run once
+  // and let the error surface with the local copy.
+  if (opts.provider?.kind === 'local') {
+    return { result: await run(primary), model: primary, usedFallback: false }
+  }
+
   const fallback = opts.fallback ?? CHEAP_MODEL
   try {
     return { result: await run(primary), model: primary, usedFallback: false }

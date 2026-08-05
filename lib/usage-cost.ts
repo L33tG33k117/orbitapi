@@ -16,6 +16,41 @@ export type ModelId =
   | 'claude-haiku-4-5'
   | 'claude-fable-5'
 
+// ------------------------------------------------------------
+// Local (self-hosted) models
+// ------------------------------------------------------------
+// A self-hosted customer runs their own model on their own hardware, so there
+// is no per-token price to attribute — the tokens are free to us AND to them.
+// Those runs are still RECORDED (token counts, run history, usage charts are
+// all still useful) but they cost $0 and consume no AI Power.
+//
+// We tag them with a `local:` prefix so a model id is self-describing wherever
+// it lands: a run row, a log line, an admin screen. Nothing has to consult the
+// edition to know how to treat it.
+
+/** Model id for a customer-supplied local model, e.g. `local:llama3.1:70b`. */
+export type LocalModelId = `local:${string}`
+
+/** Any model id we might record on a run — hosted Claude or a local model. */
+export type AnyModelId = ModelId | LocalModelId
+
+export const LOCAL_MODEL_PREFIX = 'local:'
+
+/** Tag a customer's model name as a local model id. */
+export function localModelId(name: string): LocalModelId {
+  return `${LOCAL_MODEL_PREFIX}${name}` as LocalModelId
+}
+
+/** Is this a customer-run local model (free, unmetered) rather than hosted Claude? */
+export function isLocalModel(model: string | null | undefined): boolean {
+  return typeof model === 'string' && model.startsWith(LOCAL_MODEL_PREFIX)
+}
+
+/** The bare model name a local id wraps (`local:llama3` → `llama3`). */
+export function localModelName(model: string): string {
+  return isLocalModel(model) ? model.slice(LOCAL_MODEL_PREFIX.length) : model
+}
+
 export interface ModelPrice {
   inputPerMTok: number
   outputPerMTok: number
@@ -38,6 +73,10 @@ export const CHEAP_MODEL: ModelId = 'claude-haiku-4-5'
 
 // Cost of a single run in USD given token usage.
 export function computeCost(model: string, tokensIn: number, tokensOut: number): number {
+  // A model the customer runs themselves costs us nothing to serve. Checked
+  // BEFORE the pricing lookup — an unknown id falls back to DEFAULT_MODEL
+  // pricing, which would silently bill Sonnet rates for a local run.
+  if (isLocalModel(model)) return 0
   const price = MODEL_PRICING[model as ModelId] ?? MODEL_PRICING[DEFAULT_MODEL]
   const cost =
     (tokensIn / 1_000_000) * price.inputPerMTok +

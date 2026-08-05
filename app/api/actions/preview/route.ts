@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { CHEAP_MODEL } from '@/lib/usage-cost'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 // Feature #9 — Destructive action preview.
 // Predicts the impact of an action BEFORE it runs, and whether it's reversible,
@@ -55,10 +55,11 @@ export async function POST(req: Request) {
     ? 'This is a destructive action and may not be undoable.'
     : 'This writes data to the connected system.'
   try {
+    const provider = await resolveAiProvider(membership.workspace_id)
     const { text } = await generateText({
-      model: anthropic(CHEAP_MODEL),
+      model: provider.model(CHEAP_MODEL),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: NO_THINKING,
+      providerOptions: thinkingFor(provider, 'none'),
       system: `You predict the real-world impact of an API action before it runs, for a human approver.
 Be concrete and concise (one or two sentences). State what will change and roughly how much, based on the
 action and its parameters. If it is destructive, say plainly that it cannot be undone. Do not hedge with
@@ -68,7 +69,7 @@ Connection: ${conn.label}
 Action: ${action.name} — ${action.description}
 Risk class: ${action.risk}
 Parameters: ${JSON.stringify(params ?? {}).slice(0, 1000)}`,
-      maxOutputTokens: 150,
+      maxOutputTokens: maxTokensFor(provider, 150),
     })
     if (text.trim()) impact = text.trim()
   } catch {

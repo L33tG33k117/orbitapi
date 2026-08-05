@@ -1,6 +1,6 @@
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 export interface ConnectorBuildResult {
   validated: boolean
@@ -116,13 +116,17 @@ export async function buildConnector(
   useCase: string | null,
   websiteUrl?: string | null,
   preferredSlug?: string | null,
+  workspaceId?: string | null,
 ): Promise<ConnectorBuildResult> {
+  // Connector building is a founder/admin tool that can run outside a workspace
+  // context; without an id it takes the instance default (Claude on cloud).
+  const provider = await resolveAiProvider(workspaceId)
   const { text } = await generateText({
-    model: anthropic('claude-opus-5'),
+    model: provider.model('claude-opus-5'),
     maxRetries: AI_MAX_RETRIES,
 
-    providerOptions: NO_THINKING,
-    maxOutputTokens: 8000,
+    providerOptions: thinkingFor(provider, 'none'),
+    maxOutputTokens: maxTokensFor(provider, 8000),
     messages: [
       {
         role: 'user',

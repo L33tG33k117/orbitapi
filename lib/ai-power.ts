@@ -136,6 +136,23 @@ export async function hasAiPower(workspaceId: string): Promise<boolean> {
   return (await getAiPower(workspaceId)).remaining > 0
 }
 
+/**
+ * Does this run need AI Power at all?
+ *
+ * AI Power meters what OUR Anthropic key costs us. When a customer runs the
+ * model on their own hardware we pay nothing, so metering it would be charging
+ * them for our absent bill — and on the self-hosted edition there's no billing
+ * system behind the credits anyway. Local runs are still recorded (tokens, run
+ * history, usage charts all still work); they just cost $0 and never block.
+ *
+ * The matching deduction is already safe without a branch: `computeCost`
+ * returns 0 for a `local:` model id and `consumeCredits` no-ops at 0 credits.
+ * This helper only has to open the GATE.
+ */
+export function aiPowerRequired(provider: { kind: 'anthropic' | 'local' }): boolean {
+  return provider.kind === 'anthropic'
+}
+
 // Record usage after a run (cost → credits). Best-effort; never throws.
 export async function consumeCredits(workspaceId: string, costUsd: number): Promise<void> {
   const credits = costToCredits(costUsd)

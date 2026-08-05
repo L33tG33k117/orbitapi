@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, friendlyAiError, isAiError, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 export const maxDuration = 120
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: membership } = await supabase
-    .from('memberships').select('role').eq('user_id', user.id).single()
+    .from('memberships').select('role, workspace_id').eq('user_id', user.id).single()
   if (!membership || membership.role === 'member') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -35,11 +35,13 @@ export async function POST(req: Request) {
     }
   }
 
+  const provider = await resolveAiProvider(membership.workspace_id)
+
   try {
     const { text } = await generateText({
-      model: anthropic('claude-opus-5'),
+      model: provider.model('claude-opus-5'),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: NO_THINKING,
+      providerOptions: thinkingFor(provider, 'none'),
       system: `You introspect an HTTP API and propose a connector manifest for an automation platform.
 Return ONLY a JSON object, no prose, of the form:
 {
@@ -59,7 +61,7 @@ Propose 8–20 of the most useful actions. Do not invent endpoints that clearly 
 Base URL: ${baseUrl ?? '(unknown)'}
 Auth hint: ${authHint ?? '(unknown)'}
 ${spec ? `OpenAPI/Swagger spec (possibly truncated):\n${spec}` : 'No spec provided — use your knowledge of this API if you recognize it; otherwise set validated=false.'}`,
-      maxOutputTokens: 4000,
+      maxOutputTokens: maxTokensFor(provider, 4000),
     })
 
     const match = text.match(/\{[\s\S]*\}/)
@@ -68,6 +70,7 @@ ${spec ? `OpenAPI/Swagger spec (possibly truncated):\n${spec}` : 'No spec provid
     return NextResponse.json(result)
   } catch (err) {
     console.error('[discover]', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const message = isAiError(err) ? friendlyAiError(err, provider) : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

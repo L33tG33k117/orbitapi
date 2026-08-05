@@ -1,5 +1,4 @@
 import { generateText, dynamicTool, jsonSchema, stepCountIs } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
@@ -7,12 +6,13 @@ import { createNotification, emailSkillRunOutcome } from '@/lib/notify'
 import { riskAllowed, explorationBlocks, actionPolicy, hasApprovePolicy } from '@/lib/connector-access'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
-import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
+import { getAiPower, consumeCredits, modelFor, aiPowerRequired, OUT_OF_AI_POWER, type Efficiency } from '@/lib/ai-power'
 import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
 import { SAFETY_SYSTEM_RULES } from '@/lib/prompt-safety'
+import { resolveAiProvider } from '@/lib/ai-provider'
 import {
-  AGENTIC_MAX_TOKENS, AGENTIC_THINKING, AI_MAX_RETRIES,
-  friendlyAiError, isAiError, withModelFallback,
+  AGENTIC_MAX_TOKENS, AI_MAX_RETRIES, cacheControlFor, friendlyAiError,
+  isAiError, isConnectionRefused, maxTokensFor, thinkingFor, withModelFallback,
 } from '@/lib/ai-resilience'
 import { logServerError } from '@/lib/error-log'
 
@@ -57,9 +57,13 @@ export async function runSkill({
     throw new Error('This skill has no persona yet. Add instructions and verify it before running.')
   }
 
+  // Which model are we running on? Decides whether AI Power applies at all —
+  // a customer's own local model costs us nothing, so it isn't metered.
+  const provider = await resolveAiProvider(workspaceId)
+
   // Enforce AI Power — block the run if the workspace is out of credits.
   const power = await getAiPower(workspaceId)
-  if (power.remaining <= 0) throw new Error(OUT_OF_AI_POWER)
+  if (aiPowerRequired(provider) && power.remaining <= 0) throw new Error(OUT_OF_AI_POWER)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const group = skill.group as any
@@ -354,10 +358,11 @@ Guidelines:
     const { result: gen, model: servingModel } = await withModelFallback(
       chosenModel,
       m => generateText({
-        model: anthropic(m),
+        model: provider.model(m),
         // Cache the system + tool definitions (the repeated chunk) so input bills ~10%.
+        // Anthropic-only — a local endpoint rejects or ignores the block.
         messages: [
-          { role: 'system', content: systemPrompt, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
+          { role: 'system', content: systemPrompt, providerOptions: cacheControlFor(provider) },
           { role: 'user', content: userPrompt },
         ],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -367,21 +372,24 @@ Guidelines:
         // Opus 5 / Sonnet 5 reason between tool calls, which is the whole
         // point of a skill run. maxOutputTokens must cover thinking as well
         // as the answer, hence the generous ceiling.
-        providerOptions: AGENTIC_THINKING,
-        maxOutputTokens: AGENTIC_MAX_TOKENS,
+        providerOptions: thinkingFor(provider, 'agentic'),
+        maxOutputTokens: maxTokensFor(provider, AGENTIC_MAX_TOKENS),
       }),
-      { label: `skill ${skillId}` },
+      { label: `skill ${skillId}`, provider },
     )
     const { text, usage } = gen
 
+    // What actually served the run — `local:<model>` when the customer runs
+    // their own, which makes the cost math below resolve to $0.
+    const billedModel = provider.billingModelId(servingModel)
     const { tokensIn, tokensOut } = normalizeUsage(usage)
-    const runCost = computeCost(servingModel, tokensIn, tokensOut)
+    const runCost = computeCost(billedModel, tokensIn, tokensOut)
     await admin.from('skill_runs').update({
       status: 'completed',
       steps,
       completed_at: new Date().toISOString(),
       prompt: text.slice(0, 2000),
-      model: servingModel,
+      model: billedModel,
       tokens_in: tokensIn,
       tokens_out: tokensOut,
       cost_usd: runCost,
@@ -417,7 +425,11 @@ Guidelines:
 
     // A provider outage isn't the user's fault and shouldn't read like a crash.
     // Non-AI failures keep their original message — it's the useful one.
-    const reason = isAiError(err) ? friendlyAiError(err) : String(err).slice(0, 200)
+    // A local model server that isn't running throws a plain fetch error rather
+    // than an APICallError, so check for that too — otherwise the most common
+    // self-hosted failure surfaces as a raw "fetch failed".
+    const aiFault = isAiError(err) || (provider.kind === 'local' && isConnectionRefused(err))
+    const reason = aiFault ? friendlyAiError(err, provider) : String(err).slice(0, 200)
     logServerError(err, 'skill-runner', { workspaceId })
 
     await createNotification({

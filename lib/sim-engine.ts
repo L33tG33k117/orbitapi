@@ -1,11 +1,11 @@
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import type { ActionDef, ActionResult } from '@/connectors/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { simulateAction, hasSimulatedData } from '@/lib/simulate-action'
 import { CHEAP_MODEL, computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { consumeCredits } from '@/lib/ai-power'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, thinkingFor } from '@/lib/ai-resilience'
 
 // ============================================================
 // Simulation engine — the "always answers" sandbox
@@ -182,18 +182,21 @@ export async function resolveSimulatedAction(opts: {
     ? simulateAction(connectorSlug, action.slug, params).data
     : null
 
+  const provider = await resolveAiProvider(workspaceId)
+
   try {
     const { text, usage } = await generateText({
-      model: anthropic(GEN_MODEL),
+      model: provider.model(GEN_MODEL),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: NO_THINKING,
+      providerOptions: thinkingFor(provider, 'none'),
       prompt: buildPrompt({ connectorName, connectorSlug, action, params, shapeExample, world: state.world }),
     })
 
     // Meter generation cost against the workspace (best-effort, non-blocking).
+    // Resolves to $0 on a local model, so the call is harmless either way.
     try {
       const { tokensIn, tokensOut } = normalizeUsage(usage)
-      await consumeCredits(workspaceId, computeCost(GEN_MODEL, tokensIn, tokensOut))
+      await consumeCredits(workspaceId, computeCost(provider.billingModelId(GEN_MODEL), tokensIn, tokensOut))
     } catch { /* metering must never block a result */ }
 
     const parsed = parseGenerated(text)

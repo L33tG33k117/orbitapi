@@ -1,5 +1,4 @@
 import { generateText, dynamicTool, jsonSchema, stepCountIs } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { randomUUID } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
@@ -7,11 +6,12 @@ import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
 import { computeCost, normalizeUsage, type ModelId } from '@/lib/usage-cost'
 import {
-  AGENTIC_MAX_TOKENS, AGENTIC_THINKING, AI_MAX_RETRIES,
-  friendlyAiError, isAiError, withModelFallback,
+  AGENTIC_MAX_TOKENS, AI_MAX_RETRIES, cacheControlFor, friendlyAiError,
+  isAiError, isConnectionRefused, maxTokensFor, thinkingFor, withModelFallback,
 } from '@/lib/ai-resilience'
+import { resolveAiProvider, type AiProvider } from '@/lib/ai-provider'
 import { logServerError } from '@/lib/error-log'
-import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
+import { getAiPower, consumeCredits, modelFor, aiPowerRequired, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import type { ActionDef } from '@/connectors/types'
 import { riskAllowed, explorationBlocks, actionPolicy, policyBlocks } from '@/lib/connector-access'
 import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
@@ -113,8 +113,10 @@ export async function runPlaybook(opts: {
   if (!playbook) throw new Error('Playbook not found')
 
   // Enforce AI Power on new runs (resumes are exempt — already approved).
+  // A customer's own local model isn't metered, so it never hits this gate.
+  const gateProvider = await resolveAiProvider(opts.workspaceId)
   const power = await getAiPower(opts.workspaceId)
-  if (power.remaining <= 0) throw new Error(OUT_OF_AI_POWER)
+  if (aiPowerRequired(gateProvider) && power.remaining <= 0) throw new Error(OUT_OF_AI_POWER)
 
   // Fail-safe: refuse to run against connections that were never set up
   // (real mode, no credentials — e.g. a fresh bundle install). The run route
@@ -218,9 +220,12 @@ async function executeFrom(
   const credCache: Record<string, Record<string, string>> = {}
   const actionIndex = await buildActionIndex(connections, credCache)
 
-  // Resolve the model from the workspace's Efficiency setting.
+  // Resolve the model from the workspace's Efficiency setting. On a local
+  // provider the efficiency mapping collapses — there's one installed model —
+  // but we still compute it so the fallback/billing plumbing stays uniform.
   const power = await getAiPower(run.workspace_id)
   const chosenModel = modelFor(undefined, power.efficiency)
+  const provider = await resolveAiProvider(run.workspace_id)
 
   const nodes = playbook.definition.steps ?? []
   const log: RunStep[] = [...(run.steps ?? [])]
@@ -237,12 +242,14 @@ async function executeFrom(
       // ---- assess: AI gathers read-only data and scores severity 0–10
       if (node.type === 'assess') {
         const { severity: sev, summary, findings, usage, model: servingModel } =
-          await assess(node, playbook, actionIndex, state, chosenModel)
+          await assess(node, playbook, actionIndex, state, chosenModel, provider)
         severity = sev
         state = { ...state, ...findings, assessment: summary, severity: sev }
         const { tokensIn, tokensOut } = normalizeUsage(usage)
-        // Bill the model that actually answered — it may have fallen back.
-        const stepCost = computeCost(servingModel, tokensIn, tokensOut)
+        // Bill the model that actually answered — it may have fallen back, and
+        // on a local provider it resolves to `local:<model>`, which costs $0.
+        const billedModel = provider.billingModelId(servingModel)
+        const stepCost = computeCost(billedModel, tokensIn, tokensOut)
         log.push({
           step: log.length + 1, node_id: node.id, type: 'assess', severity: sev,
           status: 'success', note: summary, duration_ms: Date.now() - startedAt,
@@ -253,7 +260,7 @@ async function executeFrom(
           p_tokens_in: tokensIn,
           p_tokens_out: tokensOut,
           p_cost: stepCost,
-          p_model: chosenModel,
+          p_model: billedModel,
         }).then(() => {}, () => {}) // best-effort; never fail a run on cost accounting
         await consumeCredits(run.workspace_id, stepCost)
         await persist(runId, log, state, { severity: sev })
@@ -441,7 +448,10 @@ async function executeFrom(
     logServerError(err, 'playbook-runner', { workspaceId: playbook.workspace_id })
     // Provider outages get plain-English copy; everything else keeps its own
     // message, which is the one that actually helps.
-    const reason = isAiError(err) ? friendlyAiError(err) : String(err).slice(0, 200)
+    // An unreachable local model server throws a plain fetch error, not an
+    // APICallError — catch that too so it gets the "check your model server" copy.
+    const aiFault = isAiError(err) || (provider.kind === 'local' && isConnectionRefused(err))
+    const reason = aiFault ? friendlyAiError(err, provider) : String(err).slice(0, 200)
     await fail(runId, log, reason)
     await createNotification({
       workspaceId: playbook.workspace_id, type: 'skill_failed',
@@ -462,6 +472,7 @@ async function assess(
   actionIndex: ActionIndex,
   state: Record<string, unknown>,
   model: ModelId,
+  provider: AiProvider,
 ): Promise<{ severity: number; summary: string; findings: Record<string, unknown>; usage: unknown; model: ModelId }> {
   // Only expose read actions to the assessment pass.
   const tools: Record<string, ReturnType<typeof dynamicTool>> = {}
@@ -497,10 +508,10 @@ Respond with ONE json object and nothing else:
   const { result: gen, model: servingModel } = await withModelFallback(
     model,
     m => generateText({
-      model: anthropic(m),
-      // Cache the system + tool definitions so input bills ~10%.
+      model: provider.model(m),
+      // Cache the system + tool definitions so input bills ~10%. Anthropic-only.
       messages: [
-        { role: 'system', content: systemPrompt, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
+        { role: 'system', content: systemPrompt, providerOptions: cacheControlFor(provider) },
         { role: 'user', content: interpolate(node.prompt ?? 'Assess the current situation.', state) },
       ],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -509,10 +520,10 @@ Respond with ONE json object and nothing else:
       maxRetries: AI_MAX_RETRIES,
       // Thinking shares the output budget on Opus 5 / Sonnet 5 — give the
       // assessment pass room so its JSON verdict is never truncated.
-      providerOptions: AGENTIC_THINKING,
-      maxOutputTokens: AGENTIC_MAX_TOKENS,
+      providerOptions: thinkingFor(provider, 'agentic'),
+      maxOutputTokens: maxTokensFor(provider, AGENTIC_MAX_TOKENS),
     }),
-    { label: `playbook assess ${node.id}` },
+    { label: `playbook assess ${node.id}`, provider },
   )
 
   return { ...parseAssessment(gen.text), usage: gen.usage, model: servingModel }

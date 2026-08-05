@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { screenInput } from '@/lib/prompt-safety'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 export type CheckStatus = 'pass' | 'warn' | 'fail'
 interface Check { status: CheckStatus; label: string; detail?: string }
@@ -112,10 +112,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     ).join('\n\n')
 
     try {
+      const provider = await resolveAiProvider(membership.workspace_id)
       const { text } = await generateText({
-        model: anthropic('claude-sonnet-5'),
+        model: provider.model('claude-sonnet-5'),
         maxRetries: AI_MAX_RETRIES,
-        providerOptions: NO_THINKING,
+        providerOptions: thinkingFor(provider, 'none'),
         system: `You verify whether an automation "skill" can actually run with the connectors available to it. You are given the skill's persona (its instructions) and the EXACT list of connected apps + actions it can use. Decide if the skill is buildable.
 
 Return ONLY a JSON object, no markdown:
@@ -130,7 +131,7 @@ Rules:
 - Flag genuinely unclear, contradictory, or impossible logic as "warn" (do not nitpick wording).
 - 2 to 5 checks total. Be concrete and reference the actual app names.`,
         prompt: `PERSONA:\n${persona}\n\n${triggerPrompt ? `TRIGGER CONDITION:\n${triggerPrompt}\n\n` : ''}AVAILABLE CONNECTED APPS & ACTIONS:\n${actionsText}\n\nReturn the JSON verdict.`,
-        maxOutputTokens: 900,
+        maxOutputTokens: maxTokensFor(provider, 900),
       })
       const cleaned = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```$/, '')
       const parsed = JSON.parse(cleaned) as { checks?: Check[] }

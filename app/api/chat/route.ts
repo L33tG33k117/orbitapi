@@ -1,5 +1,4 @@
 import { streamText, dynamicTool, jsonSchema, convertToModelMessages, stepCountIs } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import type { UIMessage } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -11,11 +10,13 @@ import { resolveCredentials } from '@/lib/credentials'
 import { createNotification } from '@/lib/notify'
 import { riskAllowed, explorationBlocks, actionPolicy } from '@/lib/connector-access'
 import { resolveSimulatedAction } from '@/lib/sim-engine'
-import { getAiPower, consumeCredits, modelFor, OUT_OF_AI_POWER } from '@/lib/ai-power'
+import { getAiPower, consumeCredits, modelFor, aiPowerRequired, OUT_OF_AI_POWER } from '@/lib/ai-power'
 import { computeCost, normalizeUsage } from '@/lib/usage-cost'
 import { SAFETY_SYSTEM_RULES, SCOPE_SYSTEM_RULES } from '@/lib/prompt-safety'
+import { resolveAiProvider } from '@/lib/ai-provider'
 import {
-  AGENTIC_MAX_TOKENS, AGENTIC_THINKING, AI_MAX_RETRIES, friendlyAiError, isAiError,
+  AGENTIC_MAX_TOKENS, AI_MAX_RETRIES, cacheControlFor, friendlyAiError,
+  isAiError, isConnectionRefused, maxTokensFor, thinkingFor,
 } from '@/lib/ai-resilience'
 import { logServerError } from '@/lib/error-log'
 
@@ -57,9 +58,13 @@ export async function POST(req: Request) {
     })
   }
 
+  // Which model serves this chat? A customer running their own local model
+  // isn't metered — the tokens cost us nothing, so AI Power doesn't apply.
+  const provider = await resolveAiProvider(membership.workspace_id)
+
   // Enforce AI Power.
   const power = await getAiPower(membership.workspace_id)
-  if (power.remaining <= 0) {
+  if (aiPowerRequired(provider) && power.remaining <= 0) {
     return new Response(JSON.stringify({ error: OUT_OF_AI_POWER, message: "You're out of AI Power for this cycle. Upgrade your plan or add a Power Pack to keep going." }), {
       status: 402, headers: { 'Content-Type': 'application/json' },
     })
@@ -381,16 +386,17 @@ Guidelines:
   // the friendly error text, and the user retries by re-sending. Revisit if we
   // ever buffer the first chunk before flushing.
   const result = streamText({
-    model: anthropic(chatModel),
+    model: provider.model(chatModel),
     maxRetries: AI_MAX_RETRIES,
     // Opus 5 / Sonnet 5 reason between tool calls. Streaming means the user
     // sees output as it lands, so the extra latency is hidden — but the output
     // budget now covers thinking too, hence the explicit ceiling.
-    providerOptions: AGENTIC_THINKING,
-    maxOutputTokens: AGENTIC_MAX_TOKENS,
-    // Cache the system + tool definitions (the repeated chunk) so input bills ~10%.
+    providerOptions: thinkingFor(provider, 'agentic'),
+    maxOutputTokens: maxTokensFor(provider, AGENTIC_MAX_TOKENS),
+    // Cache the system + tool definitions (the repeated chunk) so input bills
+    // ~10%. Anthropic-only — a local endpoint would reject the block.
     messages: [
-      { role: 'system', content: systemPrompt, providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } } },
+      { role: 'system', content: systemPrompt, providerOptions: cacheControlFor(provider) },
       ...(await convertToModelMessages(messages)),
     ],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -399,7 +405,10 @@ Guidelines:
     onFinish: async ({ response, usage }) => {
       // Record AI Power consumption for this turn.
       const { tokensIn, tokensOut } = normalizeUsage(usage)
-      await consumeCredits(membership.workspace_id, computeCost(chatModel, tokensIn, tokensOut))
+      await consumeCredits(
+        membership.workspace_id,
+        computeCost(provider.billingModelId(chatModel), tokensIn, tokensOut),
+      )
       // Save assistant reply to conversation
       if (!conversationId) return
       const assistantMsgs = response.messages.filter(m => m.role === 'assistant')
@@ -422,7 +431,8 @@ Guidelines:
   return result.toUIMessageStreamResponse({
     onError: err => {
       logServerError(err, 'chat-stream', { workspaceId: membership.workspace_id, userId: user.id })
-      return isAiError(err) ? friendlyAiError(err) : 'Something went wrong. Please try again.'
+      const aiFault = isAiError(err) || (provider.kind === 'local' && isConnectionRefused(err))
+      return aiFault ? friendlyAiError(err, provider) : 'Something went wrong. Please try again.'
     },
   })
   } catch (err) {

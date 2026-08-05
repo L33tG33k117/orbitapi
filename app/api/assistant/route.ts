@@ -1,7 +1,7 @@
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, friendlyAiError, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 export const maxDuration = 30
 
@@ -12,6 +12,10 @@ export async function POST(req: Request) {
 
   const { messages, context } = await req.json()
   const { page, pageLabel } = context ?? {}
+
+  const { data: membership } = await supabase
+    .from('memberships').select('workspace_id').eq('user_id', user.id).single()
+  const provider = await resolveAiProvider(membership?.workspace_id)
 
   const system = `You are Orbit Assistant, embedded in OrbitAPI — a platform that lets teams connect APIs and build AI skills that automate work across their tools.
 
@@ -36,14 +40,18 @@ Key concepts to explain when asked:
 
 Do not make up feature names or capabilities that aren't described above. If unsure, say so and suggest the user explore the relevant section.`
 
-  const { text } = await generateText({
-    model: anthropic('claude-haiku-4-5'),
-    maxRetries: AI_MAX_RETRIES,
-    providerOptions: NO_THINKING,
-    system,
-    messages: messages.slice(-10),
-    maxOutputTokens: 400,
-  })
-
-  return Response.json({ reply: text })
+  try {
+    const { text } = await generateText({
+      model: provider.model('claude-haiku-4-5'),
+      maxRetries: AI_MAX_RETRIES,
+      providerOptions: thinkingFor(provider, 'none'),
+      system,
+      messages: messages.slice(-10),
+      maxOutputTokens: maxTokensFor(provider, 400),
+    })
+    return Response.json({ reply: text })
+  } catch (err) {
+    console.error('[assistant]', err)
+    return Response.json({ error: friendlyAiError(err, provider) }, { status: 502 })
+  }
 }

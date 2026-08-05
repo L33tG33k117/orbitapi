@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
 import { resolveCredentials } from '@/lib/credentials'
 import { simulateAction } from '@/lib/simulate-action'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, friendlyAiError, isAiError, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 export const maxDuration = 120
 
@@ -68,11 +68,13 @@ export async function POST(req: Request) {
     if (Array.isArray(arr)) sample = arr[0]
   }
 
+  const provider = await resolveAiProvider(membership.workspace_id)
+
   try {
     const { text } = await generateText({
-      model: anthropic('claude-opus-5'),
+      model: provider.model('claude-opus-5'),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: NO_THINKING,
+      providerOptions: thinkingFor(provider, 'none'),
       system: `You map fields from a source record to a target action's input schema.
 Return ONLY JSON:
 {
@@ -89,7 +91,7 @@ ${JSON.stringify(sample, null, 2).slice(0, 4000)}
 Target connector: ${tgtSlug}, action ${tgtDef.name}
 Target input schema:
 ${JSON.stringify(tgtDef.inputSchema, null, 2).slice(0, 4000)}`,
-      maxOutputTokens: 2000,
+      maxOutputTokens: maxTokensFor(provider, 2000),
     })
     const match = text.match(/\{[\s\S]*\}/)
     if (!match) return NextResponse.json({ error: 'Could not parse mapping' }, { status: 502 })
@@ -97,6 +99,7 @@ ${JSON.stringify(tgtDef.inputSchema, null, 2).slice(0, 4000)}`,
     return NextResponse.json({ ...result, sample })
   } catch (err) {
     console.error('[data-mapping]', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const message = isAiError(err) ? friendlyAiError(err, provider) : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

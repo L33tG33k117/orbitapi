@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
-import { AI_MAX_RETRIES, NO_THINKING } from '@/lib/ai-resilience'
+import { resolveAiProvider } from '@/lib/ai-provider'
+import { AI_MAX_RETRIES, friendlyAiError, maxTokensFor, thinkingFor } from '@/lib/ai-resilience'
 
 const ICON_VALUES = [
   'Shield', 'ShieldOff', 'ShieldCheck', 'Lock', 'Unlock', 'Zap', 'ZapOff',
@@ -54,10 +54,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ connect
     return `- slug: ${a.slug}\n  name: ${a.name}\n  risk: ${a.risk}\n  description: ${a.description}\n  params:\n${props || '    (none)'}`
   }).join('\n\n')
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-5'),
+  const provider = await resolveAiProvider(membership.workspace_id)
+
+  let text: string
+  try {
+    ;({ text } = await generateText({
+    model: provider.model('claude-sonnet-5'),
     maxRetries: AI_MAX_RETRIES,
-    providerOptions: NO_THINKING,
+    providerOptions: thinkingFor(provider, 'none'),
     system: `You are an expert UI designer for API integration platforms. Design widget button configurations that make API actions accessible as single-click controls.
 
 Key principles:
@@ -98,8 +102,12 @@ Available actions:
 ${actionsText}
 
 Return ONLY a JSON array with ${customPrompt ? '1-2' : '2-3'} distinct widget suggestions. No markdown fences, no text, only the JSON array.`,
-    maxOutputTokens: 2000,
-  })
+    maxOutputTokens: maxTokensFor(provider, 2000),
+    }))
+  } catch (err) {
+    console.error('[widgets/generate]', err)
+    return NextResponse.json({ error: friendlyAiError(err, provider) }, { status: 502 })
+  }
 
   try {
     const cleaned = text.trim().replace(/^```json?\s*/i, '').replace(/\s*```$/, '')
