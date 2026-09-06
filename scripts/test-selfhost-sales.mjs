@@ -32,7 +32,10 @@ function check(label, cond) {
   else { failed++; console.log(`  ✗ ${label}`) }
 }
 
-const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
+// Normalised to LF: core.autocrlf rewrites these files on checkout, and an
+// assertion that matches a literal "\n    " passes on one machine and fails on
+// another. Read the content, not the line endings.
+const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 
 // ------------------------------------------------------------------ signing --
 console.log('\nSigning')
@@ -212,6 +215,19 @@ check('registration validates the version is semver', reg.includes(/^\d+\.\d+\.\
 check('registration requires a hex sha256', reg.includes('[0-9a-f]{64}'))
 check('registration requires an https bundle URL', reg.includes("startsWith('https://')"))
 check('re-running a release job upserts rather than failing', reg.includes("onConflict: 'version'"))
+
+// Caught in production: the auth proxy redirected this route to /login, and a
+// 307 is under 400, so curl called it a success — the release would look
+// published while nothing was recorded.
+const mw = read('lib/supabase/middleware.ts')
+check('the register route is exempt from the auth redirect',
+  mw.includes("/api/selfhost/releases/register"))
+
+const relYml = read('.github/workflows/release.yml')
+check('the release workflow asserts the register status code explicitly',
+  relYml.includes('if [ "$CODE" != "200" ]'))
+check('the release workflow fails loudly when a bundle is not catalogued',
+  relYml.includes('::error title=Not catalogued::'))
 
 // --------------------------------------------------------------- migration --
 console.log('\nMigration 056')

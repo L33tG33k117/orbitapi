@@ -175,7 +175,20 @@ jobs:
             --arg changelog "$CHANGELOG" \
             --argjson sizeBytes "${{ steps.publish.outputs.size }}" \
             '{version:$version, blobUrl:$blobUrl, sha256:$sha256, sizeBytes:$sizeBytes, changelog:$changelog}' \
-          | curl -sS --fail-with-body -X POST "$REGISTRY_URL/api/selfhost/releases/register" \
+          | curl -sS -X POST "$REGISTRY_URL/api/selfhost/releases/register" \
               -H "content-type: application/json" \
               -H "x-release-secret: $REGISTRY_SECRET" \
-              --data-binary @-
+              --data-binary @- \
+              -o /tmp/register.out -w '%{http_code}' > /tmp/register.code
+
+          CODE=$(cat /tmp/register.code)
+          cat /tmp/register.out
+
+          # Assert the status explicitly rather than trusting curl's exit code.
+          # A redirect is the dangerous case: --fail-with-body treats a 3xx as
+          # success, so an auth redirect would report a published release that
+          # was never actually catalogued.
+          if [ "$CODE" != "200" ]; then
+            echo "::error title=Not catalogued::register returned HTTP $CODE — the bundle is uploaded but no customer can see it."
+            exit 1
+          fi

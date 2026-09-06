@@ -35,6 +35,11 @@ export async function updateSession(request: NextRequest) {
     || url.pathname.startsWith('/api/cron/')
     || url.pathname.startsWith('/api/billing/webhook')
     || url.pathname.startsWith('/api/webhooks/skills/')
+    // The release workflow catalogues a build with a shared secret and no
+    // session. A redirect here is worse than a failure: curl treats the 307 as
+    // success, so the release would look published while nothing was recorded
+    // and no customer could see it.
+    || url.pathname === '/api/selfhost/releases/register'
     // The container healthcheck runs before anyone has logged in, and gets no
     // session. Redirecting it to /login would report a broken app as healthy.
     || url.pathname === '/api/health'
