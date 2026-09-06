@@ -125,7 +125,7 @@ export async function buildConnector(
     model: provider.model('claude-opus-5'),
     maxRetries: AI_MAX_RETRIES,
 
-    providerOptions: thinkingFor(provider, 'none'),
+    providerOptions: thinkingFor(provider, 'none', 'claude-opus-5'),
     maxOutputTokens: maxTokensFor(provider, 8000),
     messages: [
       {

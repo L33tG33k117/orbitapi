@@ -372,7 +372,7 @@ Guidelines:
         // Opus 5 / Sonnet 5 reason between tool calls, which is the whole
         // point of a skill run. maxOutputTokens must cover thinking as well
         // as the answer, hence the generous ceiling.
-        providerOptions: thinkingFor(provider, 'agentic'),
+        providerOptions: thinkingFor(provider, 'agentic', m),
         maxOutputTokens: maxTokensFor(provider, AGENTIC_MAX_TOKENS),
       }),
       { label: `skill ${skillId}`, provider },

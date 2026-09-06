@@ -52,6 +52,16 @@ check('anthropic gets adaptive thinking', thinkingFor(ANTHROPIC, 'agentic').anth
 check('anthropic can disable thinking', thinkingFor(ANTHROPIC, 'none').anthropic.thinking.type === 'disabled')
 check('local gets no thinking options', thinkingFor(LOCAL, 'agentic') === undefined)
 check('local gets no thinking options (none preset)', thinkingFor(LOCAL, 'none') === undefined)
+// The bug this guards (prod, 2026-09-02): chat sent adaptive thinking to
+// Haiku 4.5 — the model that economy tier and the overload fallback both land
+// on — and every message died with "adaptive thinking is not supported on this
+// model" behind a generic "Something went wrong."
+check('haiku takes no thinking block at all', thinkingFor(ANTHROPIC, 'agentic', 'claude-haiku-4-5') === undefined)
+check('haiku takes no thinking block (none preset)', thinkingFor(ANTHROPIC, 'none', 'claude-haiku-4-5') === undefined)
+check('opus 5 still thinks', thinkingFor(ANTHROPIC, 'agentic', 'claude-opus-5').anthropic.thinking.type === 'adaptive')
+check('sonnet 5 still thinks', thinkingFor(ANTHROPIC, 'agentic', 'claude-sonnet-5').anthropic.thinking.type === 'adaptive')
+check('sonnet 4.6 still thinks', thinkingFor(ANTHROPIC, 'agentic', 'claude-sonnet-4-6') !== undefined)
+check('an unnamed model keeps the old behaviour', thinkingFor(ANTHROPIC, 'none', undefined) !== undefined)
 check('anthropic gets a cache block', cacheControlFor(ANTHROPIC).anthropic.cacheControl.type === 'ephemeral')
 check('local gets no cache block', cacheControlFor(LOCAL) === undefined)
 check('anthropic keeps the full agentic budget', maxTokensFor(ANTHROPIC, AGENTIC_MAX_TOKENS) === AGENTIC_MAX_TOKENS)

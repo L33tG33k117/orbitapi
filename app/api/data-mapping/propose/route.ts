@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     const { text } = await generateText({
       model: provider.model('claude-opus-5'),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: thinkingFor(provider, 'none'),
+      providerOptions: thinkingFor(provider, 'none', 'claude-opus-5'),
       system: `You map fields from a source record to a target action's input schema.
 Return ONLY JSON:
 {

@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     const { text } = await generateText({
       model: provider.model(CHEAP_MODEL),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: thinkingFor(provider, 'none'),
+      providerOptions: thinkingFor(provider, 'none', CHEAP_MODEL),
       system: `You predict the real-world impact of an API action before it runs, for a human approver.
 Be concrete and concise (one or two sentences). State what will change and roughly how much, based on the
 action and its parameters. If it is destructive, say plainly that it cannot be undone. Do not hedge with

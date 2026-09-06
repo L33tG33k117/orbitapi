@@ -391,7 +391,7 @@ Guidelines:
     // Opus 5 / Sonnet 5 reason between tool calls. Streaming means the user
     // sees output as it lands, so the extra latency is hidden — but the output
     // budget now covers thinking too, hence the explicit ceiling.
-    providerOptions: thinkingFor(provider, 'agentic'),
+    providerOptions: thinkingFor(provider, 'agentic', chatModel),
     maxOutputTokens: maxTokensFor(provider, AGENTIC_MAX_TOKENS),
     // Cache the system + tool definitions (the repeated chunk) so input bills
     // ~10%. Anthropic-only — a local endpoint would reject the block.

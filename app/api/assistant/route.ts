@@ -44,7 +44,7 @@ Do not make up feature names or capabilities that aren't described above. If uns
     const { text } = await generateText({
       model: provider.model('claude-haiku-4-5'),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: thinkingFor(provider, 'none'),
+      providerOptions: thinkingFor(provider, 'none', 'claude-haiku-4-5'),
       system,
       messages: messages.slice(-10),
       maxOutputTokens: maxTokensFor(provider, 400),

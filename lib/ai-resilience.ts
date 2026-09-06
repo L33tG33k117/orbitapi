@@ -84,12 +84,32 @@ export const AGENTIC_MAX_TOKENS = 32_000
 // local model?", they pass their provider to these helpers and get back
 // options that are correct for whatever they're running on.
 
-/** `providerOptions` for a call site's thinking preset — `undefined` on local. */
+// Not every Anthropic model takes a `thinking` block. Adaptive thinking (and
+// the explicit `disabled` opt-out) arrived with the 4.6 generation — Haiku 4.5
+// is still on the older surface, where thinking is off unless you pass a
+// budget, and sending either shape returns a 400
+// ("adaptive thinking is not supported on this model"). Economy-tier chats run
+// on Haiku, so the preset has to be model-aware, not just provider-aware.
+const THINKING_CAPABLE = /^claude-(opus|sonnet|fable)-(5|4-6|4-7|4-8)\b/
+
+/** Does this model accept a `thinking` block at all? Omitting it = no thinking. */
+export function modelSupportsThinkingConfig(model?: string): boolean {
+  if (!model) return true
+  return THINKING_CAPABLE.test(model)
+}
+
+/**
+ * `providerOptions` for a call site's thinking preset — `undefined` on local,
+ * and `undefined` for Anthropic models that predate the thinking parameter
+ * (their default is no thinking, which is what the 'none' preset wants anyway).
+ */
 export function thinkingFor(
   provider: { supportsThinking: boolean },
   preset: 'none' | 'agentic',
+  model?: string,
 ): ProviderOptions | undefined {
   if (!provider.supportsThinking) return undefined
+  if (!modelSupportsThinkingConfig(model)) return undefined
   return preset === 'agentic' ? AGENTIC_THINKING : NO_THINKING
 }
 

@@ -61,7 +61,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ connect
     ;({ text } = await generateText({
     model: provider.model('claude-sonnet-5'),
     maxRetries: AI_MAX_RETRIES,
-    providerOptions: thinkingFor(provider, 'none'),
+    providerOptions: thinkingFor(provider, 'none', 'claude-sonnet-5'),
     system: `You are an expert UI designer for API integration platforms. Design widget button configurations that make API actions accessible as single-click controls.
 
 Key principles:

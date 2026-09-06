@@ -188,7 +188,7 @@ export async function resolveSimulatedAction(opts: {
     const { text, usage } = await generateText({
       model: provider.model(GEN_MODEL),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: thinkingFor(provider, 'none'),
+      providerOptions: thinkingFor(provider, 'none', GEN_MODEL),
       prompt: buildPrompt({ connectorName, connectorSlug, action, params, shapeExample, world: state.world }),
     })
 

@@ -520,7 +520,7 @@ Respond with ONE json object and nothing else:
       maxRetries: AI_MAX_RETRIES,
       // Thinking shares the output budget on Opus 5 / Sonnet 5 — give the
       // assessment pass room so its JSON verdict is never truncated.
-      providerOptions: thinkingFor(provider, 'agentic'),
+      providerOptions: thinkingFor(provider, 'agentic', m),
       maxOutputTokens: maxTokensFor(provider, AGENTIC_MAX_TOKENS),
     }),
     { label: `playbook assess ${node.id}`, provider },

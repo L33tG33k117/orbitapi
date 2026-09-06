@@ -116,7 +116,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const { text } = await generateText({
         model: provider.model('claude-sonnet-5'),
         maxRetries: AI_MAX_RETRIES,
-        providerOptions: thinkingFor(provider, 'none'),
+        providerOptions: thinkingFor(provider, 'none', 'claude-sonnet-5'),
         system: `You verify whether an automation "skill" can actually run with the connectors available to it. You are given the skill's persona (its instructions) and the EXACT list of connected apps + actions it can use. Decide if the skill is buildable.
 
 Return ONLY a JSON object, no markdown:

@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const { text } = await generateText({
       model: provider.model('claude-opus-5'),
       maxRetries: AI_MAX_RETRIES,
-      providerOptions: thinkingFor(provider, 'none'),
+      providerOptions: thinkingFor(provider, 'none', 'claude-opus-5'),
       system: `You introspect an HTTP API and propose a connector manifest for an automation platform.
 Return ONLY a JSON object, no prose, of the form:
 {
