@@ -42,7 +42,11 @@ export interface LicensePayload {
   kid: string
 }
 
-export type LicenseStatus = 'valid' | 'grace' | 'expired' | 'invalid' | 'absent'
+// 'revoked' is never produced by readLicense() — a signature cannot tell you a
+// licence was withdrawn. It is overlaid by lib/license-state.ts when a
+// successful check-in said so. It lives in this union anyway, so that every
+// consumer (entitlements, banner, the settings page) is forced to handle it.
+export type LicenseStatus = 'valid' | 'grace' | 'expired' | 'invalid' | 'absent' | 'revoked'
 
 export interface LicenseState {
   status: LicenseStatus
@@ -191,9 +195,11 @@ export function licenseEntitlements(state: LicenseState): { tier: WorkspaceTier;
   if ((state.status === 'valid' || state.status === 'grace') && state.payload) {
     return { tier: state.payload.tier, overrides: state.payload.overrides ?? {} }
   }
-  // absent / invalid / expired all fall to the floor. Absent is included on
-  // purpose: an unlicensed instance runs in a usable trial-shaped state rather
-  // than refusing to start, so an install can be evaluated before a key exists.
+  // absent / invalid / expired / revoked all fall to the floor. Absent is
+  // included on purpose: an unlicensed instance runs in a usable trial-shaped
+  // state rather than refusing to start, so an install can be evaluated before
+  // a key exists. Revoked lands here too — the same floor, never a lockout,
+  // because withdrawing a licence must not take a customer's data with it.
   return { tier: EXPIRED_TIER, overrides: {} }
 }
 
@@ -213,5 +219,7 @@ export function licenseBanner(state: LicenseState): { tone: 'none' | 'info' | 'w
       return { tone: 'error', text: state.message }
     case 'absent':
       return { tone: 'info', text: 'This installation is unlicensed. Apply a licence key to unlock automation features.' }
+    case 'revoked':
+      return { tone: 'error', text: state.message }
   }
 }

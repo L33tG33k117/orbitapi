@@ -27,7 +27,35 @@ export async function GET() {
   if (!ctx) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const state = await getLicenseState()
+
+  // Check-in state, so the page can be honest about whether this installation
+  // talks to us and what it last heard. All optional, and absent before
+  // migration 057 — an install that has never checked in is not broken.
+  let checkin = {
+    enabled: true,
+    lastAt: null as string | null,
+    status: null as string | null,
+    latestVersion: null as string | null,
+  }
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('instance_settings')
+      .select('checkin_enabled, last_checkin_at, checkin_status, latest_version')
+      .eq('id', 1)
+      .maybeSingle()
+    if (data) {
+      checkin = {
+        enabled: data.checkin_enabled !== false,
+        lastAt: data.last_checkin_at ?? null,
+        status: data.checkin_status ?? null,
+        latestVersion: data.latest_version ?? null,
+      }
+    }
+  } catch { /* pre-057: keep the defaults */ }
+
   return NextResponse.json({
+    checkin,
     status: state.status,
     // The key is never sent back: it is a bearer credential, and an admin
     // screen has no reason to display one.

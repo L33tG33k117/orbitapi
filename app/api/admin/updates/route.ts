@@ -39,8 +39,24 @@ export async function GET() {
 
   const current = getVersion()
 
+  // What the last check-in heard, if this install talks to us at all. Turns
+  // this page from "look in a folder" into "1.3.0 is out". Absent for an
+  // air-gapped install, and absent before migration 057 — in both cases the
+  // page behaves exactly as it did before.
+  let available: string | null = null
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const { data } = await createAdminClient()
+      .from('instance_settings')
+      .select('latest_version')
+      .eq('id', 1)
+      .maybeSingle()
+    const latest = data?.latest_version ?? null
+    if (latest && isUpgrade(current.version, latest)) available = latest
+  } catch { /* pre-057, or offline: no announcement to make */ }
+
   if (!existsSync(UPDATES_DIR)) {
-    return NextResponse.json({ current: current.version, bundles: [], updatesDir: UPDATES_DIR })
+    return NextResponse.json({ current: current.version, bundles: [], updatesDir: UPDATES_DIR, available })
   }
 
   const candidates = readdirSync(UPDATES_DIR).filter(f => f.endsWith('.tar.gz'))
@@ -73,6 +89,7 @@ export async function GET() {
   return NextResponse.json({
     current: current.version,
     released: current.released,
+    available,
     updatesDir: UPDATES_DIR,
     bundles: bundles.sort((a, b) => (b.version ?? '').localeCompare(a.version ?? '')),
   })

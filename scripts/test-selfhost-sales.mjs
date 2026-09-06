@@ -255,6 +255,107 @@ const dlPage = read('app/(dashboard)/settings/downloads/page.tsx')
 check('the downloads page redirects on a self-hosted install', dlPage.includes('if (isSelfHost()) redirect'))
 check('the downloads page redirects a non-customer', dlPage.includes('if (!access) redirect'))
 
+// ------------------------------------------------------- revocation: rules --
+console.log('\nRevocation')
+
+// A revoked licence falls to the free floor — the SAME floor as expired, never
+// a lockout. Withdrawing a licence must not take a customer's data with it.
+const revokedState = { status: 'revoked', payload: issued.payload, daysRemaining: 100, message: 'Withdrawn.' }
+const revokedEnt = lic.licenseEntitlements(revokedState)
+check('a revoked licence falls to the free floor', revokedEnt.tier === lic.EXPIRED_TIER)
+check('a revoked licence grants no capability overrides',
+  Object.keys(revokedEnt.overrides).length === 0)
+check('a revoked licence banners as an error', lic.licenseBanner(revokedState).tone === 'error')
+check('the revoked banner shows the reason we sent', lic.licenseBanner(revokedState).text === 'Withdrawn.')
+
+// The floor is identical to expiry, which is what guarantees data and export
+// keep working — that path is already asserted by test:license.
+const expiredEnt = lic.licenseEntitlements({ status: 'expired', payload: issued.payload, daysRemaining: -1, message: '' })
+check('revoked and expired land on exactly the same floor', revokedEnt.tier === expiredEnt.tier)
+
+const state057 = read('lib/license-state.ts')
+check('ONLY an explicit revoked verdict is honoured',
+  state057.includes("data?.checkin_status === 'revoked'"))
+check('an unreachable check-in cannot narrow entitlements',
+  !state057.includes("checkin_status === 'unreachable'"))
+check('revocation is overlaid only on a licence that already verifies',
+  state057.includes("verified.status === 'valid' || verified.status === 'grace'"))
+
+const accessRules = read('lib/selfhost-access.ts')
+check('a revoked customer loses downloads and self-service immediately',
+  accessRules.includes('|| row.revoked_at'))
+
+const meLicense = read('app/api/selfhost/me/license/route.ts')
+check('a revoked customer cannot re-fetch their key',
+  meLicense.includes('if (!access) return NextResponse.json'))
+
+// --------------------------------------------------------------- check-in --
+console.log('\nCheck-in')
+
+const checkinLib = read('lib/license-checkin.ts')
+check('check-in never throws out of the scheduler tick',
+  checkinLib.includes('Never throws'))
+check('a non-ok HTTP response is unreachable, NOT revoked',
+  /res\.ok[\s\S]{0,400}status: 'unreachable'/.test(checkinLib))
+check('a network failure is unreachable, not revoked',
+  /catch \{[\s\S]{0,300}status: 'unreachable'/.test(checkinLib))
+check('an unreachable check-in does not erase a known latest version',
+  checkinLib.includes('...(result.latestVersion ? { latest_version: result.latestVersion } : {})'))
+check('check-in has a request timeout', checkinLib.includes('AbortSignal.timeout'))
+check('check-in respects an explicit opt-out', checkinLib.includes("row.checkin_enabled === false"))
+check('a null checkin_enabled (pre-057 row) still counts as enabled',
+  checkinLib.includes('=== false'))
+check('check-in is self-host only', checkinLib.includes('if (!isSelfHost()) return idle'))
+
+const cloudCheckin = read('app/api/selfhost/checkin/route.ts')
+check('the cloud verifies the licence signature before answering',
+  cloudCheckin.indexOf('readLicense(body.key)') < cloudCheckin.indexOf("from('selfhost_customers')"))
+check('an unverifiable key gets 401 and no customer lookup',
+  cloudCheckin.includes("{ error: 'That licence key could not be verified.' }, { status: 401 }"))
+check('the licence key is never stored by the check-in endpoint',
+  !/license_key:/.test(cloudCheckin))
+check('the latest version is returned even to a revoked install',
+  cloudCheckin.indexOf('const releases = await listReleases()') > cloudCheckin.indexOf('const revoked'))
+check('the check-in route is exempt from the auth redirect',
+  mw.includes('/api/selfhost/checkin'))
+
+const checkinToggle = read('app/api/license/checkin/route.ts')
+check('turning check-in off clears the cached verdict',
+  checkinToggle.includes('patch.checkin_status = null'))
+check('toggling check-in invalidates the licence cache',
+  checkinToggle.includes('invalidateLicenseCache()'))
+
+const sched = read('lib/scheduler.ts')
+check('check-in runs daily, not hourly', sched.includes("cron.schedule('40 3 * * *', tickCheckin"))
+
+// ------------------------------------------------------------ self-service --
+console.log('\nCustomer self-service')
+
+const renew = read('app/api/selfhost/me/renew/route.ts')
+check('a renewal note is length-capped before storage', renew.includes('.slice(0, 1000)'))
+check('re-requesting refreshes rather than being rejected',
+  renew.includes('renewal_requested_at: new Date().toISOString()'))
+
+const issueRoute2 = read('app/api/admin/selfhost/customers/[id]/license/route.ts')
+check('issuing a licence clears the renewal request it answers',
+  issueRoute2.includes('renewal_requested_at: null'))
+
+const patchRoute2 = read('app/api/admin/selfhost/customers/[id]/route.ts')
+check('revocation is reversible', patchRoute2.includes('patch.revoked_at = body.revoked ? new Date().toISOString() : null'))
+check('a revocation reason is length-capped', patchRoute2.includes('.slice(0, 500)'))
+
+// --------------------------------------------------------------- migration --
+console.log('\nMigration 057')
+
+const mig57 = read('supabase/migrations/057_selfhost_selfservice.sql')
+check('every column add is idempotent',
+  (mig57.match(/add column/g) ?? []).length === (mig57.match(/add column if not exists/g) ?? []).length)
+check('every index is idempotent',
+  (mig57.match(/create index/g) ?? []).length === (mig57.match(/create index if not exists/g) ?? []).length)
+check('check-in defaults to on', mig57.includes('checkin_enabled boolean not null default true'))
+check('the migration documents that revocation cannot reach an air-gapped install',
+  /CANNOT reach an air-gapped/.test(mig57))
+
 // ------------------------------------------------------------------ result --
 console.log(`\n${passed} passed, ${failed} failed\n`)
 process.exit(failed > 0 ? 1 : 0)

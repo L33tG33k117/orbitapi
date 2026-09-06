@@ -52,6 +52,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     patch.status = body.status
   }
 
+  // Withdrawing a licence. Worth being precise about what this does, because
+  // the name promises more than the mechanism can deliver:
+  //
+  //   Immediately — downloads and self-service licence retrieval stop, and the
+  //   next check-in (if the install has internet) collapses it to the free
+  //   floor with the reason shown to their administrator.
+  //
+  //   Never — it does not reach an air-gapped installation. There is no way to
+  //   make it. Their signed key keeps working until it expires.
+  //
+  // Reversible on purpose: revoking during a billing dispute and reinstating a
+  // week later should not require re-issuing a key.
+  if (typeof body.revoked === 'boolean') {
+    patch.revoked_at = body.revoked ? new Date().toISOString() : null
+    patch.revoked_reason = body.revoked
+      ? (typeof body.revokedReason === 'string' && body.revokedReason.trim()
+        ? body.revokedReason.trim().slice(0, 500)
+        : null)
+      : null
+  }
+
+  // Clearing a handled renewal request. Separate from issuing the renewal
+  // itself, because "we spoke and they decided not to" is also an outcome.
+  if (body.clearRenewalRequest === true) {
+    patch.renewal_requested_at = null
+    patch.renewal_note = null
+  }
+
   const admin = createAdminClient()
   const { error } = await admin.from('selfhost_customers').update(patch).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,5 +1,6 @@
 import cron from 'node-cron'
 import { runDuePlaybooks, runDueSkills } from '@/lib/cron-jobs'
+import { runLicenseCheckin } from '@/lib/license-checkin'
 
 // ============================================================
 // In-process scheduler (self-hosted only)
@@ -61,6 +62,22 @@ async function tickPlaybooks() {
   }
 }
 
+async function tickCheckin() {
+  try {
+    const result = await runLicenseCheckin()
+    // 'unreachable' is deliberately quiet at info level: for an air-gapped
+    // customer it is the expected outcome every single day, and logging it as
+    // a problem would train them to ignore the log.
+    if (result.status === 'revoked') {
+      console.warn(`[scheduler] licence check-in: REVOKED — ${result.message}`)
+    } else if (result.status === 'ok') {
+      console.log('[scheduler] licence check-in: ok')
+    }
+  } catch (err) {
+    console.error('[scheduler] licence check-in failed:', err)
+  }
+}
+
 export function startScheduler() {
   // Next can call register() more than once in development (hot reload), and
   // two schedulers would double-fire every schedule.
@@ -73,6 +90,12 @@ export function startScheduler() {
   // endpoint at the same instant — a local model serves one request at a time.
   cron.schedule('0 * * * *', tickSkills, { timezone: tz })
   cron.schedule('15 * * * *', tickPlaybooks, { timezone: tz })
+
+  // Licence check-in: once a day, not hourly. Nothing it learns changes that
+  // fast — a revocation and a new release are both fine to hear about within a
+  // day — and an air-gapped install would otherwise log 24 failed connections
+  // daily, which looks like a fault and isn't one.
+  cron.schedule('40 3 * * *', tickCheckin, { timezone: tz })
 
   console.log(`[scheduler] started (hourly, timezone ${tz})`)
 }

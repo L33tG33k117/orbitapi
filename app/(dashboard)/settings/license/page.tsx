@@ -20,6 +20,26 @@ export default async function LicensePage() {
 
   const state = await getLicenseState()
 
+  // Check-in settings live on the single instance_settings row. Absent before
+  // migration 057, in which case the panel simply doesn't render.
+  let checkin: { enabled: boolean; lastAt: string | null; status: string | null; latestVersion: string | null } | undefined
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const { data } = await createAdminClient()
+      .from('instance_settings')
+      .select('checkin_enabled, last_checkin_at, checkin_status, latest_version')
+      .eq('id', 1)
+      .maybeSingle()
+    if (data) {
+      checkin = {
+        enabled: data.checkin_enabled !== false,
+        lastAt: data.last_checkin_at ?? null,
+        status: data.checkin_status ?? null,
+        latestVersion: data.latest_version ?? null,
+      }
+    }
+  } catch { /* pre-057 */ }
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-2xl">
       <PageHeader
@@ -37,6 +57,7 @@ export default async function LicensePage() {
           daysRemaining: state.daysRemaining,
           message: state.message,
           banner: licenseBanner(state),
+          checkin,
         }}
       />
     </div>

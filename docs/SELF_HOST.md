@@ -174,9 +174,28 @@ than changing model.
 **Settings → Licence** shows what this installation is licensed for and when it
 expires.
 
+**Lost your key?** Sign in to your OrbitAPI account and go to
+**Settings → Downloads**. Your current key is there whenever you need it — you
+never have to go looking through old emails or ask support.
+
 Changes — a renewal, more seats, a different plan — arrive as a **replacement
 key**. Paste it in, check the summary of what it changes, and apply. There is
 nothing to activate online.
+
+**Renewing:** from the same page, "Request a renewal" reaches us directly. It
+appears from 60 days before expiry.
+
+### Checking for updates
+
+Once a day, this installation can ask OrbitAPI whether a newer version is
+available and whether your licence has changed. It sends your licence key, the
+version you are running, and your installation id — **nothing about your data,
+your workspaces, or your connections**.
+
+It is on by default and can be turned off in **Settings → Licence**. Turned off,
+this installation never contacts us; you simply won't be told when an update is
+released. An air-gapped machine can't reach us either way, and nothing breaks
+when the check fails — that's the configuration this edition was built for.
 
 If a licence lapses there is a **30-day grace period** during which nothing
 changes at all. After that, automation features pause until it is renewed.

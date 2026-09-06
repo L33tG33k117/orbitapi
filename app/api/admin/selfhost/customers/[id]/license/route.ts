@@ -131,6 +131,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       license_key: issued.key,
       license_issued_at: issuedAt,
       license_expires_at: expiresAt,
+      // Issuing IS the answer to a renewal request, so clear it here rather
+      // than leaving a badge that has to be dismissed by hand afterwards.
+      renewal_requested_at: null,
+      renewal_note: null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', customer.id)

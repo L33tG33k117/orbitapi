@@ -40,6 +40,10 @@ export async function updateSession(request: NextRequest) {
     // success, so the release would look published while nothing was recorded
     // and no customer could see it.
     || url.pathname === '/api/selfhost/releases/register'
+    // An install checking in proves itself with its signed licence key, not a
+    // session. Same reasoning: a redirect here would read as a successful
+    // check-in and silently mask a revocation.
+    || url.pathname === '/api/selfhost/checkin'
     // The container healthcheck runs before anyone has logged in, and gets no
     // session. Redirecting it to /login would report a broken app as healthy.
     || url.pathname === '/api/health'

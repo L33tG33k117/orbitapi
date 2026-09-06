@@ -8,12 +8,14 @@ import { DownloadsClient } from './downloads-client'
 export const dynamic = 'force-dynamic'
 
 /**
- * Where a self-hosted customer gets their software.
+ * Everything a self-hosted customer needs to serve themselves: their licence
+ * key, their builds, and a way to ask for a renewal.
  *
  * docs/SELF_HOST.md has told customers to "sign in to your OrbitAPI account and
  * download the update bundle" since the offline edition shipped — this is the
  * page that sentence was describing. Until it existed, the only route to a
- * bundle was us emailing a tarball by hand.
+ * bundle was us emailing a tarball, and the only route to a mislaid licence key
+ * was a support ticket.
  *
  * Cloud-only, deliberately: the whole point is that it is reachable from a
  * machine with internet, which the customer's server may well not be.
@@ -36,12 +38,17 @@ export default async function DownloadsPage() {
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <PageHeader
         eyebrow="Settings"
-        title="Downloads"
-        description="Installers and update bundles for your OrbitAPI installation."
+        title="Your self-hosted installation"
+        description="Your licence key, your installers, and everything you need to keep them current."
       />
       <DownloadsClient
         company={access.company}
+        tier={access.tier}
+        seats={access.seats}
         licenseExpiresAt={access.licenseExpiresAt}
+        renewalRequestedAt={access.renewalRequestedAt}
+        lastCheckinAt={access.lastCheckinAt}
+        lastSeenVersion={access.lastSeenVersion}
         releases={releases.map(r => ({
           version: r.version,
           sizeBytes: r.size_bytes,

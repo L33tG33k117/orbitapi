@@ -18,6 +18,10 @@ export interface SelfhostAccess {
   seats: number | null
   licenseExpiresAt: string | null
   licenseId: string | null
+  /** Set when they have already asked for a renewal, so we don't invite it twice. */
+  renewalRequestedAt: string | null
+  lastCheckinAt: string | null
+  lastSeenVersion: string | null
 }
 
 export interface ReleaseRow {
@@ -46,7 +50,9 @@ export async function getSelfhostAccess(
 ): Promise<SelfhostAccess | null> {
   const admin = createAdminClient()
 
-  const columns = 'id, company, tier, seats, status, downloads_enabled, license_expires_at, license_id, user_id'
+  // One literal, not a concatenation: supabase-js infers the row type FROM the
+  // select string, and a `+` expression collapses that to an error type.
+  const columns = 'id, company, tier, seats, status, downloads_enabled, license_expires_at, license_id, user_id, revoked_at, renewal_requested_at, last_checkin_at, last_seen_version'
 
   const { data: byId, error } = await admin
     .from('selfhost_customers')
@@ -76,11 +82,16 @@ export async function getSelfhostAccess(
 
   if (!row) return null
 
-  // Two independent switches, both of which must be on. `status` is the
-  // commercial relationship; `downloads_enabled` is this specific privilege.
-  // A customer mid-renewal keeps downloads while their licence is expired —
-  // that is the case these being separate exists to serve.
-  if (row.status !== 'active' || !row.downloads_enabled) return null
+  // Three independent switches, all of which must be on. `status` is the
+  // commercial relationship; `downloads_enabled` is this specific privilege;
+  // `revoked_at` withdraws the licence itself. A customer mid-renewal keeps
+  // downloads while their licence is expired — that is the case these being
+  // separate exists to serve.
+  //
+  // Revocation cuts off self-service immediately. That is the half of
+  // "deactivate" that actually works on demand: reaching a running air-gapped
+  // install is impossible, but we control everything on this side.
+  if (row.status !== 'active' || !row.downloads_enabled || row.revoked_at) return null
 
   return {
     customerId: row.id,
@@ -89,6 +100,9 @@ export async function getSelfhostAccess(
     seats: row.seats,
     licenseExpiresAt: row.license_expires_at,
     licenseId: row.license_id,
+    renewalRequestedAt: row.renewal_requested_at ?? null,
+    lastCheckinAt: row.last_checkin_at ?? null,
+    lastSeenVersion: row.last_seen_version ?? null,
   }
 }
 

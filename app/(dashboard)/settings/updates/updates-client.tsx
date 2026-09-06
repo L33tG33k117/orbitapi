@@ -17,6 +17,8 @@ interface Bundle {
 interface Payload {
   current: string
   released?: boolean
+  /** A newer version the last check-in told us about, if any. */
+  available?: string | null
   updatesDir: string
   bundles: Bundle[]
 }
@@ -47,6 +49,21 @@ export function UpdatesClient() {
           <RefreshCw className="h-3.5 w-3.5" /> {loading ? 'Checking…' : 'Check again'}
         </Button>
       </div>
+
+      {/* The whole reason check-in exists: this page used to be unable to tell
+          you anything you didn't already know. */}
+      {data?.available && (
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 space-y-1">
+          <p className="text-sm font-medium text-primary">
+            OrbitAPI {data.available} is available.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Download it from your OrbitAPI account (Settings → Downloads) on any machine with
+            internet, copy it into <code className="font-mono">{data.updatesDir}</code>, and it
+            will appear below.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-xl border bg-card p-5 space-y-2">
         <h2 className="text-base font-semibold">How updating works</h2>

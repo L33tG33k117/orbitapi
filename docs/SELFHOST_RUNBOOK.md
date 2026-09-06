@@ -71,10 +71,38 @@ node scripts/license-issue.mjs issue \
 
 Either way the customer pastes the `ORBIT.…` key into **Settings → Licence**.
 
-**Changing a licence = issuing a new key.** There is no revocation and no
-phone-home: a renewal, a seat change and a plan change are all just a
-replacement key with a later `iat`. Their instance refuses any key older than
-the one installed, so an old key can't be replayed to undo a change.
+**Changing a licence = issuing a new key.** A renewal, a seat change and a plan
+change are all just a replacement key with a later `iat`. Their instance refuses
+any key older than the one installed, so an old key can't be replayed to undo a
+change.
+
+---
+
+## Withdrawing a licence
+
+*Admin → Self-hosted → Withdraw licence.* Be precise about what this does,
+because the name promises more than the mechanism can deliver.
+
+**Immediately, always:** their downloads stop and they can no longer retrieve
+their licence key from their account.
+
+**Within a day, if their install has internet:** the next check-in returns
+`revoked`, and the installation collapses to the free-tier floor with your
+reason shown to their administrator. Their data and exports keep working —
+that promise is never broken, for any reason.
+
+**Never, on an air-gapped install:** there is no mechanism, and there cannot be
+one. Licences verify locally against an embedded public key, which is the whole
+reason the offline edition works. Their signed key runs until it expires.
+
+So the real lever on a customer who has stopped paying is **not renewing**:
+their key expires, then 30 days of grace, then automation pauses. Withdrawing is
+for the case where you also want to cut off downloads and self-service today.
+
+Treat check-in as enforcement, not security. A customer who controls the server
+can block it, and the product is designed to be completely unaffected when they
+do. Expiry is what actually bounds the damage. Withdrawal is reversible —
+reinstating does not require issuing a new key.
 
 Copying a key to a second install is possible and not worth engineering
 against — offline validation cannot detect it. Seat limits bound the damage.

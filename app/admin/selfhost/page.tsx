@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   Server, Plus, KeyRound, Copy, Check, RefreshCw, Download, Ban,
-  AlertTriangle, Trash2, Mail, Package,
+  AlertTriangle, Trash2, Mail, Package, ShieldOff,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,6 +28,12 @@ interface Customer {
   license_issued_at: string | null
   license_expires_at: string | null
   created_at: string
+  revoked_at: string | null
+  revoked_reason: string | null
+  renewal_requested_at: string | null
+  renewal_note: string | null
+  last_checkin_at: string | null
+  last_seen_version: string | null
 }
 
 interface Release {
@@ -50,6 +56,7 @@ const STATUS_STYLES: Record<CustomerStatus, string> = {
 
 /** Licence health, in the words a support conversation actually uses. */
 function licenceState(c: Customer): { label: string; style: string } {
+  if (c.revoked_at) return { label: 'Revoked', style: 'bg-red-500/15 text-red-400' }
   if (!c.license_expires_at) return { label: 'Never issued', style: 'bg-muted text-muted-foreground' }
 
   const days = Math.ceil((new Date(c.license_expires_at).getTime() - Date.now()) / 86_400_000)
@@ -176,6 +183,35 @@ export default function AdminSelfhostPage() {
     toast.success('Customer deleted')
   }
 
+  async function setRevoked(c: Customer, revoked: boolean) {
+    let reason: string | null = null
+    if (revoked) {
+      reason = prompt(
+        `Withdraw ${c.company}'s licence?\n\n` +
+        'This stops their downloads and licence retrieval immediately, and their ' +
+        'installation collapses to the free tier at its next check-in.\n\n' +
+        'It CANNOT reach an air-gapped install — their signed key works until it expires.\n\n' +
+        'Reason (shown to their administrator):',
+        'This licence has been withdrawn. Please contact OrbitAPI support.',
+      )
+      if (reason === null) return
+    } else if (!confirm(`Reinstate ${c.company}'s licence?`)) {
+      return
+    }
+
+    await patch(
+      c,
+      { revoked, revokedReason: reason },
+      { revoked_at: revoked ? new Date().toISOString() : null, revoked_reason: reason },
+    )
+    toast.success(revoked ? 'Licence withdrawn' : 'Licence reinstated')
+  }
+
+  async function clearRenewal(c: Customer) {
+    await patch(c, { clearRenewalRequest: true }, { renewal_requested_at: null, renewal_note: null })
+    toast.success('Renewal request cleared')
+  }
+
   async function setYanked(version: string, yanked: boolean) {
     setBusy(version)
     const res = await fetch('/api/admin/selfhost/releases', {
@@ -189,6 +225,7 @@ export default function AdminSelfhostPage() {
     toast.success(yanked ? `${version} pulled from downloads` : `${version} available again`)
   }
 
+  const renewalRequests = customers.filter(c => c.renewal_requested_at)
   const active = customers.filter(c => c.status === 'active')
   const expiringSoon = active.filter(c => {
     if (!c.license_expires_at) return false
@@ -222,6 +259,17 @@ export default function AdminSelfhostPage() {
           of key <code className="text-xs">k1</code> — the same key whose public half is in{' '}
           <code className="text-xs">lib/license.ts</code>. Everything else on this page still works.
         </Notice>
+      )}
+
+      {renewalRequests.length > 0 && (
+        <div className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm">
+          <p className="text-primary">
+            {renewalRequests.length === 1
+              ? `${renewalRequests[0].company} has asked to renew.`
+              : `${renewalRequests.length} customers have asked to renew.`}{' '}
+            Each is marked below — renewing clears the request.
+          </p>
+        </div>
       )}
 
       {expiringSoon.length > 0 && (
@@ -309,11 +357,43 @@ export default function AdminSelfhostPage() {
                   </div>
                 </div>
 
+                {c.renewal_requested_at && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 space-y-1">
+                    <p className="text-xs text-primary font-medium">
+                      Renewal requested {new Date(c.renewal_requested_at).toLocaleDateString()}
+                    </p>
+                    {c.renewal_note && <p className="text-xs text-muted-foreground">{c.renewal_note}</p>}
+                    <button
+                      onClick={() => clearRenewal(c)}
+                      disabled={busy === c.id}
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline disabled:opacity-50"
+                    >
+                      Dismiss without renewing
+                    </button>
+                  </div>
+                )}
+
+                {c.revoked_at && (
+                  <p className="text-xs text-red-400">
+                    Withdrawn {new Date(c.revoked_at).toLocaleDateString()}
+                    {c.revoked_reason && <> — {c.revoked_reason}</>}
+                  </p>
+                )}
+
                 {c.license_id && (
                   <p className="text-[11px] text-muted-foreground font-mono">
                     Licence {c.license_id.slice(0, 8)} · issued {new Date(c.license_issued_at!).toLocaleDateString()} · expires {new Date(c.license_expires_at!).toLocaleDateString()}
                   </p>
                 )}
+
+                <p className="text-[11px] text-muted-foreground">
+                  {c.last_checkin_at
+                    ? <>Last checked in {new Date(c.last_checkin_at).toLocaleDateString()}
+                        {c.last_seen_version && <> running <span className="font-mono">{c.last_seen_version}</span></>}</>
+                    // Not a fault. An air-gapped install is the case this whole
+                    // edition exists for, and it will never check in.
+                    : 'Never checked in — air-gapped, or check-in turned off.'}
+                </p>
 
                 {revealed[c.id] && (
                   <div className="space-y-1.5">
@@ -377,6 +457,18 @@ export default function AdminSelfhostPage() {
                     <option value="suspended">Suspended</option>
                     <option value="churned">Churned</option>
                   </select>
+
+                  <button
+                    onClick={() => setRevoked(c, !c.revoked_at)}
+                    disabled={busy === c.id}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border disabled:opacity-50 ${
+                      c.revoked_at
+                        ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                        : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                    }`}
+                  >
+                    <ShieldOff className="h-3.5 w-3.5" /> {c.revoked_at ? 'Reinstate licence' : 'Withdraw licence'}
+                  </button>
 
                   <button onClick={() => remove(c)} disabled={busy === c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-destructive/30 text-destructive hover:bg-destructive/10 disabled:opacity-50 ml-auto">
                     <Trash2 className="h-3.5 w-3.5" /> Delete

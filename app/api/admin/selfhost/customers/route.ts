@@ -20,7 +20,8 @@ const TIERS = ['free', 'starter', 'pro', 'enterprise']
 const LIST_COLUMNS =
   'id, company, contact_name, contact_email, user_id, tier, seats, ' +
   'downloads_enabled, status, notes, license_id, license_issued_at, ' +
-  'license_expires_at, created_at, updated_at'
+  'license_expires_at, created_at, updated_at, revoked_at, revoked_reason, ' +
+  'renewal_requested_at, renewal_note, last_checkin_at, last_seen_version'
 
 export async function GET() {
   const user = await requireSuperAdmin()
