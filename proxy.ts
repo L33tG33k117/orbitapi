@@ -74,6 +74,11 @@ function rateLimited(request: NextRequest): Response | null {
 // list is far easier to keep honest than a check scattered across ~20 files.
 const CLOUD_ONLY_ROUTES = [
   '/settings/billing',
+  // You fetch bundles FROM the cloud, on a machine that has internet. An
+  // install serving its own downloads page would be offering the customer a
+  // copy of the software they are already running.
+  '/settings/downloads',
+  '/api/downloads',
   '/upgrade',
   '/pricing',
   '/integrations',

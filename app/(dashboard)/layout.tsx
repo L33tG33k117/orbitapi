@@ -7,6 +7,8 @@ import { TopBar } from '@/components/top-bar'
 import { CommandPalette } from '@/components/command-palette'
 import { FloatingAssistant } from '@/components/floating-assistant'
 import { Toaster } from 'sonner'
+import { getSelfhostAccess } from '@/lib/selfhost-access'
+import { isSelfHost } from '@/lib/edition'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -66,6 +68,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : Promise.resolve({ count: 0 }),
   ])
 
+  // Self-hosted customers fetch their bundles from the cloud, so the Downloads
+  // entry has to exist here — but only for them. Everyone else must never see a
+  // nav item for a product they have not bought. Skipped entirely on a
+  // self-hosted install, where there is nothing to download from.
+  const selfhostAccess = isSelfHost()
+    ? null
+    : await getSelfhostAccess(user.id, profileResult.data?.email ?? user.email)
+
   // Impersonation info for topbar banner
   let impersonating: { id: string; name: string; email: string } | null = null
   if (impCookie?.value) {
@@ -95,6 +105,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         superAdmin={profileResult.data?.super_admin ?? false}
         pendingApprovals={pendingApprovals ?? 0}
         unreadConnectorMessages={unreadConnectorMessages ?? 0}
+        selfhostDownloads={!!selfhostAccess}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 lg:py-2 lg:pr-2">
         <div className="app-ambiance flex-1 flex flex-col overflow-hidden min-w-0 lg:rounded-2xl lg:border lg:border-white/10 lg:shadow-[0_0_60px_-20px_oklch(0.5_0.2_280/40%)]">

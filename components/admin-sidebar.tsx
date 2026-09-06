@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Building2, Users, ShieldCheck, ArrowLeft,
-  Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus, X, Bug, Inbox,
+  Plug, Flag, BarChart2, Ban, FlaskConical, MessageSquarePlus, X, Bug, Inbox, Server,
 } from 'lucide-react'
 
 type BadgeKey = 'feedback' | 'requests' | 'reports' | 'errors' | 'contact'
@@ -21,6 +21,7 @@ const items = [
   { href: '/admin/connector-requests',  label: 'Requests',   icon: Plug, badge: 'requests' as BadgeKey },
   { href: '/admin/connector-reports',   label: 'Reports',    icon: Flag, badge: 'reports' as BadgeKey },
   { href: '/admin/errors',              label: 'Errors',     icon: Bug, badge: 'errors' as BadgeKey },
+  { href: '/admin/selfhost',            label: 'Self-hosted', icon: Server },
   { href: '/admin/sandbox',             label: 'Sandbox',    icon: FlaskConical, highlight: true },
 ]
 

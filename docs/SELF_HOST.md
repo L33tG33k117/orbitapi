@@ -35,7 +35,12 @@ cd orbitapi/docker
 ```
 
 If it does not, copy the repository across on a USB drive or internal share,
-along with the image bundle you downloaded from your OrbitAPI account.
+along with the image bundle from your OrbitAPI account.
+
+**Where the bundle comes from:** sign in to your OrbitAPI account with the email
+address on your licence, then go to **Settings → Downloads**. The installer is
+there, with its checksum and the exact commands to run. Download it on any
+machine with internet — it does not have to be the server, and usually isn't.
 
 ### 2. Load the images (offline installs only)
 
@@ -186,10 +191,14 @@ your own operational data because an invoice was late would be unacceptable.
 
 Updates are files, not downloads from this machine.
 
-1. On any machine with internet, sign in to your OrbitAPI account and download
-   the update bundle.
-2. Copy it to your server.
+1. On any machine with internet, sign in to your OrbitAPI account and go to
+   **Settings → Downloads**. The newest build is at the top; older ones are
+   listed below it.
+2. Copy the file to your server.
 3. Run `./orbit.sh update orbit-selfhost-1.2.3.tar.gz`.
+
+The Downloads page also shows the checksum, so you can confirm the file
+survived the trip before you apply it.
 
 The bundle is checked before anything is applied: its contents are verified
 against their checksums and its signature against our release key. A bundle

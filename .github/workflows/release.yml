@@ -111,3 +111,71 @@ jobs:
           name: orbit-selfhost-${{ steps.v.outputs.version }}
           path: dist/orbit-selfhost-${{ steps.v.outputs.version }}.tar.gz
           retention-days: 90
+
+      # An Actions artifact expires in 90 days and needs a GitHub login with
+      # access to this repo — neither of which a paying customer has. Publishing
+      # to Blob is what makes /settings/downloads a real page rather than a
+      # promise the docs were already making.
+      - name: Publish the bundle to Blob
+        id: publish
+        env:
+          BLOB_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BLOB_TOKEN:-}" ]; then
+            echo "::warning title=Not published::BLOB_READ_WRITE_TOKEN is unset, so this build is not downloadable by customers."
+            exit 0
+          fi
+
+          VERSION=${{ steps.v.outputs.version }}
+          FILE=dist/orbit-selfhost-$VERSION.tar.gz
+
+          # Uploaded under a per-version path. The store returns a URL with a
+          # random suffix, so the URL is unguessable and is never exposed in the
+          # downloads catalogue — /api/downloads/[version] hands it out per
+          # request, after checking entitlement.
+          URL=$(npx --yes vercel@latest blob put "$FILE" \
+                  --rw-token "$BLOB_TOKEN" \
+                  --pathname "selfhost/$VERSION/orbit-selfhost-$VERSION.tar.gz" \
+                | grep -Eo 'https://[^[:space:]]+' | head -1)
+
+          if [ -z "$URL" ]; then
+            echo "::error title=Upload failed::No blob URL came back; the release was NOT published to customers."
+            exit 1
+          fi
+
+          {
+            echo "url=$URL"
+            echo "sha=$(sha256sum "$FILE" | cut -d' ' -f1)"
+            echo "size=$(stat -c%s "$FILE")"
+          } >> "$GITHUB_OUTPUT"
+
+      # Catalogue it, so cutting a tag remains the ONE action that publishes a
+      # release. Without this the bundle exists but no customer can see it.
+      - name: Register the release
+        if: ${{ steps.publish.outputs.url != '' }}
+        env:
+          REGISTRY_SECRET: ${{ secrets.RELEASE_REGISTRY_SECRET }}
+          REGISTRY_URL: ${{ vars.RELEASE_REGISTRY_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REGISTRY_SECRET:-}" ] || [ -z "${REGISTRY_URL:-}" ]; then
+            echo "::warning title=Not catalogued::RELEASE_REGISTRY_SECRET or RELEASE_REGISTRY_URL is unset, so this build will not appear on the downloads page."
+            exit 0
+          fi
+
+          # The changelog the bundle itself ships, so the page and the tarball
+          # can never disagree about what changed.
+          CHANGELOG=$(sed -n '1,40p' CHANGELOG.md 2>/dev/null || echo "")
+
+          jq -n \
+            --arg version "${{ steps.v.outputs.version }}" \
+            --arg blobUrl "${{ steps.publish.outputs.url }}" \
+            --arg sha256 "${{ steps.publish.outputs.sha }}" \
+            --arg changelog "$CHANGELOG" \
+            --argjson sizeBytes "${{ steps.publish.outputs.size }}" \
+            '{version:$version, blobUrl:$blobUrl, sha256:$sha256, sizeBytes:$sizeBytes, changelog:$changelog}' \
+          | curl -sS --fail-with-body -X POST "$REGISTRY_URL/api/selfhost/releases/register" \
+              -H "content-type: application/json" \
+              -H "x-release-secret: $REGISTRY_SECRET" \
+              --data-binary @-

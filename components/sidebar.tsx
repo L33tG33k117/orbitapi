@@ -10,7 +10,7 @@ import { useIsSelfHost } from '@/components/config-provider'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network, KeyRound, PackageOpen,
+  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network, KeyRound, PackageOpen, DownloadCloud,
 } from 'lucide-react'
 
 interface NavItem {
@@ -108,6 +108,15 @@ const adminItems: NavItem[] = [
   { href: '/settings/workspace', label: 'Workspace', icon: Settings },
 ]
 
+/**
+ * Shown only to cloud accounts that own a self-hosted licence. Unlike the
+ * cloudOnly/selfHostOnly pair above, this cannot be decided from the edition —
+ * it depends on who is signed in — so the layout resolves it and passes it down.
+ */
+const downloadsItem: NavItem = {
+  href: '/settings/downloads', label: 'Downloads', icon: DownloadCloud, cloudOnly: true,
+}
+
 interface SidebarProps {
   workspace: { name: string; id: string }
   role: UserRole
@@ -116,9 +125,11 @@ interface SidebarProps {
   superAdmin?: boolean
   pendingApprovals?: number
   unreadConnectorMessages?: number
+  /** True when this cloud account owns a self-hosted licence. */
+  selfhostDownloads?: boolean
 }
 
-export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingApprovals, unreadConnectorMessages }: SidebarProps) {
+export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingApprovals, unreadConnectorMessages, selfhostDownloads }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const selfHost = useIsSelfHost()
@@ -241,7 +252,10 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
         {(role === 'owner' || role === 'admin') && (
           <div className="pt-3">
             <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/35">Settings</p>
-            <div className="space-y-0.5">{adminItems.map(renderItem)}</div>
+            <div className="space-y-0.5">
+              {adminItems.map(renderItem)}
+              {selfhostDownloads && renderItem(downloadsItem)}
+            </div>
           </div>
         )}
 

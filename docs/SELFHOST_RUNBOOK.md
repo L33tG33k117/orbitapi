@@ -35,6 +35,28 @@ with, and new ones are issued under the new `kid`.
 
 ## Issuing a licence
 
+**Use Admin → Self-hosted.** Add the customer, then *Issue 12-month licence*.
+The key is signed, verified against the same code their install runs, copied to
+your clipboard, and recorded — and *Email it* opens a pre-written message. No
+terminal, no private key on a laptop.
+
+This requires `LICENSE_SIGNING_KEY` in the Vercel environment, set to the
+**private** half of `k1` (the public half is already in `lib/license.ts`). If it
+is missing the page says so and issuing is disabled; everything else still works.
+
+Renewals are the same button — it reads *Renew 12 months* once a licence exists.
+
+**Re-sending is not re-issuing.** Use *Show current key* to hand over the
+existing key. Issuing a fresh one bumps `iat`, and their install refuses any key
+older than the one already applied — so minting a replacement just to resend it
+can strand a customer mid-renewal.
+
+<details>
+<summary>CLI fallback (<code>scripts/license-issue.mjs</code>)</summary>
+
+Still works, and is the way out if the cloud is down or the admin page is
+broken. It records nothing in the ledger, so add the customer afterwards.
+
 ```bash
 node scripts/license-issue.mjs issue \
   --customer "Acme Ltd" \
@@ -45,9 +67,9 @@ node scripts/license-issue.mjs issue \
   --kid k1 \
   --private-key ~/secure/k1.private.pem
 ```
+</details>
 
-Send the printed `ORBIT.…` key to the customer. They paste it into
-**Settings → Licence**.
+Either way the customer pastes the `ORBIT.…` key into **Settings → Licence**.
 
 **Changing a licence = issuing a new key.** There is no revocation and no
 phone-home: a renewal, a seat change and a plan change are all just a
@@ -68,10 +90,23 @@ git push origin selfhost-v1.2.3
 
 The workflow verifies the code first (`tsc`, connector and bundle integrity,
 the full offline suite), builds and pulls all five images, assembles the
-bundle, signs it, verifies its own output, then uploads it as an artifact.
+bundle, signs it, verifies its own output, uploads it as an artifact, **pushes
+it to Blob, and registers it** — at which point it appears on every entitled
+customer's Settings → Downloads page. Cutting the tag is the whole job.
 
-Then: download the artifact, upload it wherever customers fetch from, and add a
-changelog entry.
+Three settings make the last two steps work. If any is missing the workflow
+warns rather than failing, and the build simply is not published:
+
+| Where | Name | Value |
+|---|---|---|
+| Actions secret | `BLOB_READ_WRITE_TOKEN` | Blob store read-write token |
+| Actions secret | `RELEASE_REGISTRY_SECRET` | Same value as the app's env var |
+| Actions variable | `RELEASE_REGISTRY_URL` | `https://<production domain>` |
+
+Check the result in **Admin → Self-hosted → Releases**. A build that turns out
+bad can be *pulled from downloads* there — it stops being offered without
+destroying the record that it existed, which matters because someone may
+already be running it.
 
 **Bundles are multi-GB.** Keep the last few releases and prune older ones.
 Delta bundles are a later idea — don't build them until someone complains.
