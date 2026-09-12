@@ -752,9 +752,25 @@ async function loadPlaybook(playbookId: string): Promise<LoadedPlaybook | null> 
 }
 
 async function loadConnections(playbook: LoadedPlaybook): Promise<Connection[]> {
-  const ids = playbook.group?.group_connections?.map(gc => gc.connection_id) ?? []
-  if (ids.length === 0) return []
   const admin = createAdminClient()
+  // A playbook with no group falls back to every active connection in the
+  // workspace — this is what "No group — uses all connections" promises on
+  // create, and what the step editor's action palette already does (see
+  // app/(dashboard)/playbooks/[id]/page.tsx). The executor has to mirror that
+  // fallback or a group-less playbook's action nodes resolve against an empty
+  // connection set at run time even though the editor showed them as valid.
+  if (!playbook.group) {
+    const { data } = await admin
+      .from('connections')
+      // '*' so allow_api_exploration flows through even before migration 048.
+      .select('*, connector:connectors(slug, name)')
+      .eq('workspace_id', playbook.workspace_id)
+      .eq('status', 'active')
+    return (data ?? []) as unknown as Connection[]
+  }
+
+  const ids = playbook.group.group_connections?.map(gc => gc.connection_id) ?? []
+  if (ids.length === 0) return []
   const { data } = await admin
     .from('connections')
     // '*' so allow_api_exploration flows through even before migration 048.
