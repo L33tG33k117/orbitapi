@@ -1,12 +1,21 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
 
+// Zendesk is removing API tokens as an auth method (all tokens stop working
+// 2027-04-30; see setupGuide below). When no agent email is supplied we treat
+// `token` as an OAuth access token and send it as a Bearer token instead of
+// wrapping it in Basic auth — the same field works for both, keeping existing
+// email+token connections unchanged while giving new setups a path off tokens.
 async function zdFetch(subdomain: string, email: string, token: string, path: string, options: RequestInit = {}): Promise<ActionResult> {
   const url = `https://${subdomain}.zendesk.com/api/v2${path}`
-  const basicAuth = Buffer.from(`${email}/token:${token}`).toString('base64')
+  const trimmedEmail = email.trim()
+  const trimmedToken = token.trim()
+  const authHeader = trimmedEmail
+    ? `Basic ${Buffer.from(`${trimmedEmail}/token:${trimmedToken}`).toString('base64')}`
+    : `Bearer ${trimmedToken}`
   const res = await fetch(url, {
     ...options,
     headers: {
-      'Authorization': `Basic ${basicAuth}`,
+      'Authorization': authHeader,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...(options.headers ?? {}),
@@ -30,24 +39,51 @@ export const zendeskManifest: ConnectorManifest = {
 
   auth: {
     type: 'api_key',
-    keyLabel: 'API Token',
-    keyPlaceholder: 'Your Zendesk API token',
+    keyLabel: 'API Token or OAuth Token',
+    keyPlaceholder: 'Your Zendesk API token or OAuth access token',
     fields: [
       { key: 'subdomain', label: 'Subdomain', placeholder: 'e.g. acme (from acme.zendesk.com)', inputType: 'text' },
-      { key: 'email', label: 'Agent Email', placeholder: 'agent@yourcompany.com', inputType: 'text' },
-      { key: 'token', label: 'API Token', placeholder: 'Zendesk API token', inputType: 'password' },
+      {
+        key: 'email',
+        label: 'Agent Email (API token only)',
+        placeholder: 'agent@yourcompany.com — leave blank if using an OAuth token',
+        inputType: 'text',
+        hint: 'Required for an API token. Leave blank when pasting an OAuth access token below.',
+      },
+      {
+        key: 'token',
+        label: 'API Token or OAuth Access Token',
+        placeholder: 'Zendesk API token or OAuth access token',
+        inputType: 'password',
+        hint: 'Zendesk is removing API tokens — see the setup steps for how to switch to an OAuth token.',
+      },
     ],
     setupGuide: [
+      {
+        title: 'Zendesk is removing API tokens',
+        description:
+          "Zendesk is **removing API tokens as an authentication method**: no new tokens can be created after **October 27, 2026**, " +
+          'and all existing tokens **stop working on April 30, 2027**. ' +
+          'New connections should use an **OAuth access token** instead (see below). ' +
+          '[Zendesk\'s announcement](https://support.zendesk.com/hc/en-us/articles/10851263566234-Announcing-the-removal-of-API-tokens-as-an-authentication-method-for-API-requests) has the full timeline.',
+      },
       {
         title: 'Find your subdomain',
         description: 'Your Zendesk URL is **{subdomain}.zendesk.com** — the subdomain is the prefix before .zendesk.com.',
       },
       {
-        title: 'Generate an API token',
+        title: 'Recommended: generate an OAuth access token',
         description:
-          'In Zendesk: **Admin Center → Apps and integrations → Zendesk API → API token**. ' +
+          'In Zendesk: **Admin Center → Apps and integrations → APIs → Zendesk API → OAuth Clients**. ' +
+          'Create an OAuth client, then use it to request a token with the `client_credentials` grant. ' +
+          'Paste the resulting access token into the token field above and **leave the Agent Email field blank**.',
+      },
+      {
+        title: 'Legacy: generate an API token (being phased out)',
+        description:
+          'Only use this if you cannot yet migrate to OAuth. In Zendesk: **Admin Center → Apps and integrations → Zendesk API → API token**. ' +
           'Click **Add API token**, give it a name, copy the token. ' +
-          'Use your agent email (not the token) as the email field above.',
+          'Use your agent email (not the token) as the Agent Email field above — tokens created this way will stop working on April 30, 2027.',
       },
     ],
   },
