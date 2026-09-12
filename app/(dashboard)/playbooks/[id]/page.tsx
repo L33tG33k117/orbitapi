@@ -24,15 +24,18 @@ export default async function PlaybookDetailPage({ params }: Params) {
   if (!playbook || playbook.workspace_id !== membership.workspace_id) notFound()
 
   // Build the action palette for the step editor from the group's connections.
+  // A playbook with no group falls back to every active connection in the
+  // workspace (this is what "No group — uses all connections" promises on create).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const connIds: string[] = ((playbook.group as any)?.group_connections ?? []).map((gc: { connection_id: string }) => gc.connection_id)
   let availableActions: { connectionId: string; label: string; actions: { slug: string; name: string; risk: string }[] }[] = []
-  if (connIds.length) {
-    const { data: conns } = await admin
+  if (connIds.length || !playbook.group_id) {
+    let query = admin
       .from('connections')
       .select('id, label, connector:connectors(slug, name)')
-      .in('id', connIds)
       .eq('status', 'active')
+    query = playbook.group_id ? query.in('id', connIds) : query.eq('workspace_id', playbook.workspace_id)
+    const { data: conns } = await query
     availableActions = (conns ?? []).map(c => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const slug = (c.connector as any)?.slug

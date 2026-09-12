@@ -104,8 +104,8 @@ function seed(steps: PlaybookNode[]): { nodes: Node[]; edges: Edge[] } {
   return { nodes, edges }
 }
 
-export function PlaybookCanvas({ steps, onChange, availableActions }: {
-  steps: PlaybookNode[]; onChange: (s: PlaybookNode[]) => void; availableActions: AvailableConn[]
+export function PlaybookCanvas({ steps, onChange, availableActions, hasGroup }: {
+  steps: PlaybookNode[]; onChange: (s: PlaybookNode[]) => void; availableActions: AvailableConn[]; hasGroup: boolean
 }) {
   const seeded = useMemo(() => seed(steps), []) // seed once; canvas is then self-contained
   const [nodes, setNodes, onNodesChange] = useNodesState(seeded.nodes)
@@ -195,6 +195,14 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
         </div>
         <p className="text-[11px] text-muted-foreground">Drag to arrange · drag a dot to connect steps · click a step to edit</p>
       </div>
+
+      {availableActions.length === 0 && (
+        <p className="text-xs text-amber-600 dark:text-amber-500 px-3 py-2 border-b">
+          {hasGroup
+            ? `This playbook's group has no active connections — action steps won't have anything to call.`
+            : `No active connections in this workspace yet — action steps won't have anything to call.`}
+        </p>
+      )}
 
       <div className="flex" style={{ height: 520 }}>
         <div className="flex-1 min-w-0">
