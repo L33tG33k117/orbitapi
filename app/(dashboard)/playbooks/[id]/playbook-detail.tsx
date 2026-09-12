@@ -261,7 +261,9 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
             <>
             {availableActions.length === 0 && (
               <p className="text-xs text-amber-600 dark:text-amber-500">
-                This playbook&apos;s group has no active connections — action steps won&apos;t have anything to call.
+                {playbook.group_id
+                  ? "This playbook's group has no active connections — action steps won't have anything to call."
+                  : 'No active connections in this workspace yet — action steps won\'t have anything to call.'}
               </p>
             )}
             {steps.length === 0 && <p className="text-xs text-muted-foreground">No steps yet. Add one below.</p>}

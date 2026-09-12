@@ -239,6 +239,11 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
 
               {selectedNode.type === 'action' && (
                 <div className="space-y-2">
+                  {availableActions.length === 0 && (
+                    <p className="text-xs text-amber-600 dark:text-amber-500">
+                      No active connections available — this step won&apos;t have anything to call.
+                    </p>
+                  )}
                   <select value={selectedNode.connection_id ?? ''} onChange={e => patchSelected({ connection_id: e.target.value, action_slug: '' })}
                     className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm">
                     <option value="">Connection…</option>
