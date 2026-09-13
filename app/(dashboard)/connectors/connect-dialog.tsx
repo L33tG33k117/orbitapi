@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ChevronRightIcon } from 'lucide-react'
 import type { ConnectorSummary, CredentialField } from '@/connectors/types'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -10,6 +11,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+
+function inlineMarkdown(text: string) {
+  return { __html: text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }
+}
 
 interface Props {
   connector: ConnectorSummary
@@ -30,6 +35,10 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
   const guide = connector.auth.type === 'api_key' ? connector.auth.setupGuide : []
   const auth = connector.auth.type === 'api_key' ? connector.auth : null
   const multiFields: CredentialField[] | undefined = auth?.fields
+  const isGuideStep = step === 0 && guide.length > 0
+  const notices = guide.filter(s => s.kind === 'notice')
+  const legacySteps = guide.filter(s => s.kind === 'legacy')
+  const mainSteps = guide.filter(s => s.kind !== 'notice' && s.kind !== 'legacy')
 
   function reset() {
     setStep(0); setLabel(''); setApiKey(''); setFieldValues({}); setError(null); setTestResult(null)
@@ -76,7 +85,7 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={v => { onOpenChange(v); if (!v) reset() }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className={isGuideStep ? 'max-w-xl' : 'max-w-lg'}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {connector.logoUrl && (
@@ -111,10 +120,19 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
               Connect with {connector.name} →
             </Button>
           </div>
-        ) : step === 0 && guide.length > 0 ? (
+        ) : isGuideStep ? (
           <div className="space-y-4">
+            {notices.map((s, i) => (
+              <div
+                key={i}
+                className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+              >
+                <p className="font-medium">{s.title}</p>
+                <p className="mt-0.5" dangerouslySetInnerHTML={inlineMarkdown(s.description)} />
+              </div>
+            ))}
             <div className="space-y-4">
-              {guide.map((s, i) => (
+              {mainSteps.map((s, i) => (
                 <div key={i} className="flex gap-3">
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
                     {i + 1}
@@ -122,12 +140,25 @@ export function ConnectDialog({ connector, open, onOpenChange }: Props) {
                   <div>
                     <p className="text-sm font-medium">{s.title}</p>
                     <p className="text-sm text-muted-foreground mt-0.5"
-                       dangerouslySetInnerHTML={{ __html: s.description.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') }}
+                       dangerouslySetInnerHTML={inlineMarkdown(s.description)}
                     />
                   </div>
                 </div>
               ))}
             </div>
+            {legacySteps.length > 0 && (
+              <details className="group rounded-md border p-3">
+                <summary className="flex cursor-pointer list-none items-center gap-1 text-sm font-medium text-muted-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                  <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
+                  {legacySteps.length === 1 ? legacySteps[0].title : 'Legacy options'}
+                </summary>
+                <div className="mt-3 space-y-3 pl-4.5">
+                  {legacySteps.map((s, i) => (
+                    <p key={i} className="text-sm text-muted-foreground" dangerouslySetInnerHTML={inlineMarkdown(s.description)} />
+                  ))}
+                </div>
+              </details>
+            )}
             <Button className="w-full" onClick={() => setStep(1)}>
               I have my {auth?.keyLabel ?? 'credentials'} →
             </Button>
