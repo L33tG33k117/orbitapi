@@ -2,6 +2,10 @@ export interface SetupStep {
   title: string
   description: string
   imageUrl?: string
+  /** 'notice' renders as a banner above the numbered steps (no number).
+   *  'legacy' renders collapsed by default, below the numbered steps.
+   *  Omitted (default) renders as a normal numbered step. */
+  kind?: 'notice' | 'legacy'
 }
 
 export type AuthType = 'api_key' | 'oauth2'

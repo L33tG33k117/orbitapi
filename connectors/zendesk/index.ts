@@ -60,6 +60,7 @@ export const zendeskManifest: ConnectorManifest = {
     ],
     setupGuide: [
       {
+        kind: 'notice',
         title: 'Zendesk is removing API tokens',
         description:
           "Zendesk is **removing API tokens as an authentication method**: no new tokens can be created after **October 27, 2026**, " +
@@ -79,6 +80,7 @@ export const zendeskManifest: ConnectorManifest = {
           'Paste the resulting access token into the token field above and **leave the Agent Email field blank**.',
       },
       {
+        kind: 'legacy',
         title: 'Legacy: generate an API token (being phased out)',
         description:
           'Only use this if you cannot yet migrate to OAuth. In Zendesk: **Admin Center → Apps and integrations → Zendesk API → API token**. ' +
