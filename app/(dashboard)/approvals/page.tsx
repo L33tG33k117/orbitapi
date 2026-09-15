@@ -101,12 +101,15 @@ export default function ApprovalsPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rollback_reasoning: rollback[id] || undefined }),
     })
-    const body = await res.json()
+    const body = await res.json().catch(() => ({}))
     if (res.ok) {
       setActions(prev => prev.map(a => a.id === id ? { ...a, status: 'executed' } : a))
       setExpanded(null)
     } else {
-      setError(body.error ?? 'Approval failed')
+      // Show what went wrong AND what to do about it, and stop listing it as pending.
+      const ex = body.explained as { title?: string; hint?: string } | undefined
+      setError(ex?.title ? `${ex.title} ${ex.hint ?? ''} (Details: ${body.error ?? 'unknown error'})` : (body.error ?? 'Approval failed'))
+      if (body.status === 'failed') setActions(prev => prev.map(a => a.id === id ? { ...a, status: 'failed' } : a))
     }
     setActing(null)
   }

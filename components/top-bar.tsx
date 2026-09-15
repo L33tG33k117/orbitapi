@@ -47,7 +47,7 @@ export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: T
   const roleLabel = role === 'owner' ? 'Owner' : role === 'admin' ? 'Administrator' : 'User'
 
   return (
-    <div className="flex items-center justify-end gap-1 px-4 py-2.5 border-b border-border/60 glass shrink-0">
+    <div className="flex items-center justify-end gap-1 px-4 py-2.5 border-b border-border/60 glass shrink-0 print:hidden">
       {/* Mobile menu trigger + brand (sidebar is hidden under lg) */}
       <div className="lg:hidden mr-auto flex items-center gap-2">
         <button

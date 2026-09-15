@@ -172,6 +172,7 @@ export async function executeTool(
     .from('connections')
     .select('*')
     .eq('id', binding.connectionId)
+    .eq('workspace_id', endpoint.workspace_id)
     .eq('status', 'active')
     .single()
   if (!conn) return { text: 'Connection not found or inactive.', isError: true }

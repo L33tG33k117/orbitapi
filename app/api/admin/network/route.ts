@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isSelfHost } from '@/lib/edition'
+import { getSelfhostAccess } from '@/lib/selfhost-access'
 import { allConnectorNetworks, allowlistFor, allowlistText } from '@/lib/network-access'
 
 // Firewall allowlist export.
@@ -19,6 +21,11 @@ export async function GET(req: Request) {
     .from('memberships').select('workspace_id, role').eq('user_id', user.id).single()
   if (!membership || membership.role === 'member') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Offline customers only (see settings/network/page.tsx).
+  if (!isSelfHost() && !(await getSelfhostAccess(user.id, user.email))) {
+    return NextResponse.json({ error: 'not_available' }, { status: 404 })
   }
 
   const url = new URL(req.url)

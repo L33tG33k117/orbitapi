@@ -123,7 +123,7 @@ export function FeedbackButton() {
     <>
       {open && mounted && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-black/40 p-4"
+          className="fixed inset-0 z-[100] flex justify-center overflow-y-auto bg-black/40 p-4 print:hidden"
           onClick={() => setOpen(false)}
         >
           <div

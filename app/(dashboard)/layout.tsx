@@ -9,6 +9,9 @@ import { FloatingAssistant } from '@/components/floating-assistant'
 import { Toaster } from 'sonner'
 import { getSelfhostAccess } from '@/lib/selfhost-access'
 import { isSelfHost } from '@/lib/edition'
+import { hasCapability, type FeatureOverrides } from '@/lib/entitlements'
+import { OfflineModeShell } from '@/components/offline-mode-shell'
+import type { WorkspaceTier } from '@/types'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -76,6 +79,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ? null
     : await getSelfhostAccess(user.id, profileResult.data?.email ?? user.email)
 
+  // Offline (self-hosted) settings are only relevant to people who run it:
+  // the self-hosted build itself, or a cloud account holding a self-hosted
+  // (Enterprise) licence. Everyone else never sees them.
+  const ws = membershipResult.data.workspace as { tier?: string; feature_flags?: FeatureOverrides; offline_mode?: boolean } | null
+  const offlineEligible = isSelfHost() || !!selfhostAccess
+  // Exclusive mode: a cloud workspace switched to offline pauses the online product.
+  const offlineActive = !isSelfHost() && !!selfhostAccess && ws?.offline_mode === true
+  const byoLlm = isSelfHost() || hasCapability((ws?.tier ?? 'free') as WorkspaceTier, ws?.feature_flags ?? null, 'byo_llm')
+
   // Impersonation info for topbar banner
   let impersonating: { id: string; name: string; email: string } | null = null
   if (impCookie?.value) {
@@ -106,6 +118,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         pendingApprovals={pendingApprovals ?? 0}
         unreadConnectorMessages={unreadConnectorMessages ?? 0}
         selfhostDownloads={!!selfhostAccess}
+        offlineEligible={offlineEligible}
+        offlineActive={offlineActive}
+        byoLlm={byoLlm}
       />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 lg:py-2 lg:pr-2">
         <div className="app-ambiance flex-1 flex flex-col overflow-hidden min-w-0 lg:rounded-2xl lg:border lg:border-white/10 lg:shadow-[0_0_60px_-20px_oklch(0.5_0.2_280/40%)]">
@@ -116,7 +131,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             impersonating={impersonating}
           />
           <main className="flex-1 overflow-y-auto">
-            {children}
+            <OfflineModeShell active={offlineActive} canManage={isAdmin}>
+              {children}
+            </OfflineModeShell>
           </main>
         </div>
       </div>

@@ -10,8 +10,9 @@ import { useIsSelfHost } from '@/components/config-provider'
 import {
   LayoutDashboard, Plug, Layers, Zap, MessageSquare, ScrollText, Users, Settings,
   Orbit, ShieldCheck, CreditCard, Search, BarChart2, ClipboardCheck, Inbox, BookOpen, Trash2,
-  ShieldAlert, Package, Webhook, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network, KeyRound, PackageOpen, DownloadCloud,
+  ShieldAlert, Package, Webhook, CloudOff, Gauge, Sparkles, Shuffle, LifeBuoy, Lock, X, Activity, Bot, Rocket, Cpu, Network, KeyRound, PackageOpen, DownloadCloud,
 } from 'lucide-react'
+import { isOfflinePausedPath } from '@/lib/offline-paths'
 
 interface NavItem {
   href: string
@@ -29,6 +30,11 @@ interface NavItem {
   cloudOnly?: boolean
   /** Exists only in the self-hosted build (the licence screen). */
   selfHostOnly?: boolean
+  /**
+   * Only meaningful for offline (self-hosted) customers: firewall allowlists,
+   * bring-your-own model. Hidden for everyone else rather than locked.
+   */
+  offlineOnly?: boolean
 }
 
 interface NavSection {
@@ -100,8 +106,8 @@ const sections: NavSection[] = [
 const adminItems: NavItem[] = [
   { href: '/settings/members', label: 'Members', icon: Users },
   { href: '/settings/billing', label: 'Billing', icon: CreditCard, cloudOnly: true },
-  { href: '/settings/ai-provider', label: 'AI Provider', icon: Cpu },
-  { href: '/settings/network', label: 'Network Access', icon: Network },
+  { href: '/settings/ai-provider', label: 'AI Provider', icon: Cpu, offlineOnly: true },
+  { href: '/settings/network', label: 'Network Access', icon: Network, offlineOnly: true },
   // The mirror image of Billing: only exists where Billing doesn't.
   { href: '/settings/license', label: 'Licence', icon: KeyRound, selfHostOnly: true },
   { href: '/settings/updates', label: 'Updates', icon: PackageOpen, selfHostOnly: true },
@@ -127,9 +133,15 @@ interface SidebarProps {
   unreadConnectorMessages?: number
   /** True when this cloud account owns a self-hosted licence. */
   selfhostDownloads?: boolean
+  /** Self-hosted build, or a cloud account with a self-hosted licence. */
+  offlineEligible?: boolean
+  /** Cloud workspace switched to offline mode: online features are paused. */
+  offlineActive?: boolean
+  /** Workspace may use its own model (AI Provider page). */
+  byoLlm?: boolean
 }
 
-export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingApprovals, unreadConnectorMessages, selfhostDownloads }: SidebarProps) {
+export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingApprovals, unreadConnectorMessages, selfhostDownloads, offlineEligible, offlineActive, byoLlm }: SidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const selfHost = useIsSelfHost()
@@ -161,12 +173,14 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
     // question the product can't answer.
     if (item.cloudOnly && selfHost) return null
     if (item.selfHostOnly && !selfHost) return null
+    if (item.offlineOnly && !selfHost && !offlineEligible && !(item.href === '/settings/ai-provider' && byoLlm)) return null
 
     const active = isActive(item)
     const Icon = item.icon
     const comingSoon = !!item.comingSoon
     const locked = !comingSoon && !!item.capability && !hasCapability(tier, flags, item.capability)
-    const dimmed = locked || comingSoon
+    const paused = !!offlineActive && isOfflinePausedPath(item.href)
+    const dimmed = locked || comingSoon || paused
     const badge =
       item.href === '/approvals' ? (pendingApprovals ?? 0) :
       item.href === '/connectors/requests' ? (unreadConnectorMessages ?? 0) : 0
@@ -175,7 +189,7 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
       <Link
         key={item.href}
         href={item.href}
-        title={comingSoon ? 'Coming soon — click to learn more' : locked ? ((item.capability && LOCKED_HINTS[item.capability]) ?? 'Upgrade to unlock') : undefined}
+        title={paused ? 'Paused: this workspace is in offline mode' : comingSoon ? 'Coming soon — click to learn more' : locked ? ((item.capability && LOCKED_HINTS[item.capability]) ?? 'Upgrade to unlock') : undefined}
         className={cn(
           'group relative flex items-center gap-2.5 rounded-lg font-medium transition-all duration-150',
           item.indent ? 'ml-3.5 px-2.5 py-1.5 text-[13px]' : 'px-2.5 py-2 text-sm',
@@ -193,7 +207,9 @@ export function Sidebar({ workspace, role, tier, flags, superAdmin, pendingAppro
         )}
         <Icon className={cn('shrink-0', item.indent ? 'h-3.5 w-3.5' : 'h-[18px] w-[18px]')} />
         <span className="flex-1 truncate">{item.label}</span>
-        {comingSoon
+        {paused
+          ? <CloudOff className="h-3 w-3 shrink-0 opacity-60" />
+          : comingSoon
           ? <span className="shrink-0 rounded-full bg-sidebar-accent/70 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sidebar-foreground/60">Soon</span>
           : locked
             ? <Lock className="h-3 w-3 shrink-0 opacity-60" />

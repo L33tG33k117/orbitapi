@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { groupInWorkspace } from '@/lib/workspace-guard'
 import { capabilityGuard, getWorkspaceFeatures } from '@/lib/workspace-features'
 import { hasCapability, skillLimit } from '@/lib/entitlements'
 
@@ -39,6 +40,10 @@ export async function POST(req: Request) {
 
   const { name, description, group_id, persona, autonomy } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+
+  if (!(await groupInWorkspace(group_id, membership.workspace_id))) {
+    return NextResponse.json({ error: 'Group not found' }, { status: 400 })
+  }
 
   const admin = createAdminClient()
 

@@ -52,6 +52,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ id
       .from('connections')
       .select('id, label, connector:connectors(slug)')
       .in('id', connectionIds)
+      .eq('workspace_id', membership.workspace_id)
       .eq('status', 'active')
 
     for (const conn of connections ?? []) {

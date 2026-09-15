@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap, Handle, Position, MarkerType,
   useNodesState, useEdgesState, addEdge,
   type Node, type Edge, type Connection, type NodeProps,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Gauge, GitBranch, Bell, Clock, ShieldCheck, Wrench, Plus, X } from 'lucide-react'
+import { Gauge, GitBranch, Bell, Clock, ShieldCheck, Wrench, Plus, X, Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
@@ -31,7 +31,7 @@ export interface PlaybookNode {
 export interface AvailableConn { connectionId: string; label: string; actions: { slug: string; name: string; risk: string }[] }
 
 const META: Record<NodeType, { label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; hint: string; color: string }> = {
-  assess:    { label: 'Assess', icon: Gauge, hint: 'AI reads data and scores confidence 0–10', color: 'oklch(0.72 0.16 274)' },
+  assess:    { label: 'Assess', icon: Gauge, hint: 'AI reads data (read-only) and gives a 0–10 severity score. See Autonomy policy for what each score means.', color: 'oklch(0.72 0.16 274)' },
   action:    { label: 'Action', icon: Wrench, hint: 'Run a connector action (gated by autonomy policy)', color: 'oklch(0.7 0.15 200)' },
   condition: { label: 'Condition', icon: GitBranch, hint: 'Branch on state, e.g. state.open > 0', color: 'oklch(0.78 0.15 90)' },
   approval:  { label: 'Approval', icon: ShieldCheck, hint: 'Pause for a human to approve', color: 'oklch(0.78 0.16 60)' },
@@ -111,6 +111,18 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
   const [nodes, setNodes, onNodesChange] = useNodesState(seeded.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(seeded.edges)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(true)
+
+  // Esc leaves full screen; lock page scroll while it's open.
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [fullscreen])
   const nodesRef = useRef(nodes); nodesRef.current = nodes
   const edgesRef = useRef(edges); edgesRef.current = edges
 
@@ -181,7 +193,9 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
   const selectedNode = selected ? (selected.data as RFData).node : null
 
   return (
-    <div className="border rounded-xl overflow-hidden bg-card">
+    <div className={fullscreen
+      ? 'fixed inset-0 z-50 flex flex-col bg-card'
+      : 'border rounded-xl overflow-hidden bg-card flex flex-col'}>
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b flex-wrap">
         <div className="flex flex-wrap gap-1.5">
           {(Object.keys(META) as NodeType[]).map(t => {
@@ -193,10 +207,21 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
             )
           })}
         </div>
-        <p className="text-[11px] text-muted-foreground">Drag to arrange · drag a dot to connect steps · click a step to edit</p>
+        <div className="flex items-center gap-2">
+          <p className="hidden lg:block text-[11px] text-muted-foreground">Drag to arrange · drag a dot to connect steps · click a step to edit</p>
+          <Button variant="ghost" size="icon-sm" onClick={() => setPanelOpen(o => !o)}
+            title={panelOpen ? 'Hide step settings' : 'Show step settings'}>
+            {panelOpen ? <PanelRightClose className="h-3.5 w-3.5" /> : <PanelRightOpen className="h-3.5 w-3.5" />}
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => setFullscreen(f => !f)}
+            title={fullscreen ? 'Exit full screen (Esc)' : 'Full screen'}>
+            {fullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
       </div>
 
-      <div className="flex" style={{ height: 520 }}>
+      {/* Fill the viewport (minus page chrome) instead of a fixed 520px box. */}
+      <div className={`flex ${fullscreen ? 'flex-1 min-h-0' : 'h-[calc(100vh-12rem)] min-h-[560px]'}`}>
         <div className="flex-1 min-w-0">
           <ReactFlow
             nodes={nodes}
@@ -206,10 +231,12 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeDragStop={onNodeDragStop}
-            onNodeClick={(_, n) => setSelectedId(n.id)}
+            onNodeClick={(_, n) => { setSelectedId(n.id); setPanelOpen(true) }}
             onPaneClick={() => setSelectedId(null)}
             onEdgesDelete={() => queueMicrotask(() => commit(nodesRef.current, edgesRef.current))}
             fitView
+            fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }}
+            minZoom={0.2}
             proOptions={{ hideAttribution: true }}
           >
             <Background />
@@ -219,7 +246,7 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
         </div>
 
         {/* Config side panel */}
-        <div className="w-72 shrink-0 border-l p-3 overflow-y-auto">
+        {panelOpen && <div className="w-80 shrink-0 border-l p-3 overflow-y-auto">
           {!selectedNode && <p className="text-sm text-muted-foreground">Select a step to configure it, or add one from the toolbar.</p>}
           {selectedNode && (
             <div className="space-y-3">
@@ -275,7 +302,7 @@ export function PlaybookCanvas({ steps, onChange, availableActions }: {
               <p className="text-[11px] text-muted-foreground">{META[selectedNode.type].hint}</p>
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   )

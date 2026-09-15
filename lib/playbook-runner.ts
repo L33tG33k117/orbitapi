@@ -15,6 +15,8 @@ import { getAiPower, consumeCredits, modelFor, aiPowerRequired, OUT_OF_AI_POWER 
 import type { ActionDef } from '@/connectors/types'
 import { riskAllowed, explorationBlocks, actionPolicy, policyBlocks } from '@/lib/connector-access'
 import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
+import { explainActionError } from '@/lib/action-errors'
+import { clampScore, rubricForPrompt, resolveMode as resolveBand, type AutonomyMode, type Threshold } from '@/lib/severity'
 
 // ============================================================
 // Foundation A — Playbook execution engine
@@ -30,9 +32,8 @@ import { isUnready, UnreadyConnectionsError } from '@/lib/connection-readiness'
 // same async substrate that #6 (conditional chaining) builds on.
 // ============================================================
 
-export type AutonomyMode = 'auto' | 'approval' | 'notify'
+export type { AutonomyMode }
 
-type Threshold = { min: number; max: number; mode: AutonomyMode }
 type AutonomyPolicy = { thresholds: Threshold[] }
 
 export type PlaybookNode = {
@@ -241,10 +242,10 @@ async function executeFrom(
 
       // ---- assess: AI gathers read-only data and scores severity 0–10
       if (node.type === 'assess') {
-        const { severity: sev, summary, findings, usage, model: servingModel } =
+        const { severity: sev, summary, reasons, findings, usage, model: servingModel } =
           await assess(node, playbook, actionIndex, state, chosenModel, provider)
         severity = sev
-        state = { ...state, ...findings, assessment: summary, severity: sev }
+        state = { ...state, ...findings, assessment: summary, severity: sev, severity_reasons: reasons }
         const { tokensIn, tokensOut } = normalizeUsage(usage)
         // Bill the model that actually answered — it may have fallen back, and
         // on a local provider it resolves to `local:<model>`, which costs $0.
@@ -253,6 +254,7 @@ async function executeFrom(
         log.push({
           step: log.length + 1, node_id: node.id, type: 'assess', severity: sev,
           status: 'success', note: summary, duration_ms: Date.now() - startedAt,
+          result: reasons.length ? { why_this_score: reasons } : undefined,
         })
         // Accumulate LLM cost onto the run (#8) — additive so resumes don't reset it.
         await admin.rpc('increment_playbook_run_cost', {
@@ -399,7 +401,10 @@ async function executeFrom(
 
         // decision === 'auto' (or read, or just-approved): execute.
         const creds = credCache[entry.connection.id]
+        // A connector that throws is recorded like one that returned an error,
+        // so the run log (and the approver) see the reason instead of a crash.
         const result = await entry.action.execute(creds, params)
+          .catch((err: unknown) => ({ ok: false as const, data: undefined, error: err instanceof Error ? err.message : String(err) }))
         const dur = Date.now() - startedAt
 
         log.push({
@@ -410,6 +415,18 @@ async function executeFrom(
           status: result.ok ? 'success' : 'error', duration_ms: dur,
           note: justApproved ? 'Executed after approval' : undefined,
         })
+
+        // An approved action that then fails must say so loudly — the approver
+        // is waiting to hear it ran. Tell them why and how to fix it.
+        if (justApproved && !result.ok) {
+          const ex = explainActionError(result.error, { connectionId: entry.connection.id, connectionLabel: entry.connection.label })
+          await createNotification({
+            workspaceId: playbook.workspace_id, type: 'skill_failed',
+            title: `${playbook.name}: approved action failed`,
+            body: `${entry.action.name} on ${entry.connection.label}: ${ex.title} ${ex.hint}`,
+            link: ex.fixHref ?? `/playbooks/${playbook.id}`,
+          })
+        }
 
         if (isWrite && result.ok) {
           await admin.from('audit_log').insert({
@@ -473,7 +490,7 @@ async function assess(
   state: Record<string, unknown>,
   model: ModelId,
   provider: AiProvider,
-): Promise<{ severity: number; summary: string; findings: Record<string, unknown>; usage: unknown; model: ModelId }> {
+): Promise<{ severity: number; summary: string; reasons: string[]; findings: Record<string, unknown>; usage: unknown; model: ModelId }> {
   // Only expose read actions to the assessment pass.
   const tools: Record<string, ReturnType<typeof dynamicTool>> = {}
   for (const key of Object.keys(actionIndex)) {
@@ -493,15 +510,16 @@ async function assess(
   const systemPrompt = `${playbook.persona || 'You are a security operations analyst.'}
 
 You are the ASSESSMENT phase of an automated playbook. Gather current data using the
-read-only tools, then judge the situation's SEVERITY on a 0–10 scale where:
-  0–5  = informational / low — no automated action warranted
-  6–8  = elevated — a human should approve any action
-  9–10 = critical — immediate automated response is justified
+read-only tools, then judge the situation's SEVERITY as a whole number on a 0–10 scale.
+Score the situation itself, not the tool the data came from. Use this rubric:
+${rubricForPrompt()}
+If the tools returned errors or too little data to judge, say so in the reasons and
+score no higher than 4.
 
 Current carried state: ${JSON.stringify(state).slice(0, 1500)}
 
 Respond with ONE json object and nothing else:
-{"severity": <0-10 number>, "summary": "<one sentence>", "findings": { <key facts downstream steps need> }}`
+{"severity": <0-10 integer>, "summary": "<one sentence>", "reasons": ["<short fact that drove the score>", ...up to 4], "findings": { <key facts downstream steps need> }}`
 
   // Retry transient failures, then drop to Economy if still overloaded. An
   // assess step blocks the whole playbook, so a cheaper answer beats a dead run.
@@ -529,22 +547,24 @@ Respond with ONE json object and nothing else:
   return { ...parseAssessment(gen.text), usage: gen.usage, model: servingModel }
 }
 
-function parseAssessment(text: string): { severity: number; summary: string; findings: Record<string, unknown> } {
+function parseAssessment(text: string): { severity: number; summary: string; reasons: string[]; findings: Record<string, unknown> } {
   try {
     const match = text.match(/\{[\s\S]*\}/)
     if (match) {
       const obj = JSON.parse(match[0])
-      const sev = Math.max(0, Math.min(10, Number(obj.severity)))
+      // Whole numbers only: a 8.5 used to fall between the 6–8 and 9–10 bands.
+      const raw = Number(obj.severity)
       return {
-        severity: Number.isFinite(sev) ? sev : 0,
+        severity: Number.isFinite(raw) ? clampScore(raw) : 0,
         summary: String(obj.summary ?? '').slice(0, 500),
+        reasons: Array.isArray(obj.reasons) ? obj.reasons.slice(0, 4).map((r: unknown) => String(r).slice(0, 200)) : [],
         findings: (obj.findings && typeof obj.findings === 'object') ? obj.findings : {},
       }
     }
   } catch {
     // fall through
   }
-  return { severity: 0, summary: text.slice(0, 500), findings: {} }
+  return { severity: 0, summary: text.slice(0, 500), reasons: ['The AI did not return a readable score, so it defaulted to 0.'], findings: {} }
 }
 
 // ------------------------------------------------------------
@@ -552,11 +572,7 @@ function parseAssessment(text: string): { severity: number; summary: string; fin
 // ------------------------------------------------------------
 
 function resolveMode(severity: number | null, policy: AutonomyPolicy): AutonomyMode {
-  const s = severity ?? 0
-  for (const t of policy.thresholds ?? []) {
-    if (s >= t.min && s <= t.max) return t.mode
-  }
-  return 'approval' // safe default when no band matches
+  return resolveBand(severity, policy?.thresholds) // 'approval' when no band matches
 }
 
 // Next node: explicit `next` id, else the next node in the array.
@@ -760,6 +776,7 @@ async function loadConnections(playbook: LoadedPlaybook): Promise<Connection[]> 
     // '*' so allow_api_exploration flows through even before migration 048.
     .select('*, connector:connectors(slug, name)')
     .in('id', ids)
+    .eq('workspace_id', playbook.workspace_id) // never run another workspace's connection
     .eq('status', 'active')
   return (data ?? []) as unknown as Connection[]
 }

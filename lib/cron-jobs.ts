@@ -5,6 +5,7 @@ import { isDue } from '@/lib/schedules'
 import { tierMinPollHours, hasAiPower, aiPowerRequired } from '@/lib/ai-power'
 import { resolveAiProvider } from '@/lib/ai-provider'
 import { isSelfHost } from '@/lib/edition'
+import { offlineWorkspaceIds } from '@/lib/offline-mode'
 
 // ============================================================
 // Scheduled work, callable from anywhere
@@ -20,8 +21,23 @@ import { isSelfHost } from '@/lib/edition'
 // the in-process node-cron scheduler on self-host.
 // ============================================================
 
-/** Do not re-run a schedule more often than this, whatever the plan says. */
-const MIN_DEDUPE_WINDOW_MS = 30 * 60 * 1000
+/**
+ * Do not re-run a schedule more often than this, whatever the plan says.
+ * The schedule format ("DOW:HOUR[@TZ]") can express at most one run per day,
+ * so 20h is safe and also absorbs the repeated hour when daylight saving ends.
+ * Revisit if sub-daily schedules are ever added.
+ */
+const MIN_DEDUPE_WINDOW_MS = 20 * 60 * 60 * 1000
+
+/**
+ * Cloud (Vercel Hobby) only ticks once per day, at a fixed UTC hour. Matching
+ * the hour there would mean a schedule only ever fires if it happens to be set
+ * to that exact hour, so on cloud we match the day only. Set CRON_HOURLY=true
+ * once the cloud cron runs hourly. Self-host always ticks hourly.
+ */
+function scheduleOpts() {
+  return { ignoreHour: !isSelfHost() && process.env.CRON_HOURLY !== 'true' }
+}
 
 /**
  * Would this run be blocked for lack of AI Power?
@@ -72,9 +88,12 @@ export async function runDueSkills(now: Date = new Date()): Promise<CronResult> 
   const skipped: string[] = []
   const errors: { id: string; error: string }[] = []
 
+  // Workspaces in offline mode run their schedules on their own install.
+  const offline = await offlineWorkspaceIds()
+
   await Promise.all(
     skills.map(async (skill) => {
-      if (!skill.schedule || !isDue(skill.schedule, now)) {
+      if (offline.has(skill.workspace_id) || !skill.schedule || !isDue(skill.schedule, now, scheduleOpts())) {
         skipped.push(skill.id)
         return
       }
@@ -138,12 +157,14 @@ export async function runDuePlaybooks(now: Date = new Date()): Promise<CronResul
   const admin = createAdminClient()
 
   // ---- 1. Resume timer-parked runs whose wait has elapsed (async substrate) ----
-  const { data: parked } = await admin
+  const offline = await offlineWorkspaceIds()
+  const { data: parkedAll } = await admin
     .from('playbook_runs')
-    .select('id')
+    .select('id, workspace_id')
     .eq('status', 'waiting')
     .not('resume_at', 'is', null)
     .lte('resume_at', now.toISOString())
+  const parked = (parkedAll ?? []).filter(r => !offline.has(r.workspace_id))
 
   const resumed: string[] = []
   const resumeErrors: { id: string; error: string }[] = []
@@ -179,7 +200,7 @@ export async function runDuePlaybooks(now: Date = new Date()): Promise<CronResul
 
   await Promise.all(
     (playbooks ?? []).map(async (pb) => {
-      if (!pb.schedule || !isDue(pb.schedule, now)) {
+      if (offline.has(pb.workspace_id) || !pb.schedule || !isDue(pb.schedule, now, scheduleOpts())) {
         skipped.push(pb.id)
         return
       }

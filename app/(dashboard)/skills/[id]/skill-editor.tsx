@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Lock, Gauge, Plug, ShieldCheck, CheckCircle2, AlertTriangle, XCircle, Loader2 } from 'lucide-react'
-import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule } from '@/lib/schedules'
+import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule, browserTimezone } from '@/lib/schedules'
+import { TimezoneSelect } from '@/components/timezone-select'
+import { checkPersona, personaPlaceholders, personaTemplate } from '@/lib/persona-coach'
 import { estimateRunCredits, runsPerMonth, scaleEstimate, formatEstimate, type Efficiency } from '@/lib/ai-estimate'
 
 type Autonomy = 'supervised' | 'manual' | 'autonomous'
@@ -98,9 +100,13 @@ export function SkillEditor({
   const [webhookLoading, setWebhookLoading] = useState(false)
 
   // Parse schedule into DOW + hour for the pickers
-  const parsedSchedule = form.schedule ? parseSchedule(form.schedule) : { dow: '*', hour: '8' }
+  const parsedSchedule = form.schedule ? parseSchedule(form.schedule) : { dow: '*', hour: '8', tz: 'UTC' }
   const [scheduleDow, setScheduleDow] = useState(parsedSchedule.dow)
   const [scheduleHour, setScheduleHour] = useState(parsedSchedule.hour)
+  const [scheduleTz, setScheduleTz] = useState(parsedSchedule.tz)
+  // New schedules default to the viewer's zone (after mount, to avoid a hydration mismatch).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!form.schedule) setScheduleTz(browserTimezone()) }, [])
   const [scheduleEnabled, setScheduleEnabled] = useState(!!form.schedule)
 
   // Skill Builder — verification gates Save (we don't ship broken skills).
@@ -173,19 +179,25 @@ export function SkillEditor({
 
   function handleDowChange(dow: string) {
     setScheduleDow(dow)
-    if (scheduleEnabled) set('schedule', buildSchedule(dow, scheduleHour))
+    if (scheduleEnabled) set('schedule', buildSchedule(dow, scheduleHour, scheduleTz))
     setSaved(false)
   }
 
   function handleHourChange(hour: string) {
     setScheduleHour(hour)
-    if (scheduleEnabled) set('schedule', buildSchedule(scheduleDow, hour))
+    if (scheduleEnabled) set('schedule', buildSchedule(scheduleDow, hour, scheduleTz))
     setSaved(false)
   }
 
   function handleScheduleToggle(enabled: boolean) {
     setScheduleEnabled(enabled)
-    set('schedule', enabled ? buildSchedule(scheduleDow, scheduleHour) : '')
+    set('schedule', enabled ? buildSchedule(scheduleDow, scheduleHour, scheduleTz) : '')
+  }
+
+  function handleTzChange(tz: string) {
+    setScheduleTz(tz)
+    if (scheduleEnabled) set('schedule', buildSchedule(scheduleDow, scheduleHour, tz))
+    setSaved(false)
   }
 
   function toggleBlocked(slug: string) {
@@ -305,11 +317,52 @@ export function SkillEditor({
         />
       </div>
 
-      <div className="space-y-1.5">
+      <div id="persona" className="space-y-1.5 scroll-mt-20">
         <Label>Persona</Label>
         <p className="text-xs text-muted-foreground">
           This is the AI&apos;s system prompt — its role, responsibilities, and how it should behave.
         </p>
+        {(() => {
+          // Coach: generic personas (bundles, templates) work, but they don't know
+          // your product. Show what's missing and offer fill-in-the-blank sections.
+          const checks = checkPersona(form.persona)
+          const missing = checks.filter(c => !c.covered)
+          const placeholders = personaPlaceholders(form.persona)
+          if (missing.length === 0 && placeholders.length === 0) return null
+          return (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <p className="text-sm font-medium">Make this skill yours</p>
+              <p className="text-xs text-muted-foreground">
+                The more this persona knows about your business, the better it answers.
+                Add the details below. Generic personas give generic results.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {checks.map(c => (
+                  <span key={c.key} title={c.tip}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] ${c.covered ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400' : 'border-border text-muted-foreground'}`}>
+                    {c.covered ? '✓' : '○'} {c.label}
+                  </span>
+                ))}
+              </div>
+              {missing.length > 0 && (
+                <ul className="text-[11px] text-muted-foreground list-disc pl-4 space-y-0.5">
+                  {missing.map(c => <li key={c.key}>{c.tip}</li>)}
+                </ul>
+              )}
+              {placeholders.length > 0 && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-500">
+                  Replace the {placeholders.length} [bracketed] placeholder{placeholders.length === 1 ? '' : 's'} with your own details before verifying.
+                </p>
+              )}
+              {missing.length > 0 && (
+                <Button type="button" size="xs" variant="outline"
+                  onClick={() => set('persona', `${form.persona.trim()}\n\n${personaTemplate(missing.map(m => m.key))}`.trim())}>
+                  Add fill-in sections for what&apos;s missing
+                </Button>
+              )}
+            </div>
+          )
+        })()}
         <textarea
           value={form.persona}
           onChange={e => set('persona', e.target.value)}
@@ -389,7 +442,7 @@ export function SkillEditor({
               : 'Check the trigger condition at a fixed interval. The AI evaluates current data and only acts if conditions are met — no wasted runs.'}
           </p>
           {scheduleEnabled && (
-            <div className="flex items-center gap-3 pl-6">
+            <div className="flex flex-wrap items-center gap-3 pl-6">
               <select
                 value={scheduleDow}
                 onChange={e => handleDowChange(e.target.value)}
@@ -405,6 +458,8 @@ export function SkillEditor({
               >
                 {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              <TimezoneSelect value={scheduleTz} onChange={handleTzChange}
+                className="h-9 max-w-[14rem] rounded-md border border-input bg-background px-3 text-sm" />
               {!form.enabled && (
                 <p className="text-xs text-amber-600">Enable this skill for the schedule to run.</p>
               )}

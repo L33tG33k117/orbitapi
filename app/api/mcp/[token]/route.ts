@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import { getEndpointByToken, buildTools, executeTool } from '@/lib/mcp'
 
 // Stateless MCP server over Streamable HTTP. External AI assistants (Claude,
@@ -24,6 +25,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!endpoint) {
     return NextResponse.json({ error: 'Unknown or disabled MCP endpoint' }, { status: 404 })
   }
+  const paused = await offlineModeGuard(endpoint.workspace_id)
+  if (paused) return paused
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let msg: any

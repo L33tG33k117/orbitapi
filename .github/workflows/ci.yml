@@ -39,6 +39,12 @@ jobs:
       - name: Simulation data parity (every action has demo data)
         run: npm run test:sim-parity
 
+      - name: Workspace isolation (service-role lookups are workspace-scoped)
+        run: npm run test:isolation
+
+      - name: Schedules, time zones and severity bands
+        run: npm run test:schedules
+
       - name: Offline edition checks (provider, secrets, config, gating)
         run: npm run test:offline
 

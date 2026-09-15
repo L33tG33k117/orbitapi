@@ -32,6 +32,7 @@ export default async function PlaybookDetailPage({ params }: Params) {
       .from('connections')
       .select('id, label, connector:connectors(slug, name)')
       .in('id', connIds)
+      .eq('workspace_id', membership.workspace_id)
       .eq('status', 'active')
     availableActions = (conns ?? []).map(c => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { normalizeThresholds } from '@/lib/severity'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { groupInWorkspace } from '@/lib/workspace-guard'
 import { capabilityGuard } from '@/lib/workspace-features'
 
 export async function GET() {
@@ -37,6 +39,9 @@ export async function POST(req: Request) {
   if (denied) return denied
 
   const body = await req.json()
+  if (!(await groupInWorkspace(body.group_id, membership.workspace_id))) {
+    return NextResponse.json({ error: 'Group not found' }, { status: 400 })
+  }
   if (!body.name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
   const admin = createAdminClient()
@@ -49,7 +54,8 @@ export async function POST(req: Request) {
       group_id: body.group_id || null,
       persona: body.persona ?? '',
       definition: body.definition ?? { steps: [] },
-      autonomy_policy: body.autonomy_policy ?? undefined, // fall back to table default
+      // fall back to the table default when absent or malformed
+      autonomy_policy: normalizeThresholds(body.autonomy_policy?.thresholds) ? { thresholds: normalizeThresholds(body.autonomy_policy.thresholds) } : undefined,
       trigger_type: body.trigger_type ?? 'manual',
       schedule: body.schedule ?? null,
       source: body.source ?? 'custom',

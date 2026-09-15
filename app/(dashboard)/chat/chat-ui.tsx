@@ -13,6 +13,8 @@ import { Markdown } from '@/components/markdown'
 import { AiPowerMeter, type AiPowerState } from '@/components/ai-power-meter'
 import { ResultExport } from '@/components/result-export'
 import { toTable } from '@/lib/export-data'
+import Link from 'next/link'
+import type { ExplainedError } from '@/lib/action-errors'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,26 +118,48 @@ interface Skill {
 
 // ─── ConfirmationCard ─────────────────────────────────────────────────────────
 
-function ConfirmationCard({ out }: { out: PendingOutput }) {
+export interface ConfirmationOutcome {
+  out: PendingOutput
+  kind: 'done' | 'rejected' | 'error'
+  message: string
+  explained?: ExplainedError
+}
+
+function ConfirmationCard({ out, onResolved }: { out: PendingOutput; onResolved?: (o: ConfirmationOutcome) => void }) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'rejected' | 'error'>('idle')
   const [resultMsg, setResultMsg] = useState('')
+  const [explained, setExplained] = useState<ExplainedError | null>(null)
 
   async function confirm() {
     setState('loading')
     try {
       const res = await fetch(`/api/pending-actions/${out.pending_action_id}/confirm`, { method: 'POST' })
-      if (res.ok) { setState('done'); setResultMsg('Action executed successfully.') }
-      else {
-        const body = await res.json().catch(() => ({}))
-        setState('error'); setResultMsg(body.error ?? 'Execution failed.')
+      const body = await res.json().catch(() => ({}))
+      if (res.ok) {
+        const msg = body.message ?? 'Action executed successfully.'
+        setState('done'); setResultMsg(msg)
+        onResolved?.({ out, kind: 'done', message: msg })
+      } else {
+        const msg = body.error ?? `Execution failed (HTTP ${res.status}).`
+        const ex: ExplainedError = body.explained ?? {
+          kind: 'unknown', title: 'The action didn\'t complete.',
+          hint: 'Try again, or check the connection with "Test connection".',
+        }
+        setState('error'); setResultMsg(msg); setExplained(ex)
+        onResolved?.({ out, kind: 'error', message: msg, explained: ex })
       }
-    } catch { setState('error'); setResultMsg('Network error.') }
+    } catch {
+      const ex: ExplainedError = { kind: 'network', title: 'Couldn\'t reach OrbitAPI.', hint: 'Check your internet connection. The action may not have run; check Approvals before retrying.', fixHref: '/approvals', fixLabel: 'Open Approvals' }
+      setState('error'); setResultMsg('Network error.'); setExplained(ex)
+      onResolved?.({ out, kind: 'error', message: 'Network error.', explained: ex })
+    }
   }
 
   async function reject() {
     setState('loading')
     await fetch(`/api/pending-actions/${out.pending_action_id}/reject`, { method: 'POST' }).catch(() => {})
     setState('rejected')
+    onResolved?.({ out, kind: 'rejected', message: 'Rejected. Nothing was changed.' })
   }
 
   const paramEntries = Object.entries(out.params ?? {})
@@ -163,10 +187,21 @@ function ConfirmationCard({ out }: { out: PendingOutput }) {
           <Button size="sm" variant="outline" onClick={reject} className="flex-1">Reject</Button>
         </div>
       )}
-      {state === 'loading' && <p className="text-xs text-muted-foreground animate-pulse">Processing…</p>}
+      {state === 'loading' && <p className="text-xs text-muted-foreground animate-pulse">Running…</p>}
       {state === 'done' && <p className="text-xs text-green-600 font-medium">✓ {resultMsg}</p>}
-      {state === 'rejected' && <p className="text-xs text-muted-foreground">Rejected.</p>}
-      {state === 'error' && <p className="text-xs text-destructive">✕ {resultMsg}</p>}
+      {state === 'rejected' && <p className="text-xs text-muted-foreground">Rejected. Nothing was changed.</p>}
+      {state === 'error' && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2.5 space-y-1.5">
+          <p className="text-xs font-medium text-destructive">✕ Approved, but it didn&apos;t run. {explained?.title}</p>
+          {explained?.hint && <p className="text-xs text-muted-foreground">{explained.hint}</p>}
+          <p className="text-[11px] text-muted-foreground font-mono break-words">Details: {resultMsg}</p>
+          {explained?.fixHref && (
+            <Link href={explained.fixHref} className="inline-block text-xs font-semibold text-primary hover:underline">
+              {explained.fixLabel ?? 'Fix it'} →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -240,6 +275,38 @@ function ChatCore({
     prevStatus.current = status
   }, [status])
 
+  // When a staged action is approved/rejected, write the outcome into the
+  // conversation right away. Otherwise the last thing the assistant said is
+  // "waiting for your confirmation" and the chat looks stuck, even when the
+  // action failed. The note is also saved, so the assistant sees it next turn.
+  const onConfirmationResolved = useCallback((o: ConfirmationOutcome) => {
+    const text = o.kind === 'done'
+      ? `✓ **${o.out.action_name}** on ${o.out.connection_name}: ${o.message}`
+      : o.kind === 'rejected'
+        ? `You rejected **${o.out.action_name}** on ${o.out.connection_name}. Nothing was changed.`
+        : [
+            `✕ **${o.out.action_name}** on ${o.out.connection_name} was approved but **did not run**.`,
+            '',
+            `**What happened:** ${o.explained?.title ?? 'The action failed.'}`,
+            '',
+            `**How to fix it:** ${o.explained?.hint ?? 'Check the connection and try again.'}`,
+            '',
+            `Error from the app: \`${o.message.replace(/`/g, "'").slice(0, 300)}\``,
+            '',
+            'Once that\'s fixed, ask me to try again.',
+          ].join('\n')
+    const note: UIMessage = {
+      id: `outcome-${o.out.pending_action_id}`,
+      role: 'assistant',
+      parts: [{ type: 'text', text }],
+    }
+    setMessages(prev => prev.some(m => m.id === note.id) ? prev : [...prev, note])
+    fetch(`/api/conversations/${conversationId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: [{ role: 'assistant', content: text }] }),
+    }).catch(() => { /* best-effort; the note is already on screen */ })
+  }, [setMessages, conversationId])
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!input.trim() || isLoading) return
@@ -297,7 +364,7 @@ function ChatCore({
                         <div className="flex items-center gap-1.5 text-xs opacity-70 italic mb-1">
                           <span>⏸</span><span>Staged: {output.action_name}</span>
                         </div>
-                        <ConfirmationCard out={output} />
+                        <ConfirmationCard out={output} onResolved={onConfirmationResolved} />
                       </div>
                     )
                   }

@@ -1,13 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule, scheduleLabel } from '@/lib/schedules'
+import { DOW_OPTIONS, HOUR_OPTIONS, parseSchedule, buildSchedule, scheduleLabel, browserTimezone } from '@/lib/schedules'
+import { severityLabel, DEFAULT_BANDS, bandsToThresholds, type Threshold } from '@/lib/severity'
+import { TimezoneSelect } from '@/components/timezone-select'
+import { AutonomyPolicyEditor } from './autonomy-policy'
 import {
   Play, Trash2, Plus, ChevronDown, ChevronUp, ArrowLeft, Gauge, GitBranch,
   Bot, Bell, Clock, ShieldCheck, Wrench, X, List, Network,
@@ -31,7 +34,6 @@ interface PlaybookNode {
   next?: string
   position?: { x: number; y: number }
 }
-interface Threshold { min: number; max: number; mode: 'auto' | 'approval' | 'notify' }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Run = any
@@ -46,7 +48,7 @@ interface Props {
 }
 
 const NODE_META: Record<NodeType, { label: string; icon: React.ComponentType<{ className?: string }>; hint: string }> = {
-  assess:   { label: 'Assess', icon: Gauge, hint: 'AI reads data and scores confidence 0–10' },
+  assess:   { label: 'Assess', icon: Gauge, hint: 'AI reads data (read-only) and gives a 0–10 severity score. See Autonomy policy for what each score means.' },
   action:   { label: 'Action', icon: Wrench, hint: 'Run a connector action (gated by autonomy policy)' },
   condition:{ label: 'Condition', icon: GitBranch, hint: 'Branch on state, e.g. state.open > 0' },
   approval: { label: 'Approval', icon: ShieldCheck, hint: 'Pause for a human to approve' },
@@ -60,16 +62,21 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
   const [triggerType, setTriggerType] = useState<string>(playbook.trigger_type ?? 'manual')
   // Schedule is stored as "DOW:HOUR" (same as skills) and evaluated by the cron
   // via isDue() — so present it as plain-language day + hour pickers, never raw cron.
+  // New schedules default to the viewer's own time zone; saved ones keep theirs
+  // (a schedule saved before time zones existed reads as UTC).
   const initSched = parseSchedule(playbook.schedule || '*:8')
   const [scheduleDow, setScheduleDow] = useState<string>(initSched.dow)
   const [scheduleHour, setScheduleHour] = useState<string>(initSched.hour)
-  const schedule = triggerType === 'schedule' ? buildSchedule(scheduleDow, scheduleHour) : (playbook.schedule ?? '')
+  const [scheduleTz, setScheduleTz] = useState<string>(initSched.tz)
+  // Read the browser zone after mount so server and client render the same HTML.
+  useEffect(() => {
+    if (!playbook.schedule) setScheduleTz(browserTimezone())
+  }, [playbook.schedule])
+  const schedule = triggerType === 'schedule' ? buildSchedule(scheduleDow, scheduleHour, scheduleTz) : (playbook.schedule ?? '')
   const [enabled, setEnabled] = useState<boolean>(playbook.enabled ?? false)
   const [steps, setSteps] = useState<PlaybookNode[]>(playbook.definition?.steps ?? [])
   const [thresholds, setThresholds] = useState<Threshold[]>(
-    playbook.autonomy_policy?.thresholds ?? [
-      { min: 9, max: 10, mode: 'auto' }, { min: 6, max: 8, mode: 'approval' }, { min: 0, max: 5, mode: 'notify' },
-    ]
+    playbook.autonomy_policy?.thresholds ?? bandsToThresholds(DEFAULT_BANDS)
   )
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState(false)
@@ -127,7 +134,7 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-3xl">
+    <div className={`p-4 md:p-8 space-y-6 ${view === 'canvas' && isAdmin ? 'max-w-[1800px]' : 'max-w-3xl'}`}>
       <Link href="/playbooks" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3.5 w-3.5" /> Playbooks
       </Link>
@@ -151,6 +158,8 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
 
       {isAdmin && (
         <>
+          {/* On the wide canvas layout, config + policy sit side by side so the canvas starts higher. */}
+          <div className={view === 'canvas' ? 'grid gap-6 xl:grid-cols-2 items-start' : 'space-y-6'}>
           {/* Config */}
           <section className="border rounded-xl p-4 bg-card space-y-4">
             <h2 className="font-medium text-sm">Configuration</h2>
@@ -184,8 +193,9 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
                       {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
+                  <TimezoneSelect value={scheduleTz} onChange={setScheduleTz} />
                   <p className="text-[11px] text-muted-foreground">
-                    {scheduleLabel(buildSchedule(scheduleDow, scheduleHour))}. Times are UTC.
+                    {scheduleLabel(buildSchedule(scheduleDow, scheduleHour, scheduleTz))}.
                   </p>
                 </div>
               )}
@@ -209,33 +219,8 @@ export function PlaybookDetail({ playbook, availableActions, runs, isAdmin }: Pr
           </section>
 
           {/* Autonomy policy */}
-          <section className="border rounded-xl p-4 bg-card space-y-3">
-            <div>
-              <h2 className="font-medium text-sm">Autonomy policy</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                How write actions behave at a given confidence level. This is what lets one playbook auto-act
-                when the AI is highly confident while requiring approval when it&apos;s uncertain.
-              </p>
-            </div>
-            {thresholds.map((t, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground w-16">Confidence</span>
-                <Input type="number" min={0} max={10} value={t.min} className="w-16"
-                  onChange={e => setThresholds(ts => ts.map((x, idx) => idx === i ? { ...x, min: Number(e.target.value) } : x))} />
-                <span className="text-muted-foreground">to</span>
-                <Input type="number" min={0} max={10} value={t.max} className="w-16"
-                  onChange={e => setThresholds(ts => ts.map((x, idx) => idx === i ? { ...x, max: Number(e.target.value) } : x))} />
-                <span className="text-muted-foreground">→</span>
-                <select value={t.mode}
-                  onChange={e => setThresholds(ts => ts.map((x, idx) => idx === i ? { ...x, mode: e.target.value as Threshold['mode'] } : x))}
-                  className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-                  <option value="auto">Auto-execute</option>
-                  <option value="approval">Require approval</option>
-                  <option value="notify">Notify only</option>
-                </select>
-              </div>
-            ))}
-          </section>
+          <AutonomyPolicyEditor thresholds={thresholds} onChange={setThresholds} />
+          </div>
 
           {/* Step editor */}
           <section className="border rounded-xl p-4 bg-card space-y-3">
@@ -383,7 +368,7 @@ function RunRow({ run }: { run: Run }) {
         <div className="flex-1 min-w-0">
           <p className="text-xs">
             {run.mode === 'dry_run' ? 'Dry run' : 'Live'} · {new Date(run.started_at).toLocaleString()}
-            {run.severity != null && ` · confidence ${run.severity}`}
+            {run.severity != null && ` · severity ${run.severity} (${severityLabel(run.severity)})`}
             {run.autonomy_decision && ` · ${run.autonomy_decision}`}
           </p>
           {run.summary && <p className="text-[11px] text-muted-foreground truncate">{run.summary}</p>}

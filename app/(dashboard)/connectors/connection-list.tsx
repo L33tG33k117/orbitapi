@@ -258,7 +258,7 @@ export function ConnectionList({
               )}
             </div>
             <div data-tour="connection-actions" className="flex items-center gap-2 shrink-0">
-              <Link href={`/connectors/${c.id}/manual`}>
+              <Link href={`/connectors/${c.id}/manual?from=/connectors`}>
                 <Button variant="secondary" size="sm" className="gap-1.5">
                   <Play className="h-3.5 w-3.5" />
                   Use now
