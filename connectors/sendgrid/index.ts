@@ -1,9 +1,10 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const SG_BASE = 'https://api.sendgrid.com/v3'
 
 async function sgPost(apiKey: string, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${SG_BASE}${path}`, {
+  const res = await fetchWithTimeout(`${SG_BASE}${path}`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -17,7 +18,7 @@ async function sgPost(apiKey: string, path: string, body: unknown): Promise<Acti
 }
 
 async function sgGet(apiKey: string, path: string): Promise<ActionResult> {
-  const res = await fetch(`${SG_BASE}${path}`, {
+  const res = await fetchWithTimeout(`${SG_BASE}${path}`, {
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
   })
   if (!res.ok) {
@@ -28,7 +29,7 @@ async function sgGet(apiKey: string, path: string): Promise<ActionResult> {
 }
 
 async function sgDelete(apiKey: string, path: string, body?: unknown): Promise<ActionResult> {
-  const res = await fetch(`${SG_BASE}${path}`, {
+  const res = await fetchWithTimeout(`${SG_BASE}${path}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -68,7 +69,7 @@ export const sendgridManifest: ConnectorManifest = {
   },
 
   testConnection: async (creds) => {
-    const res = await fetch(`${SG_BASE}/user/profile`, {
+    const res = await fetchWithTimeout(`${SG_BASE}/user/profile`, {
       headers: { 'Authorization': `Bearer ${creds.api_key}` },
     })
     if (!res.ok) return { ok: false, error: 'Invalid SendGrid API key' }

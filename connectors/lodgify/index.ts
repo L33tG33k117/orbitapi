@@ -1,4 +1,5 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const BASE = 'https://api.lodgify.com'
 
@@ -8,7 +9,7 @@ async function lodgifyFetch(
   options: RequestInit = {}
 ): Promise<ActionResult> {
   const url = `${BASE}${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: {
       'X-ApiKey': apiKey,

@@ -1,8 +1,9 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 async function snFetch(instance: string, username: string, password: string, path: string, options: RequestInit = {}): Promise<ActionResult> {
   const url = `https://${instance}.service-now.com/api/now${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: {
       'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,

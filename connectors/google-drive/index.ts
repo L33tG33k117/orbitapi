@@ -1,4 +1,5 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 // Google Drive — OAuth2 (read-only). Tokens are obtained via the OAuth flow
 // (/api/oauth/google-drive/start + /callback) and stored as connection
@@ -6,7 +7,7 @@ import type { ConnectorManifest, ActionResult } from '@/connectors/types'
 
 async function gdrive(token: string, path: string): Promise<ActionResult> {
   if (!token) return { ok: false, error: 'Not authorized — reconnect Google Drive.' }
-  const res = await fetch(`https://www.googleapis.com/drive/v3${path}`, {
+  const res = await fetchWithTimeout(`https://www.googleapis.com/drive/v3${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
   })
   if (!res.ok) return { ok: false, error: `Google Drive ${res.status}: ${await res.text().catch(() => res.statusText)}` }

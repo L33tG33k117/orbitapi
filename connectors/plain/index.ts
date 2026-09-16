@@ -1,9 +1,10 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const PLAIN_ENDPOINT = 'https://core.plain.com/b/graphql'
 
 async function plainGql(apiKey: string, query: string, variables: Record<string, unknown> = {}): Promise<ActionResult> {
-  const res = await fetch(PLAIN_ENDPOINT, {
+  const res = await fetchWithTimeout(PLAIN_ENDPOINT, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,

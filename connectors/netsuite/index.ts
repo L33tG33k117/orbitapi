@@ -1,4 +1,5 @@
 import * as crypto from 'crypto'
+import { fetchWithTimeout } from '@/connectors/timeout'
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
 
 function buildOAuth1Header(
@@ -39,7 +40,7 @@ function nsUrl(accountId: string, path: string): string {
 async function nsFetch(creds: Record<string, string>, method: string, path: string, body?: unknown): Promise<ActionResult> {
   const url = nsUrl(creds.account_id, path)
   const auth = buildOAuth1Header(method, url, creds.consumer_key, creds.consumer_secret, creds.token_key, creds.token_secret)
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method,
     headers: {
       'Authorization': auth,

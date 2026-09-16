@@ -41,6 +41,9 @@ jobs:
 
       - name: Workspace isolation (service-role lookups are workspace-scoped)
         run: npm run test:isolation
+      - name: Reliability and secret-logging invariants
+        run: npm run test:reliability
+
 
       - name: Schedules, time zones and severity bands
         run: npm run test:schedules

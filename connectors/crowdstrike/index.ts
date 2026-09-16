@@ -1,9 +1,10 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const BASE = 'https://api.crowdstrike.com'
 
 async function csGet(token: string, path: string): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   })
   if (!res.ok) return { ok: false, error: `CrowdStrike API ${res.status}: ${await res.text().catch(() => res.statusText)}` }
@@ -11,7 +12,7 @@ async function csGet(token: string, path: string): Promise<ActionResult> {
 }
 
 async function csPost(token: string, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify(body),
@@ -21,7 +22,7 @@ async function csPost(token: string, path: string, body: unknown): Promise<Actio
 }
 
 async function csPatch(token: string, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     method: 'PATCH',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify(body),
@@ -31,7 +32,7 @@ async function csPatch(token: string, path: string, body: unknown): Promise<Acti
 }
 
 async function csDelete(token: string, path: string): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   })
@@ -40,7 +41,7 @@ async function csDelete(token: string, path: string): Promise<ActionResult> {
 }
 
 async function getToken(clientId: string, clientSecret: string): Promise<string> {
-  const res = await fetch(`${BASE}/oauth2/token`, {
+  const res = await fetchWithTimeout(`${BASE}/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&grant_type=client_credentials`,

@@ -1,5 +1,6 @@
 // connectors/eufy-security/index.ts
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const EUFY_BASE = 'https://security-app.eufylife.com/v1'
 
@@ -9,7 +10,7 @@ async function eufyFetch(
   options: RequestInit = {},
 ): Promise<ActionResult> {
   const url = `${EUFY_BASE}${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: {
       'X-Auth-Token': token,

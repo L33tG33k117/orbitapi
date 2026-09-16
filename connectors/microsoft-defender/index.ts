@@ -1,10 +1,11 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const BASE = 'https://api.securitycenter.microsoft.com/api'
 const TOKEN_BASE = 'https://login.microsoftonline.com'
 
 async function getDefenderToken(tenantId: string, clientId: string, clientSecret: string): Promise<string> {
-  const res = await fetch(`${TOKEN_BASE}/${tenantId}/oauth2/v2.0/token`, {
+  const res = await fetchWithTimeout(`${TOKEN_BASE}/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -20,7 +21,7 @@ async function getDefenderToken(tenantId: string, clientId: string, clientSecret
 }
 
 async function defenderGet(token: string, path: string): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   })
   if (!res.ok) {
@@ -31,7 +32,7 @@ async function defenderGet(token: string, path: string): Promise<ActionResult> {
 }
 
 async function defenderPost(token: string, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -48,7 +49,7 @@ async function defenderPost(token: string, path: string, body: unknown): Promise
 }
 
 async function defenderPatch(token: string, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchWithTimeout(`${BASE}${path}`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,

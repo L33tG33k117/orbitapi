@@ -55,6 +55,8 @@ export interface RestConnectorSpec {
   testLabel: string
   /** For POST-only APIs (e.g. GraphQL): override the test request. */
   testInit?: { method: 'POST'; body: unknown }
+  /** Override the 30s request timeout for an API that is legitimately slow. */
+  timeoutMs?: number
   /** Send write bodies as application/x-www-form-urlencoded (e.g. Stripe). */
   formEncoded?: boolean
   /**
@@ -115,6 +117,12 @@ function schemaOf(params: Record<string, ParamSpec> | undefined): JSONSchema {
   return { type: 'object', properties, ...(required.length ? { required } : {}) }
 }
 
+// A connector API that accepts the connection and then never answers would
+// otherwise hang until the platform kills the whole function — the user just
+// watches a spinner, and a scheduled run burns its entire budget on one call.
+// Every REST connector goes through here, so one timeout covers all of them.
+const REQUEST_TIMEOUT_MS = 30_000
+
 async function restFetch(
   spec: RestConnectorSpec,
   creds: Record<string, string>,
@@ -124,6 +132,7 @@ async function restFetch(
   try {
     const res = await fetch(url, {
       ...init,
+      signal: AbortSignal.timeout(spec.timeoutMs ?? REQUEST_TIMEOUT_MS),
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...spec.headers(creds), ...(init.headers ?? {}) },
     })
     if (!res.ok) {
@@ -135,6 +144,12 @@ async function restFetch(
     try { return { ok: true, data: text ? JSON.parse(text) : { status: 'ok' } } }
     catch { return { ok: true, data: { response: text.slice(0, 2000) } } }
   } catch (e) {
+    // AbortSignal.timeout rejects with a TimeoutError. Say so plainly — "request
+    // failed" sends people hunting for a credential problem that isn't there.
+    const seconds = Math.round((spec.timeoutMs ?? REQUEST_TIMEOUT_MS) / 1000)
+    if (e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+      return { ok: false, error: `${spec.name} did not respond within ${seconds}s. The service may be down or unreachable from here.` }
+    }
     return { ok: false, error: `${spec.name} request failed: ${String(e).slice(0, 300)}` }
   }
 }

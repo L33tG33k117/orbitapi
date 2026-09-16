@@ -1,4 +1,5 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 // Zendesk is removing API tokens as an auth method (all tokens stop working
 // 2027-04-30; see setupGuide below). When no agent email is supplied we treat
@@ -12,7 +13,7 @@ async function zdFetch(subdomain: string, email: string, token: string, path: st
   const authHeader = trimmedEmail
     ? `Basic ${Buffer.from(`${trimmedEmail}/token:${trimmedToken}`).toString('base64')}`
     : `Bearer ${trimmedToken}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: {
       'Authorization': authHeader,

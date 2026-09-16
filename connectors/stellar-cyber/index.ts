@@ -1,8 +1,9 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 async function getStarLightToken(host: string, username: string, apiKey: string): Promise<string> {
   const base = host.replace(/\/$/, '')
-  const res = await fetch(`${base}/connect/api/v1/access_token`, {
+  const res = await fetchWithTimeout(`${base}/connect/api/v1/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, api_key: apiKey }),
@@ -14,7 +15,7 @@ async function getStarLightToken(host: string, username: string, apiKey: string)
 
 async function scGet(host: string, token: string, path: string): Promise<ActionResult> {
   const base = host.replace(/\/$/, '')
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetchWithTimeout(`${base}${path}`, {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   })
   if (!res.ok) {
@@ -26,7 +27,7 @@ async function scGet(host: string, token: string, path: string): Promise<ActionR
 
 async function scPost(host: string, token: string, path: string, body: unknown): Promise<ActionResult> {
   const base = host.replace(/\/$/, '')
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetchWithTimeout(`${base}${path}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -44,7 +45,7 @@ async function scPost(host: string, token: string, path: string, body: unknown):
 
 async function scPatch(host: string, token: string, path: string, body: unknown): Promise<ActionResult> {
   const base = host.replace(/\/$/, '')
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetchWithTimeout(`${base}${path}`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,

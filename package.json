@@ -28,7 +28,8 @@
     "db:up": "node --no-warnings scripts/db-migrate.mjs up",
     "db:migrate": "node --no-warnings scripts/db-migrate.mjs",
     "check:models": "node scripts/check-models.mjs",
-    "seed:isolation": "node --no-warnings scripts/seed-isolation-fixtures.mjs"
+    "seed:isolation": "node --no-warnings scripts/seed-isolation-fixtures.mjs",
+    "test:reliability": "node --no-warnings scripts/test-reliability.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.83",

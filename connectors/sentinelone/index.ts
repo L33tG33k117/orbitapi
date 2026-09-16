@@ -1,9 +1,10 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 async function s1Fetch(managementUrl: string, apiToken: string, path: string, options: RequestInit = {}): Promise<ActionResult> {
   const base = managementUrl.replace(/\/$/, '')
   const url = `${base}/web/api/v2.1${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: {
       'Authorization': `ApiToken ${apiToken}`,

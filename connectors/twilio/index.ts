@@ -1,4 +1,5 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 function twilioAuthHeader(accountSid: string, authToken: string): string {
   return `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`
@@ -6,7 +7,7 @@ function twilioAuthHeader(accountSid: string, authToken: string): string {
 
 async function twilioPost(accountSid: string, authToken: string, path: string, body: Record<string, string>): Promise<ActionResult> {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Authorization': twilioAuthHeader(accountSid, authToken),
@@ -23,7 +24,7 @@ async function twilioPost(accountSid: string, authToken: string, path: string, b
 
 async function twilioGet(accountSid: string, authToken: string, path: string): Promise<ActionResult> {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { 'Authorization': twilioAuthHeader(accountSid, authToken) },
   })
   if (!res.ok) {
@@ -35,7 +36,7 @@ async function twilioGet(accountSid: string, authToken: string, path: string): P
 
 async function twilioDelete(accountSid: string, authToken: string, path: string): Promise<ActionResult> {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: 'DELETE',
     headers: { 'Authorization': twilioAuthHeader(accountSid, authToken) },
   })
@@ -78,7 +79,7 @@ export const twilioManifest: ConnectorManifest = {
 
   testConnection: async (creds) => {
     const url = `https://api.twilio.com/2010-04-01/Accounts/${creds.account_sid}.json`
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: { 'Authorization': twilioAuthHeader(creds.account_sid, creds.auth_token) },
     })
     if (!res.ok) return { ok: false, error: 'Invalid Account SID or Auth Token' }
@@ -298,7 +299,7 @@ export const twilioManifest: ConnectorManifest = {
         const num = encodeURIComponent(params.phone_number as string)
         const qs = params.type ? `?Type=${params.type}` : ''
         const url = `https://lookups.twilio.com/v1/PhoneNumbers/${num}${qs}`
-        const res = await fetch(url, {
+        const res = await fetchWithTimeout(url, {
           headers: { 'Authorization': twilioAuthHeader(creds.account_sid, creds.auth_token) },
         })
         if (!res.ok) {
@@ -342,7 +343,7 @@ export const twilioManifest: ConnectorManifest = {
       },
       execute: async (creds, params) => {
         const url = `https://verify.twilio.com/v2/Services/${params.verify_service_sid as string}/Verifications`
-        const res = await fetch(url, {
+        const res = await fetchWithTimeout(url, {
           method: 'POST',
           headers: {
             'Authorization': twilioAuthHeader(creds.account_sid, creds.auth_token),
@@ -376,7 +377,7 @@ export const twilioManifest: ConnectorManifest = {
       },
       execute: async (creds, params) => {
         const url = `https://verify.twilio.com/v2/Services/${params.verify_service_sid as string}/VerificationCheck`
-        const res = await fetch(url, {
+        const res = await fetchWithTimeout(url, {
           method: 'POST',
           headers: {
             'Authorization': twilioAuthHeader(creds.account_sid, creds.auth_token),

@@ -1,10 +1,11 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const EVENTS_API = 'https://events.pagerduty.com/v2/enqueue'
 const REST_API = 'https://api.pagerduty.com'
 
 async function pdEvent(routingKey: string, body: Record<string, unknown>): Promise<ActionResult> {
-  const res = await fetch(EVENTS_API, {
+  const res = await fetchWithTimeout(EVENTS_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ routing_key: routingKey, ...body }),
@@ -17,7 +18,7 @@ async function pdEvent(routingKey: string, body: Record<string, unknown>): Promi
 }
 
 async function pdRest(apiKey: string, path: string, options: RequestInit = {}): Promise<ActionResult> {
-  const res = await fetch(`${REST_API}${path}`, {
+  const res = await fetchWithTimeout(`${REST_API}${path}`, {
     ...options,
     headers: {
       'Authorization': `Token token=${apiKey}`,

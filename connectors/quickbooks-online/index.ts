@@ -1,5 +1,6 @@
 // connectors/quickbooks-online/index.ts
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 // QuickBooks Online Accounting API.
 // Docs: https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/account
@@ -24,7 +25,7 @@ async function qboFetch(
   if (!creds.accessToken) return { ok: false, error: 'Missing QuickBooks access token' }
   if (!creds.realmId) return { ok: false, error: 'Missing QuickBooks company (realm) ID' }
   const url = buildUrl(creds.realmId, path, query)
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: {
       Authorization: `Bearer ${creds.accessToken}`,

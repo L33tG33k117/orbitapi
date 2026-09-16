@@ -1,4 +1,5 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const SLACK_API = 'https://slack.com/api'
 
@@ -31,7 +32,7 @@ function friendlySlackError(data: { error?: string; needed?: string }): string {
 }
 
 async function slackPost(apiKey: string, path: string, body: Record<string, unknown>): Promise<ActionResult> {
-  const res = await fetch(`${SLACK_API}${path}`, {
+  const res = await fetchWithTimeout(`${SLACK_API}${path}`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -43,7 +44,7 @@ async function slackPost(apiKey: string, path: string, body: Record<string, unkn
 }
 
 async function slackGet(apiKey: string, path: string): Promise<ActionResult> {
-  const res = await fetch(`${SLACK_API}${path}`, {
+  const res = await fetchWithTimeout(`${SLACK_API}${path}`, {
     headers: { 'Authorization': `Bearer ${apiKey}` },
   })
   if (!res.ok) return { ok: false, error: `HTTP ${res.status}` }
@@ -109,7 +110,7 @@ export const slackManifest: ConnectorManifest = {
   },
 
   testConnection: async (creds) => {
-    const res = await fetch(`${SLACK_API}/auth.test`, {
+    const res = await fetchWithTimeout(`${SLACK_API}/auth.test`, {
       headers: { 'Authorization': `Bearer ${creds.api_key}` },
     })
     const data = await res.json()

@@ -1,7 +1,8 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 async function teamsPost(webhookUrl: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(webhookUrl, {
+  const res = await fetchWithTimeout(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

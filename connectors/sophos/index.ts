@@ -1,4 +1,5 @@
 import type { ConnectorManifest, ActionResult } from '@/connectors/types'
+import { fetchWithTimeout } from '@/connectors/timeout'
 
 const AUTH_URL = 'https://id.sophos.com/api/v2/oauth2/token'
 const WHOAMI_URL = 'https://api.central.sophos.com/whoami/v1'
@@ -10,7 +11,7 @@ interface SophosContext {
 }
 
 async function getSophosContext(clientId: string, clientSecret: string): Promise<SophosContext> {
-  const tokenRes = await fetch(AUTH_URL, {
+  const tokenRes = await fetchWithTimeout(AUTH_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&scope=token`,
@@ -19,7 +20,7 @@ async function getSophosContext(clientId: string, clientSecret: string): Promise
   const tokenData = await tokenRes.json()
   const token = tokenData.access_token as string
 
-  const whoamiRes = await fetch(WHOAMI_URL, {
+  const whoamiRes = await fetchWithTimeout(WHOAMI_URL, {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   })
   if (!whoamiRes.ok) throw new Error(`Sophos whoami failed: ${whoamiRes.status}`)
@@ -31,7 +32,7 @@ async function getSophosContext(clientId: string, clientSecret: string): Promise
 }
 
 async function sophosGet(ctx: SophosContext, path: string): Promise<ActionResult> {
-  const res = await fetch(`${ctx.apiHost}${path}`, {
+  const res = await fetchWithTimeout(`${ctx.apiHost}${path}`, {
     headers: {
       'Authorization': `Bearer ${ctx.token}`,
       'X-Tenant-ID': ctx.tenantId,
@@ -46,7 +47,7 @@ async function sophosGet(ctx: SophosContext, path: string): Promise<ActionResult
 }
 
 async function sophosPost(ctx: SophosContext, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${ctx.apiHost}${path}`, {
+  const res = await fetchWithTimeout(`${ctx.apiHost}${path}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${ctx.token}`,
@@ -64,7 +65,7 @@ async function sophosPost(ctx: SophosContext, path: string, body: unknown): Prom
 }
 
 async function sophosPatch(ctx: SophosContext, path: string, body: unknown): Promise<ActionResult> {
-  const res = await fetch(`${ctx.apiHost}${path}`, {
+  const res = await fetchWithTimeout(`${ctx.apiHost}${path}`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${ctx.token}`,
@@ -82,7 +83,7 @@ async function sophosPatch(ctx: SophosContext, path: string, body: unknown): Pro
 }
 
 async function sophosDelete(ctx: SophosContext, path: string): Promise<ActionResult> {
-  const res = await fetch(`${ctx.apiHost}${path}`, {
+  const res = await fetchWithTimeout(`${ctx.apiHost}${path}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${ctx.token}`,
