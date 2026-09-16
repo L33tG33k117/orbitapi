@@ -1,8 +1,54 @@
 {
-  "generatedAt": "2026-09-16T06:12:59.204Z",
-  "generatedFrom": "d9897dde52b1181787653a980a082839dffa9e87",
+  "generatedAt": "2026-09-16T06:15:26.750Z",
+  "generatedFrom": "ff4ad18d7946b905fd4e2e37b4b5ede0ceb8d660",
   "since": "2026-06-01",
   "entries": [
+    {
+      "sha": "ff4ad18d7946b905fd4e2e37b4b5ede0ceb8d660",
+      "short": "ff4ad18",
+      "date": "2026-09-16T02:14:42-04:00",
+      "author": "L33tG33k117",
+      "subject": "Add release notes: a customer view and a technical admin view",
+      "category": "feature",
+      "categoryLabel": "New",
+      "paragraphs": [
+        "The changelog had gone stale — it still ended at 2026-08-02 while a month of work shipped behind it, because keeping it current depended on somebody remembering. Two audiences needed different things from it, so there are now two views over one timeline, reachable from a new button in the top bar.",
+        "What's new (/whats-new) is for customers and the people who work with us: curated, plain-language, grouped by month, filterable by New / Improved / Foundation. It shares its source with the public /changelog, so the two can no longer drift apart. A dot on the top-bar button marks anything shipped since this browser last looked.",
+        "Admin -> Releases (/admin/releases) is for people with backend access: every change that landed on main, with the date and time, who shipped it, the commit body explaining WHY, the areas touched, file and line counts, and — called out in orange — any database migrations the change carried, because those have to be applied to a self-hosted install before the change works. Searchable and filterable by category, and each entry expands rather than dumping a diff.",
+        "The admin half is generated from git history (npm run notes:build), not written, so it cannot fall behind what is deployed. A CI job regenerates and commits it on every push to main, which is what makes the feed correspond to merges instead of to good intentions. The page states which commit it was generated from against the commit actually running, so \"is this current?\" is answerable rather than assumed.",
+        "The customer notes stay hand-written on purpose: a commit subject is not release copy, and most of what we ship is noise to someone using the product. To keep that from going stale again, the admin page counts how many changes have shipped since the last customer note and says so in amber until somebody writes one. It is at zero now — the September work is written up."
+      ],
+      "areas": [
+        "Admin",
+        "App shell",
+        "CI",
+        "Core logic",
+        "Dependencies",
+        "Marketing site",
+        "Other",
+        "Tooling",
+        "UI components",
+        "Whats new"
+      ],
+      "migrations": [],
+      "files": 17,
+      "added": 5390,
+      "removed": 6,
+      "topPaths": [
+        "data/release-notes.json",
+        "app/admin/releases/releases-client.tsx",
+        "scripts/build-release-notes.mjs",
+        "app/(dashboard)/whats-new/whats-new-client.tsx",
+        "lib/release-notes/index.ts",
+        ".github/workflows/ci.yml",
+        "components/whats-new-button.tsx",
+        "app/admin/releases/page.tsx",
+        "app/changelog/changelog-data.ts => lib/release-notes/customer.ts",
+        "app/(dashboard)/whats-new/page.tsx",
+        "components/top-bar.tsx",
+        "components/help-menu.tsx"
+      ]
+    },
     {
       "sha": "d9897dde52b1181787653a980a082839dffa9e87",
       "short": "d9897dd",
