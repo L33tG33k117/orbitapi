@@ -45,6 +45,27 @@ jobs:
         run: npm run test:reliability
 
 
+      # Dependency vulnerability scan (launch checklist: Security).
+      #
+      # Blocking at CRITICAL only, and warning at high. A critical advisory is
+      # rare and unambiguous — today's upgrade cleared two unauthenticated RCEs
+      # in Next.js that had been live in production. Blocking on `high` as well
+      # would wedge every unrelated deploy the next time a transitive dev
+      # dependency gets an advisory, which is how teams learn to pass --force.
+      - name: Dependency vulnerabilities
+        run: |
+          set -uo pipefail
+          npm audit --audit-level=critical
+          crit=$?
+          if [ $crit -ne 0 ]; then
+            echo "::error title=Critical vulnerability::npm audit found a CRITICAL advisory. Run 'npm audit' locally."
+            exit 1
+          fi
+          if ! npm audit --audit-level=high > /dev/null 2>&1; then
+            echo "::warning title=High-severity advisories::npm audit reports high-severity advisories. Not blocking, but worth clearing — run 'npm audit'."
+          fi
+          echo "No critical advisories."
+
       - name: Schedules, time zones and severity bands
         run: npm run test:schedules
 
