@@ -142,6 +142,112 @@ jobs:
         working-directory: docker
         run: docker compose --env-file .env down -v || true
 
+
+  # ----------------------------------------------------------------------
+  # Workspace isolation — the LIVE half.
+  #
+  # WHY THIS EXISTS: `verify` runs the static half of test-workspace-isolation
+  # on every push, but the half that actually proves isolation — signing in as
+  # two users in two workspaces and trying every cross-workspace move — needs a
+  # running app and two real accounts, so it had been skipped since the day it
+  # was written. A security test that never runs is documentation, not a test.
+  #
+  # It boots the app against the DEV Supabase project, seeds two fixture
+  # workspaces, and drives the real HTTP surface.
+  #
+  # NO-OP until these repository secrets exist, so it is safe to merge now:
+  #   ISO_SUPABASE_URL           dev project URL (NOT production)
+  #   ISO_SUPABASE_ANON_KEY      dev anon key
+  #   ISO_SUPABASE_SERVICE_KEY   dev service-role key (seeding creates users)
+  #   ISO_A_PASSWORD             password for the two fixture accounts
+  #   ISO_B_PASSWORD
+  # Emails are derived below, so no secret is needed for them. The seeder
+  # refuses to run against the production project ref regardless.
+  # ----------------------------------------------------------------------
+  isolation-live:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for isolation fixtures
+        id: creds
+        env:
+          ISO_SUPABASE_URL: ${{ secrets.ISO_SUPABASE_URL }}
+          ISO_SUPABASE_SERVICE_KEY: ${{ secrets.ISO_SUPABASE_SERVICE_KEY }}
+          ISO_A_PASSWORD: ${{ secrets.ISO_A_PASSWORD }}
+        run: |
+          if [ -z "$ISO_SUPABASE_URL" ] || [ -z "$ISO_SUPABASE_SERVICE_KEY" ] || [ -z "$ISO_A_PASSWORD" ]; then
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Live isolation tests skipped::ISO_* secrets are not set, so only the static half of the workspace-isolation suite ran. See .github/workflows/ci.yml for the list."
+          else
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.creds.outputs.has_creds == 'true'
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.creds.outputs.has_creds == 'true'
+        run: npm ci
+
+      - name: Build
+        if: steps.creds.outputs.has_creds == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ISO_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ISO_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ISO_SUPABASE_SERVICE_KEY }}
+        run: npm run build
+
+      - name: Seed the two fixture workspaces
+        if: steps.creds.outputs.has_creds == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ISO_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ISO_SUPABASE_SERVICE_KEY }}
+          ISO_A_EMAIL: iso-a@isolation.test
+          ISO_B_EMAIL: iso-b@isolation.test
+          ISO_A_PASSWORD: ${{ secrets.ISO_A_PASSWORD }}
+          ISO_B_PASSWORD: ${{ secrets.ISO_B_PASSWORD }}
+        run: node scripts/seed-isolation-fixtures.mjs
+
+      - name: Start the app
+        if: steps.creds.outputs.has_creds == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ISO_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ISO_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ISO_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          npm run start -- --port 3000 > /tmp/app.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "App is up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error title=App did not start::No response on :3000 within 60s"
+          tail -50 /tmp/app.log
+          exit 1
+
+      - name: Cross-workspace isolation (live)
+        if: steps.creds.outputs.has_creds == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.ISO_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.ISO_SUPABASE_ANON_KEY }}
+          ISO_BASE_URL: http://localhost:3000
+          ISO_A_EMAIL: iso-a@isolation.test
+          ISO_B_EMAIL: iso-b@isolation.test
+          ISO_A_PASSWORD: ${{ secrets.ISO_A_PASSWORD }}
+          ISO_B_PASSWORD: ${{ secrets.ISO_B_PASSWORD }}
+        run: npm run test:isolation
+
+      - name: App log
+        if: always() && steps.creds.outputs.has_creds == 'true'
+        run: tail -100 /tmp/app.log || true
   # ----------------------------------------------------------------------
   # Deploy to production.
   #

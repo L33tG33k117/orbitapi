@@ -27,7 +27,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const state = url.searchParams.get('state')
 
   // Verify the CSRF state cookie set during /start.
-  let saved: { state: string; slug: string; label: string } | null = null
+  let saved: { state: string; slug: string; label: string; workspaceId?: string } | null = null
   try {
     const raw = req.headers.get('cookie')?.match(/(?:^|;\s*)orbit_oauth=([^;]+)/)?.[1]
     if (raw) saved = JSON.parse(decodeURIComponent(raw))
@@ -74,6 +74,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const { data: membership } = await supabase
     .from('memberships').select('workspace_id, role').eq('user_id', user.id).single()
   if (!membership || membership.role === 'member') return fail(req, 'forbidden')
+
+  // The connection must land in the workspace that started the flow. Without
+  // this, a callback captured in one workspace could be replayed to attach the
+  // provider's tokens to another.
+  if (saved.workspaceId && saved.workspaceId !== membership.workspace_id) {
+    return fail(req, 'workspace_mismatch')
+  }
 
   const { data: connectorRow } = await admin.from('connectors').select('id').eq('slug', slug).single()
   if (!connectorRow) return fail(req, 'connector_not_in_db')

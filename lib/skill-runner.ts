@@ -51,6 +51,11 @@ export async function runSkill({
 
   if (!skill) throw new Error('Skill not found')
 
+  // The caller supplies workspaceId separately from skillId (schedules, webhooks
+  // and chat all call in). If they ever disagree, the run would execute one
+  // workspace's skill against another's connections and credits, so refuse.
+  if (skill.workspace_id !== workspaceId) throw new Error('Skill not found')
+
   // A skill with no persona has no instructions — it would just run a generic
   // "do something" workflow against whatever connectors exist. Refuse it.
   if (!skill.persona || !skill.persona.trim()) {

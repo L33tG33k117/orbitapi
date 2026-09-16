@@ -44,6 +44,13 @@ export async function DELETE(_req: Request, { params }: Params) {
   }
 
   const admin = createAdminClient()
+  // Same workspace check as POST: the service-role client skips RLS, so an id
+  // from the URL must be proven to belong to the caller's workspace first.
+  const { data: skill } = await admin.from('skills').select('workspace_id').eq('id', id).single()
+  if (!skill || skill.workspace_id !== membership.workspace_id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   await admin.from('skills').update({ webhook_secret: null }).eq('id', id)
   return new Response(null, { status: 204 })
 }

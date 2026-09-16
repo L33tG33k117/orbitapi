@@ -30,6 +30,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     )
   }
 
+  // Bind the flow to the workspace that started it, so the callback cannot be
+  // replayed to land a connection in a different workspace.
+  const { data: membership } = await supabase
+    .from('memberships').select('workspace_id, role').eq('user_id', user.id).single()
+  if (!membership || membership.role === 'member') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const origin = new URL(req.url).origin
   const label = new URL(req.url).searchParams.get('label') || manifest.name
   const state = crypto.randomUUID()
@@ -44,8 +52,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   authUrl.searchParams.set('prompt', 'consent')
 
   const res = NextResponse.redirect(authUrl.toString())
-  // CSRF: state + intent travel in an httpOnly cookie, verified on callback.
-  res.cookies.set('orbit_oauth', JSON.stringify({ state, slug, label }), {
+  // CSRF: state + intent + originating workspace travel in an httpOnly cookie,
+  // all verified on callback.
+  res.cookies.set('orbit_oauth', JSON.stringify({ state, slug, label, workspaceId: membership.workspace_id }), {
     httpOnly: true, sameSite: 'lax', secure: true, maxAge: 600, path: '/',
   })
   return res
