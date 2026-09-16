@@ -1,3 +1,4 @@
+import { getReleaseFeed } from '@/lib/release-notes'
 import { redirect } from 'next/navigation'
 import { requireSuperAdmin } from '@/lib/admin-guard'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -48,6 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             role="owner"
             workspaceId=""
             adminInbox
+            newestReleaseDate={getReleaseFeed().entries[0]?.date.slice(0, 10) ?? null}
           />
           <main className="flex-1 overflow-y-auto">
             {children}

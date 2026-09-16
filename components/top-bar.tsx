@@ -17,6 +17,7 @@ import { FeedbackButton } from '@/components/feedback-button'
 import { PageTour } from '@/components/page-tour'
 import { LaunchTray } from '@/components/launch-tray'
 import { HelpMenu } from '@/components/help-menu'
+import { WhatsNewButton } from '@/components/whats-new-button'
 import { LogOut, User as UserIcon, Settings, ChevronDown, Menu } from 'lucide-react'
 
 interface TopBarProps {
@@ -26,9 +27,12 @@ interface TopBarProps {
   impersonating?: { id: string; name: string; email: string } | null
   /** Show the Super Admin inbox bell instead of the workspace notification bell. */
   adminInbox?: boolean
+  /** Newest release date (ISO yyyy-mm-dd) for the What's new dot. Passed from
+   *  the server so the release feed never ships to the browser. */
+  newestReleaseDate?: string | null
 }
 
-export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: TopBarProps) {
+export function TopBar({ user, role, workspaceId, impersonating, adminInbox, newestReleaseDate = null }: TopBarProps) {
   const router = useRouter()
 
   async function signOut() {
@@ -86,6 +90,7 @@ export function TopBar({ user, role, workspaceId, impersonating, adminInbox }: T
 
       {/* Consistent icon utilities: launches, notifications, help, theme, account. */}
       <LaunchTray />
+      <WhatsNewButton admin={adminInbox} newestDate={newestReleaseDate} />
       {adminInbox
         ? <AdminNotificationBell />
         : workspaceId && <NotificationBell workspaceId={workspaceId} />}

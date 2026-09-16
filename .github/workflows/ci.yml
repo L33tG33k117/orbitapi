@@ -272,6 +272,60 @@ jobs:
       - name: App log
         if: always() && steps.creds.outputs.has_creds == 'true'
         run: tail -100 /tmp/app.log || true
+
+  # ----------------------------------------------------------------------
+  # Release notes.
+  #
+  # WHY THIS EXISTS: the hand-written changelog went stale — it still ended at
+  # 2026-08-02 while a month of work shipped behind it. Keeping it current
+  # depended on somebody remembering, and nobody did.
+  #
+  # So the technical half is not remembered, it is derived: this regenerates
+  # data/release-notes.json from what actually landed on main and commits it
+  # back, which is what makes Admin -> Releases correspond to merges rather
+  # than to good intentions. The customer-facing notes stay hand-written on
+  # purpose (a commit subject is not release copy); the admin page shows how
+  # far behind they are so that gap is visible instead of forgotten.
+  #
+  # [skip ci] on the commit stops it from triggering itself.
+  # ----------------------------------------------------------------------
+  release-notes:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Full history: the generator reads the whole first-parent log, and the
+      # default shallow clone has none of it.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # The generator uses only git and node builtins, so there is nothing to
+      # install — which also keeps this job from failing on a dependency issue
+      # that has nothing to do with release notes.
+      - name: Regenerate from git history
+        run: node scripts/build-release-notes.mjs
+
+      - name: Commit if anything changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/release-notes.json; then
+            echo "Release notes already current."
+            exit 0
+          fi
+          git config user.name "orbit-release-notes[bot]"
+          git config user.email "noreply@orbitapi.dev"
+          git add data/release-notes.json
+          git commit -m "chore: regenerate release notes [skip ci]"
+          git push origin main
+          echo "Release notes updated."
   # ----------------------------------------------------------------------
   # Deploy to production.
   #

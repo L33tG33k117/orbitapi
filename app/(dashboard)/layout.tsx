@@ -1,3 +1,4 @@
+import { CHANGELOG } from '@/lib/release-notes/customer'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
@@ -129,6 +130,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             role={membershipResult.data.role}
             workspaceId={membershipResult.data.workspace_id}
             impersonating={impersonating}
+            newestReleaseDate={CHANGELOG[0]?.date ?? null}
           />
           <main className="flex-1 overflow-y-auto">
             <OfflineModeShell active={offlineActive} canManage={isAdmin}>

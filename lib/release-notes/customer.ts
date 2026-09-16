@@ -11,6 +11,39 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-09-16',
+    title: 'Security hardening, faster failures, and a much stricter build',
+    tag: 'Improved',
+    points: [
+      'Connections now belong to exactly one workspace at the database level, not just in the app. Three ways a request could have reached across workspaces were closed, and the checks that prove it run on every change we make.',
+      'Connecting an app through sign-in (OAuth) is now tied to the workspace that started it, so a connection can only ever land where you began.',
+      'Every connector request now gives up after 30 seconds instead of hanging. If an app stops responding you get a plain message naming it and the time limit, rather than a spinner that never resolves.',
+      'We upgraded the framework Orbit runs on to pick up security fixes, and added an automatic scan so known vulnerabilities cannot quietly accumulate.',
+    ],
+  },
+  {
+    date: '2026-09-16',
+    title: 'Release notes — see exactly what changed',
+    tag: 'New',
+    points: [
+      'A What’s new page, reachable from the top of every screen, so you can see what shipped without asking us.',
+      'Admins get a fuller technical view: every change that landed, when, what areas it touched, which database migrations it carried, and how large it was.',
+      'The admin view is generated from what we actually ship, so it cannot drift out of date the way a hand-written list does.',
+    ],
+  },
+  {
+    date: '2026-09-15',
+    title: 'Schedules in your own time zone, and clearer playbook risk',
+    tag: 'Improved',
+    points: [
+      'Schedules now run in a time zone you pick, defaulting to your browser’s, and show the next run in your local time. Daylight saving is handled, and existing schedules keep working exactly as before.',
+      'The playbook canvas fills the screen instead of sitting in a small fixed box, with a full-screen toggle and collapsible panels.',
+      'What used to be a bare “confidence” number on a playbook step is now a severity band that says what it means and what to do when it is low.',
+      'When an approved action fails, the assistant now explains what went wrong and how to fix it instead of sitting on “waiting for approval” forever.',
+      'Enterprise customers moving to a self-hosted install can switch a cloud workspace to offline mode, which pauses the online copy so the two cannot both act.',
+    ],
+  },
+  {
     date: '2026-08-02',
     title: 'Upgraded to the latest Claude models',
     tag: 'Improved',

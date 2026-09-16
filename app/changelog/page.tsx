@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { MarketingNav, MarketingFooter } from '@/components/marketing/site-chrome'
-import { CHANGELOG } from './changelog-data'
+import { CHANGELOG } from '@/lib/release-notes/customer'
 
 export const metadata: Metadata = {
   title: 'Changelog — OrbitAPI',

@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { HelpCircle, Compass, LifeBuoy, Keyboard, MessageSquarePlus } from 'lucide-react'
+import { HelpCircle, Compass, LifeBuoy, Keyboard, MessageSquarePlus , Megaphone } from 'lucide-react'
 import { getTour } from '@/lib/tours'
 import { useIsSelfHost } from '@/components/config-provider'
 
@@ -40,6 +40,10 @@ export function HelpMenu() {
         <DropdownMenuItem onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }))} className="gap-2">
           <Keyboard className="h-3.5 w-3.5" />
           Keyboard shortcuts
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/whats-new')} className="gap-2">
+          <Megaphone className="h-3.5 w-3.5" />
+          What&apos;s new
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {/* Feedback from a self-hosted install lands in that customer's own
