@@ -164,5 +164,27 @@ for (const f of ['webhooks-client', 'mcp-client']) {
   check(`${f} shows the LAN caveat`, readFileSync(p, 'utf8').includes('<LanCaveat'))
 }
 
+// ── Offline-mode gating (launch checklist item 9) ────────────────────────────
+// Hiding an Enterprise-only panel in the UI is not enough: the server has to
+// refuse it too, or anyone can just POST the route directly.
+const offlineRoute = readFileSync(join(ROOT, 'app', 'api', 'workspaces', 'offline-mode', 'route.ts'), 'utf8')
+check('turning offline mode ON requires a self-hosted licence',
+  /body\.enabled && !\(await getSelfhostAccess/.test(offlineRoute))
+check('turning offline mode OFF is always allowed (never strand a lapsed account)',
+  /body\.enabled &&/.test(offlineRoute) && !/!body\.enabled[\s\S]{0,80}getSelfhostAccess/.test(offlineRoute))
+check('members cannot change offline mode', /role === 'member'[\s\S]{0,120}403/.test(offlineRoute))
+check('offline-mode changes are audited', /logAuditEvent\(/.test(offlineRoute))
+check('the offline-mode route is absent from the offline edition itself',
+  /if \(isSelfHost\(\)\)[\s\S]{0,200}404/.test(offlineRoute))
+
+const networkPage = readFileSync(join(ROOT, 'app', '(dashboard)', 'settings', 'network', 'page.tsx'), 'utf8')
+check('Network access is server-gated, not just hidden',
+  /if \(!isSelfHost\(\) && !\(await getSelfhostAccess[\s\S]{0,60}redirect\('\/dashboard'\)/.test(networkPage))
+check('Network access refuses plain members', /role === 'member'\) redirect/.test(networkPage))
+
+const networkClient = readFileSync(join(ROOT, 'app', '(dashboard)', 'settings', 'network', 'network-client.tsx'), 'utf8')
+check('Network access separates outbound from inbound', /\(outbound\)/.test(networkClient) && /Inbound:/.test(networkClient))
+check('the inbound section says most installs need nothing inbound', /need nothing inbound/.test(networkClient))
+
 console.log(`\n${passed} passed, ${failed} failed\n`)
 process.exitCode = failed === 0 ? 0 : 1

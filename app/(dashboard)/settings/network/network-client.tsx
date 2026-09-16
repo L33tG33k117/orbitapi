@@ -49,7 +49,7 @@ export function NetworkClient({
   return (
     <div className="space-y-6">
       <div className="rounded-xl border bg-card p-5 space-y-3">
-        <h2 className="text-base font-semibold">What to allow</h2>
+        <h2 className="text-base font-semibold">What to allow (outbound)</h2>
         <p className="text-sm text-muted-foreground">
           OrbitAPI itself makes no outbound calls. Everything below is a service one of your
           connectors talks to. If your AI model runs on another machine, add that address too.
@@ -125,6 +125,26 @@ export function NetworkClient({
         </section>
       )}
 
+
+      {/* Inbound is a separate question from everything above, and conflating
+          the two is how a security team ends up opening far more than they
+          need. Most installs need no inbound rule at all. */}
+      <section className="space-y-2 rounded-xl border bg-card p-5">
+        <h3 className="text-sm font-semibold">Inbound: only if an app sends events to you</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Everything above is <strong>outbound</strong> — OrbitAPI reaching out to your apps.
+          Most installs need nothing inbound. You only need an inbound rule if you set up a
+          webhook so an outside app can push events in, which is optional: OrbitAPI can poll
+          instead, and schedules and manual runs need no inbound access whatsoever.
+        </p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          If you do use webhooks, the sending app needs to reach this install over HTTPS at{' '}
+          <code className="px-1 py-0.5 rounded bg-muted text-[11px]">/api/hooks/&lt;token&gt;</code>{' '}
+          — one unguessable token per endpoint, and nothing else needs to be exposed. Allow only
+          the sending app&apos;s published IP ranges where it lists them; the token and its
+          signature are what actually authenticate the call, so an open path is not an open door.
+        </p>
+      </section>
       {rows.length === 0 && (
         <p className="text-sm text-muted-foreground py-8 text-center border border-dashed rounded-xl">
           Nothing matches that search.
