@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolvePendingAction } from '@/lib/pending-actions'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -23,7 +24,7 @@ export async function POST(_req: Request, { params }: Params) {
 
   const { data: pending } = await admin
     .from('pending_actions')
-    .select('id, status, workspace_id')
+    .select('*, connection:connections(*, connector:connectors(slug))')
     .eq('id', id)
     .eq('workspace_id', membership.workspace_id)
     .single()
@@ -31,6 +32,7 @@ export async function POST(_req: Request, { params }: Params) {
   if (!pending) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (pending.status !== 'pending') return NextResponse.json({ error: 'Already resolved' }, { status: 409 })
 
-  await admin.from('pending_actions').update({ status: 'rejected' }).eq('id', id)
+  // Also halts a parked playbook run (it used to stay "waiting" forever).
+  await resolvePendingAction({ pending, approved: false, actorId: user.id })
   return NextResponse.json({ ok: true })
 }

@@ -144,6 +144,19 @@ export function InstallBundleDialog({ slug, bundleName, source, connectors, exis
             )}
           </div>
 
+          {created.skills.length > 0 && (
+            <div className="rounded-lg bg-primary/5 border border-primary/25 p-3 text-xs space-y-1.5">
+              <p className="font-medium text-foreground flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-primary" /> Make {created.skills.length === 1 ? 'this skill' : 'these skills'} yours</p>
+              <p className="text-muted-foreground">
+                Bundle personas are generic starting points. Add your product, who your customers are, the tone to use,
+                what to always mention, and when to hand off to a person. The persona editor shows what&apos;s missing.
+              </p>
+              <Button variant="outline" size="xs" onClick={() => goTo(`/skills/${created.skills[0]}#persona`)}>
+                Customize the persona{created.skills.length > 1 ? ` (1 of ${created.skills.length})` : ''}
+              </Button>
+            </div>
+          )}
+
           {needsSetup.length > 0 && (
             <div className="rounded-lg bg-amber-500/10 border border-amber-500/25 p-3 text-xs space-y-1">
               <p className="font-medium text-amber-500 flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> One more step</p>

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifySignature, SIGNATURE_HEADER } from '@/lib/webhooks'
 import { dispatchWebhook } from '@/lib/webhook-dispatch'
@@ -24,6 +25,11 @@ export async function POST(req: Request, { params }: Params) {
   if (!endpoint || !endpoint.enabled || endpoint.name === '__mcp__') {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
+
+  // Offline mode: the cloud copy must not run automations (they run on the
+  // customer's install). Refuse so the sender can see it isn't processed here.
+  const paused = await offlineModeGuard(endpoint.workspace_id)
+  if (paused) return paused
 
   const rawBody = await req.text()
   let payload: Record<string, unknown> = {}

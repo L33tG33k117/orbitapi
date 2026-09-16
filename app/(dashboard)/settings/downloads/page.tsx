@@ -4,6 +4,8 @@ import { PageHeader } from '@/components/page-header'
 import { isSelfHost } from '@/lib/edition'
 import { getSelfhostAccess, listReleases } from '@/lib/selfhost-access'
 import { DownloadsClient } from './downloads-client'
+import { OfflineModeCard } from './offline-mode-card'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,12 +36,25 @@ export default async function DownloadsPage() {
 
   const releases = await listReleases()
 
+  const { data: membership } = await supabase
+    .from('memberships').select('workspace_id, role')
+    .eq('user_id', user.id).order('created_at', { ascending: true }).limit(1).maybeSingle()
+  const { data: ws } = membership
+    ? await createAdminClient().from('workspaces').select('*').eq('id', membership.workspace_id).maybeSingle()
+    : { data: null }
+  const offline = ws as { offline_mode?: boolean; offline_mode_changed_at?: string | null } | null
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <PageHeader
         eyebrow="Settings"
         title="Your self-hosted installation"
         description="Your licence key, your installers, and everything you need to keep them current."
+      />
+      <OfflineModeCard
+        active={offline?.offline_mode === true}
+        canManage={!!membership && membership.role !== 'member'}
+        changedAt={offline?.offline_mode_changed_at ?? null}
       />
       <DownloadsClient
         company={access.company}

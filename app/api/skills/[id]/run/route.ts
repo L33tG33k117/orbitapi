@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runSkill } from '@/lib/skill-runner'
@@ -40,6 +41,9 @@ export async function POST(req: Request, { params }: Params) {
   if (!skill.persona || !skill.persona.trim()) {
     return NextResponse.json({ error: 'This skill has no persona yet. Add instructions and verify it before running.' }, { status: 400 })
   }
+
+  const paused = await offlineModeGuard(membership.workspace_id)
+  if (paused) return paused
 
   const body = await req.json().catch(() => ({}))
   const mode: 'dry_run' | 'live' = body.mode === 'live' ? 'live' : 'dry_run'

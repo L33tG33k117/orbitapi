@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { groupInWorkspace } from '@/lib/workspace-guard'
+import { normalizeThresholds } from '@/lib/severity'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -52,6 +54,16 @@ export async function PATCH(req: Request, { params }: Params) {
   // group_id is a uuid column — an empty string from a "No group" <select>
   // must become null, not '' (which throws invalid-uuid).
   if ('group_id' in patch) patch.group_id = patch.group_id || null
+  if ('group_id' in patch && !(await groupInWorkspace(patch.group_id, ctx.membership.workspace_id))) {
+    return NextResponse.json({ error: 'Group not found' }, { status: 400 })
+  }
+  // Autonomy bands decide whether writes run unattended, so never store a
+  // malformed policy (non-integer scores, unknown modes, min > max).
+  if ('autonomy_policy' in patch) {
+    const thresholds = normalizeThresholds((patch.autonomy_policy as { thresholds?: unknown } | null)?.thresholds)
+    if (!thresholds) return NextResponse.json({ error: 'Invalid autonomy policy' }, { status: 400 })
+    patch.autonomy_policy = { thresholds }
+  }
 
   const { data, error } = await ctx.admin
     .from('playbooks').update(patch).eq('id', id).select().single()

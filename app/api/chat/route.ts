@@ -1,4 +1,5 @@
 import { streamText, dynamicTool, jsonSchema, convertToModelMessages, stepCountIs } from 'ai'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import type { UIMessage } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -41,6 +42,8 @@ export async function POST(req: Request) {
     .single()
 
   if (!membership) return new Response('No workspace', { status: 403 })
+  const paused = await offlineModeGuard(membership.workspace_id)
+  if (paused) return paused
 
   const features = await getWorkspaceFeatures()
   if (features && !hasCapability(features.tier, features.flags, 'ai_chat')) {

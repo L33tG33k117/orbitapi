@@ -354,3 +354,23 @@ input:disabled,
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: oklch(0.6 0.05 274 / 28%); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(0.6 0.08 274 / 50%); }
+
+/* ─── Print / "Export PDF" ───────────────────────────────────────────────── */
+/* Exports use the browser's print-to-PDF, so anything floating over the page
+   (tour nudges and spotlights, toasts, the assistant bubble, dialogs) would be
+   captured on top of the report. Hide all of it on paper. */
+@media print {
+  .no-print,
+  [data-print-hide],
+  .driver-popover,
+  .driver-overlay,
+  .driver-active-element::after,
+  [data-sonner-toaster],
+  [data-slot="dialog-overlay"],
+  [data-slot="sheet-overlay"] {
+    display: none !important;
+  }
+  /* Driver.js dims the page and locks scroll while a tour is open. */
+  body.driver-active { overflow: visible !important; }
+  .driver-active-element { box-shadow: none !important; outline: none !important; }
+}

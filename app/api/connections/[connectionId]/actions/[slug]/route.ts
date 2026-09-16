@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
@@ -32,6 +33,8 @@ export async function POST(request: Request, { params }: Params) {
     .single()
 
   if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const paused = await offlineModeGuard(connection.workspace_id)
+  if (paused) return paused
 
   const connectorSlug = (connection.connector as { slug: string }).slug
   const manifest = getConnector(connectorSlug)

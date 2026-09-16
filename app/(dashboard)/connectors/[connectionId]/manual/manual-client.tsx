@@ -111,6 +111,8 @@ function syntaxHighlight(json: string): string {
 
 interface Props {
   connectionId: string
+  backHref: string
+  backLabel: string
   connectionLabel: string
   connectorSlug: string
   connectorName: string
@@ -120,7 +122,7 @@ interface Props {
   onSimple?: () => void
 }
 
-export function ManualClient({ connectionId, connectionLabel, connectorSlug, connectorName, connectorCategory, status, actions, onSimple }: Props) {
+export function ManualClient({ connectionId, connectionLabel, connectorSlug, connectorName, connectorCategory, status, actions, onSimple, backHref, backLabel }: Props) {
   const historyKey = `orbit_hist_${connectionId}`
   const savedKey = `orbit_saved_${connectionId}`
 
@@ -254,9 +256,9 @@ export function ManualClient({ connectionId, connectionLabel, connectorSlug, con
     <div className="flex flex-col h-[calc(100vh-49px)] overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b bg-card shrink-0">
-        <Link href={`/connectors/${connectionId}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0">
+        <Link href={backHref} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0">
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back
+          Back to {backLabel}
         </Link>
         <div className="h-4 w-px bg-border" />
         <div className="flex items-center gap-2">

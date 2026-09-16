@@ -137,7 +137,7 @@ export default async function StarlabPage() {
                         <p className="text-sm font-medium truncate">{c.label}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{cn?.name}{c.is_simulated ? ' · simulated' : ''}</p>
                       </div>
-                      <Link href={`/connectors/${c.id}/manual`} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors shrink-0">
+                      <Link href={`/connectors/${c.id}/manual?from=/starlab`} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 transition-colors shrink-0">
                         <Play className="h-3 w-3" /> Use now
                       </Link>
                     </div>

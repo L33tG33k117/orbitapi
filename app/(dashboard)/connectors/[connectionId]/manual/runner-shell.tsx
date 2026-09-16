@@ -15,6 +15,8 @@ interface Props {
   connectorCategory: string
   status: string
   actions: ActionDef[]
+  backHref: string
+  backLabel: string
 }
 
 // Default to the beginner-friendly form runner; power users can flip to the

@@ -334,6 +334,7 @@ export async function exportBundle(opts: {
       .from('groups')
       .select('id, name, color, group_connections(connection_id)')
       .eq('id', groupId)
+      .eq('workspace_id', opts.workspaceId)
       .single()
     if (!group) return undefined
     const key = `group_${groupCounter++}`
@@ -346,6 +347,7 @@ export async function exportBundle(opts: {
         .from('connections')
         .select('connector:connectors(slug)')
         .in('id', connIds)
+        .eq('workspace_id', opts.workspaceId)
       for (const c of (conns ?? []) as unknown as { connector: { slug: string } }[]) {
         slugs.push(c.connector.slug)
         connectorSlugs.add(c.connector.slug)

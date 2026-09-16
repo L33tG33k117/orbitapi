@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { groupInWorkspace, connectionsInWorkspace } from '@/lib/workspace-guard'
 import { getWorkspaceFeatures } from '@/lib/workspace-features'
 import { hasCapability } from '@/lib/entitlements'
 
@@ -49,6 +50,12 @@ export async function PUT(req: Request, { params }: Params) {
   }
 
   const body = await req.json()
+  if (!(await groupInWorkspace(body.group_id, membership.workspace_id))) {
+    return NextResponse.json({ error: 'Group not found' }, { status: 400 })
+  }
+  if (Array.isArray(body.connection_ids) && !(await connectionsInWorkspace(body.connection_ids, membership.workspace_id))) {
+    return NextResponse.json({ error: 'Connection not found' }, { status: 400 })
+  }
 
   // Free (no skill_automation) is manual-only: ignore any schedule / non-manual
   // mode coming from a tampered client.

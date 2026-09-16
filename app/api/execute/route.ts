@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getConnector } from '@/connectors'
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
   const { data: membership } = await supabase
     .from('memberships').select('workspace_id, role').eq('user_id', user.id).single()
   if (!membership) return NextResponse.json({ error: 'No workspace' }, { status: 403 })
+  const paused = await offlineModeGuard(membership.workspace_id)
+  if (paused) return paused
 
   const admin = createAdminClient()
 

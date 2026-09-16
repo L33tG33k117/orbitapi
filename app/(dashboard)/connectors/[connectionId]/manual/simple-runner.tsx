@@ -24,6 +24,8 @@ interface ActionDef {
 
 interface Props {
   connectionId: string
+  backHref: string
+  backLabel: string
   connectionLabel: string
   connectorName: string
   connectorSlug: string
@@ -83,7 +85,7 @@ function ResultTable({ data }: { data: unknown }) {
   )
 }
 
-export function SimpleActionRunner({ connectionId, connectionLabel, connectorName, connectorSlug, status, actions, onAdvanced }: Props) {
+export function SimpleActionRunner({ connectionId, connectionLabel, connectorName, connectorSlug, status, actions, onAdvanced, backHref, backLabel }: Props) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<ActionDef | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
@@ -151,8 +153,8 @@ export function SimpleActionRunner({ connectionId, connectionLabel, connectorNam
     <div className="p-4 sm:p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3 flex-wrap">
-        <Link href={`/connectors/${connectionId}`} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back
+        <Link href={backHref} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to {backLabel}
         </Link>
         <div className="h-4 w-px bg-border" />
         <div className="min-w-0">

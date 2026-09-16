@@ -27,6 +27,15 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
+  // The connection must belong to the same workspace. Without this, an admin
+  // who knew another workspace's connection id could attach it to their own
+  // group and run playbooks against that workspace's credentials.
+  const { data: connection } = await admin
+    .from('connections').select('workspace_id').eq('id', connectionId).maybeSingle()
+  if (!connection || connection.workspace_id !== membership.workspace_id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   const { error } = await admin
     .from('group_connections')
     .upsert({ group_id: groupId, connection_id: connectionId })

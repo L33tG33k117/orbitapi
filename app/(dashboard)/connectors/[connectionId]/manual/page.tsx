@@ -5,8 +5,22 @@ import { getConnector } from '@/connectors'
 import { policyBlocks } from '@/lib/connector-access'
 import { RunnerShell } from './runner-shell'
 
-export default async function ManualPage({ params }: { params: Promise<{ connectionId: string }> }) {
+// Where "Back" goes. Pages that link here pass ?from=<path> so Back returns the
+// user to where they were (e.g. Star Lab) instead of the connection settings.
+// Only known in-app pages are accepted, so this can't become an open redirect.
+const BACK_TARGETS: Record<string, string> = {
+  '/starlab': 'Starlab',
+  '/connectors': 'Connectors',
+  '/dashboard': 'Dashboard',
+  '/reference': 'Reference',
+}
+
+export default async function ManualPage({ params, searchParams }: {
+  params: Promise<{ connectionId: string }>
+  searchParams: Promise<{ from?: string }>
+}) {
   const { connectionId } = await params
+  const { from } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -80,6 +94,8 @@ export default async function ManualPage({ params }: { params: Promise<{ connect
       connectorCategory={meta?.category ?? ''}
       status={connection.status}
       actions={actions}
+      backHref={from && BACK_TARGETS[from] ? from : `/connectors/${connectionId}`}
+      backLabel={from && BACK_TARGETS[from] ? BACK_TARGETS[from] : connection.label}
     />
   )
 }

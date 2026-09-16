@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { offlineModeGuard } from '@/lib/offline-mode'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { runPlaybook } from '@/lib/playbook-runner'
@@ -35,6 +36,9 @@ export async function POST(req: Request, { params }: Params) {
   if (!playbook || playbook.workspace_id !== membership.workspace_id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
+
+  const paused = await offlineModeGuard(membership.workspace_id)
+  if (paused) return paused
 
   const body = await req.json().catch(() => ({}))
   const mode: 'dry_run' | 'live' = body.mode === 'dry_run' ? 'dry_run' : 'live'

@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getConnector } from '@/connectors'
-import { resolveCredentials } from '@/lib/credentials'
-import { resumePlaybookRun } from '@/lib/playbook-runner'
+import { resolvePendingAction, outcomeBody } from '@/lib/pending-actions'
+import { explainActionError } from '@/lib/action-errors'
 
 type Params = { params: Promise<{ id: string }> }
 
+// Chat confirmation card → run the staged action (or resume a parked playbook).
+// Always answers with JSON, including on failure, so the card can show what
+// went wrong and how to fix it instead of sitting in "pending".
 export async function POST(_req: Request, { params }: Params) {
   const { id } = await params
 
@@ -16,7 +18,7 @@ export async function POST(_req: Request, { params }: Params) {
 
   const admin = createAdminClient()
 
-  // Fetch pending action — must belong to this user and still be pending
+  // Must belong to this user and still be pending
   const { data: pending } = await admin
     .from('pending_actions')
     .select('*, connection:connections(*, connector:connectors(slug))')
@@ -25,61 +27,21 @@ export async function POST(_req: Request, { params }: Params) {
     .eq('status', 'pending')
     .single()
 
-  if (!pending) return NextResponse.json({ error: 'Not found or already resolved' }, { status: 404 })
+  if (!pending) {
+    return NextResponse.json({
+      ok: false, status: 'not_found', error: 'Not found or already resolved',
+      explained: { kind: 'unknown', title: 'This request was already handled or no longer exists.', hint: 'Check the Approvals page for its current status.', fixHref: '/approvals', fixLabel: 'Open Approvals' },
+    }, { status: 404 })
+  }
 
-  // Check expiry
   if (pending.expires_at && new Date(pending.expires_at) < new Date()) {
     await admin.from('pending_actions').update({ status: 'expired' }).eq('id', id)
-    return NextResponse.json({ error: 'Action has expired' }, { status: 410 })
+    return NextResponse.json({
+      ok: false, status: 'expired', error: 'Action has expired',
+      explained: { ...explainActionError('expired'), kind: 'unknown', title: 'This request expired before it was approved.', hint: 'Nothing was changed. Ask the assistant to set it up again.' },
+    }, { status: 410 })
   }
 
-  // Playbook approval gate: don't execute here — resume the parked run, which
-  // re-runs the approved node itself (single, engine-audited execution path).
-  const pbParams = (pending.params ?? {}) as Record<string, unknown>
-  const playbookRunId = pbParams.__playbook_run as string | undefined
-  if (playbookRunId) {
-    await admin.from('pending_actions').update({ status: 'confirmed' }).eq('id', id)
-    const { status } = await resumePlaybookRun({ runId: playbookRunId, approved: true })
-    return NextResponse.json({ data: { resumed: true, runStatus: status } })
-  }
-
-  const connection = pending.connection as {
-    id: string; workspace_id: string; vault_secret_id: string | null;
-    connector: { slug: string }
-  }
-  const manifest = getConnector(connection.connector.slug)
-  if (!manifest) return NextResponse.json({ error: 'Connector not found' }, { status: 404 })
-
-  const action = manifest.actions.find(a => a.slug === pending.action_slug)
-  if (!action) return NextResponse.json({ error: 'Action not found' }, { status: 404 })
-
-  const creds = await resolveCredentials(connection)
-
-  // Mark as confirmed before executing (idempotency guard)
-  await admin.from('pending_actions').update({ status: 'confirmed' }).eq('id', id)
-
-  const result = await action.execute(creds, (pending.params as Record<string, unknown>) ?? {})
-
-  const finalStatus = result.ok ? 'executed' : 'failed'
-  await admin.from('pending_actions').update({ status: finalStatus }).eq('id', id)
-
-  await admin.from('audit_log').insert({
-    workspace_id: connection.workspace_id,
-    actor_type: 'user',
-    actor_id: user.id,
-    connection_id: connection.id,
-    action_slug: pending.action_slug,
-    risk: action.risk,
-    params: pending.params,
-    result_status: result.ok ? 'success' : 'error',
-    result_summary: result.ok
-      ? JSON.stringify(result.data).slice(0, 500)
-      : (result.error ?? 'Unknown error'),
-  })
-
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 })
-  }
-
-  return NextResponse.json({ data: result.data })
+  const outcome = await resolvePendingAction({ pending, approved: true, actorId: user.id })
+  return NextResponse.json(outcomeBody(outcome), { status: outcome.ok ? 200 : outcome.httpStatus })
 }

@@ -104,7 +104,7 @@ export function PageTour() {
       {/* First-visit nudge — portaled to body so the .glass TopBar (backdrop-filter)
           doesn't become its containing block and mis-position the fixed card. */}
       {showNudge && createPortal(
-        <div className="fixed right-4 top-16 z-[100] w-72 rounded-xl border border-primary/30 bg-popover shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div data-print-hide className="no-print print:hidden fixed right-4 top-16 z-[100] w-72 rounded-xl border border-primary/30 bg-popover shadow-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <button
             onClick={markOffered}
             className="absolute right-2 top-2 text-muted-foreground hover:text-foreground p-0.5"
